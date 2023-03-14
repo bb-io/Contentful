@@ -1,0 +1,20 @@
+{
+  "definition": [
+    {
+      "name": "deliveryApiKey",
+      "description": "Your delivery API key"
+    },
+    {
+      "name": "previewApiKey",
+      "description": "Your preview API key"
+    },
+    {
+      "name": "spaceId",
+      "description": "Your space ID"
+    }
+  ],
+  "communicationWrapperType": "HttpWrapper",
+  "authenticationType": null,
+  "authenticationDefition": null,
+  "authenticationResponseMapping": null
+}
