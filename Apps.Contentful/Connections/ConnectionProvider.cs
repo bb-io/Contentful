@@ -19,6 +19,6 @@ namespace Apps.Contentful.Connections
         public string ConnectionName => "Blackbird";
 
 
-        public IEnumerable<string> ConnectionProperties => new[] { "deliveryApiKey", "previewApiKey", "spaceId" };
+        public IEnumerable<string> ConnectionProperties => new[] { "deliveryApiKey", "previewApiKey", "managementApiKey", "spaceId" };
     }
 }
