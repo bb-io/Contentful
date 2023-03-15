@@ -11,11 +11,16 @@ namespace Apps.Contentful
     [ActionList]
     public class Actions
     {
-        [Action("Get content", Description = "Get content")]
-        public GetContentResponse GetContent(AuthenticationCredentialsProvider authenticationCredentialsProvider, 
-            [ActionParameter] GetContentRequest input)
+        [Action("Get entry", Description = "Get entry by id")]
+        public GetEntryResponse GetContent(string deliveryApiKey, AuthenticationCredentialsProvider authenticationCredentialsProvider, 
+            [ActionParameter] GetEntryRequest input)
         {
-            return new GetContentResponse();
+            var client = GetContentfulClient(deliveryApiKey, authenticationCredentialsProvider.Value, input.SpaceId);
+            var testDto = client.GetEntry<TestDto>(input.EntryId).Result;
+            return new GetEntryResponse()
+            {
+                TestDto = testDto
+            };
         }
 
         private ContentfulClient GetContentfulClient(string deliveryApiKey, string previewApiKey, string spaceId)

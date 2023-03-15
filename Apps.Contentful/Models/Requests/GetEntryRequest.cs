@@ -6,8 +6,8 @@ using System.Threading.Tasks;
 
 namespace Apps.Contentful.Models.Requests
 {
-    public class GetContentRequest
+    public class GetEntryRequest
     {
-        public string UserLogin { get; set; }
+        public string EntryId { get; set; }
     }
 }
