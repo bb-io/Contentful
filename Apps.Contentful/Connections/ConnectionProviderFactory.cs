@@ -7,7 +7,7 @@ namespace Apps.Contentful.Connections
     {
         public IEnumerable<IConnectionProvider> Create()
         {
-            yield return new ConnectionProvider();
+            yield return new BearerConnectionProvider();
         }
     }
 }

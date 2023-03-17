@@ -9,6 +9,10 @@ namespace Apps.Contentful.Models.Responses
 {
     public class GetEntryResponse
     {
-        public TestDto TestDto { get; set; }
+        //public TestDto TestDto { get; set; }
+
+        public string TestText { get; set; }
+
+        public bool TestBoolean { get; set; }
     }
 }

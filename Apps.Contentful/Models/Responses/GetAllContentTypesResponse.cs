@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Apps.Contentful.Dtos;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,6 +9,6 @@ namespace Apps.Contentful.Models.Responses
 {
     public class GetAllContentTypesResponse
     {
-        public IEnumerable<string> ContentTypes { get; set; }
+        public IEnumerable<ContentTypeDto> ContentTypes { get; set; }
     }
 }

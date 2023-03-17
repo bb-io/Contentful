@@ -8,17 +8,17 @@ using System.Threading.Tasks;
 
 namespace Apps.Contentful.Connections
 {
-    public class ConnectionProvider : IConnectionProvider
+    public class BearerConnectionProvider : IConnectionProvider
     {
         public AuthenticationCredentialsProvider Create(IDictionary<string, string> connectionValues)
         {
-            var credential = connectionValues.First(x => x.Key == "spaceId");
+            var credential = connectionValues.First(x => x.Key == "Authorization");
             return new AuthenticationCredentialsProvider(AuthenticationCredentialsRequestLocation.None, credential.Key, credential.Value);
         }
 
-        public string ConnectionName => "Blackbird";
+        public string ConnectionName => "OAuth";
 
 
-        public IEnumerable<string> ConnectionProperties => new[] { "deliveryApiKey", "previewApiKey", "managementApiKey", "spaceId" };
+        public IEnumerable<string> ConnectionProperties => new[] { "Authorization" };
     }
 }

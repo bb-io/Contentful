@@ -5,6 +5,7 @@ using Apps.Contentful.Models.Responses;
 using Apps.Contentful.Dtos;
 using Contentful.Core.Configuration;
 using Contentful.Core;
+using Newtonsoft.Json.Linq;
 
 namespace Apps.Contentful
 {
@@ -12,81 +13,56 @@ namespace Apps.Contentful
     public class Actions
     {
         [Action("Get content", Description = "Get content by id")]
-        public GetEntryResponse GetContent(string deliveryApiKey, string previewApiKey, string managementApiKey, 
-            AuthenticationCredentialsProvider authenticationCredentialsProvider, 
+        public GetEntryResponse GetContent(AuthenticationCredentialsProvider authenticationCredentialsProvider, 
             [ActionParameter] GetEntryRequest input)
         {
-            var client = GetContentfulPreviewClient(deliveryApiKey, previewApiKey, authenticationCredentialsProvider.Value);
-            var testDto = client.GetEntry<TestDto>(input.EntryId).Result;
+            var client = GetContentfulClient(authenticationCredentialsProvider.Value, input.SpaceId);
+            var fields = (JObject)(client.GetEntry(input.EntryId).Result.Fields);
+            
             return new GetEntryResponse()
             {
-                TestDto = testDto
+                TestText = fields["testText"][input.Locale].ToString(),
+                TestBoolean = (bool)fields["testBoolean"][input.Locale]
             };
         }
 
         [Action("Get all content types", Description = "Get all content types in space")]
-        public GetAllContentTypesResponse GetAllContentTypes(string deliveryApiKey, string previewApiKey, string managementApiKey,
-            AuthenticationCredentialsProvider authenticationCredentialsProvider)
+        public GetAllContentTypesResponse GetAllContentTypes(AuthenticationCredentialsProvider authenticationCredentialsProvider,
+            [ActionParameter] GetContentTypesRequest input)
         {
-            var client = GetContentfulPreviewClient(deliveryApiKey, previewApiKey, authenticationCredentialsProvider.Value);
+            var client = GetContentfulClient(authenticationCredentialsProvider.Value, input.SpaceId);
             var contentTypes = client.GetContentTypes().Result;
-            
+            var contentTypeDtos = contentTypes.Select(t => new ContentTypeDto() { Name = t.Name }).ToList();
             return new GetAllContentTypesResponse
             {
-                ContentTypes = contentTypes.Select(x => x.Name).ToList()
+                ContentTypes = contentTypeDtos
             };
         }
 
         [Action("Get asset", Description = "Get asset by Id")]
-        public GetAssetResponse GetAssetById(string deliveryApiKey, string previewApiKey, string managementApiKey, 
-            AuthenticationCredentialsProvider authenticationCredentialsProvider,
+        public GetAssetResponse GetAssetById(AuthenticationCredentialsProvider authenticationCredentialsProvider,
             [ActionParameter] GetAssetRequest input)
         {
-            var client = GetContentfulPreviewClient(deliveryApiKey, previewApiKey, authenticationCredentialsProvider.Value);
+            var client = GetContentfulClient(authenticationCredentialsProvider.Value, input.SpaceId);
             var asset = client.GetAsset(input.AssetId).Result;
 
             return new GetAssetResponse()
             {
-                Title = asset.Title,
-                Description = asset.Description,
-                FileSize = asset.File.Details.Size
+                Title = asset.Title.First().Value,
+                Description = asset.Description.First().Value,
+                FileSize = asset.Files.First().Value.Details.Size
             };
         }
 
-        /*
-        [Action("Create content", Description = "Create content")]
-        public GetEntryResponse CreateContent(string deliveryApiKey, string previewApiKey, string managementApiKey, 
-            AuthenticationCredentialsProvider authenticationCredentialsProvider,
-            [ActionParameter] CreateEntryRequest input)
-        {
-            var client = GetContentfulManagementClient(managementApiKey, authenticationCredentialsProvider.Value);
-            var testDto = client.CreateEntry(input.Content, input.ContentTypeId).Result;
-            return new GetEntryResponse()
-            {
-                TestDto = testDto
-            };
-        }
-        */
-
-        private ContentfulClient GetContentfulPreviewClient(string deliveryApiKey, string previewApiKey, string spaceId)
-        {
+        private ContentfulManagementClient GetContentfulClient(string accessToken, string spaceId)
+        {     
             var httpClient = new HttpClient();
-            //httpClient.DefaultRequestHeaders.Add("Authorization", "Bearer *oauth_access_token*");
             var options = new ContentfulOptions
             {
-                DeliveryApiKey = deliveryApiKey,
-                PreviewApiKey = previewApiKey,
+                ManagementApiKey = accessToken.Split(' ')[1],
                 SpaceId = spaceId
             };
-            var client = new ContentfulClient(httpClient, options);
-            return client;
-        }
-
-        private ContentfulManagementClient GetContentfulManagementClient(string deliveryApiKey, string spaceId)
-        {
-            var httpClient = new HttpClient();
-            //httpClient.DefaultRequestHeaders.Add("Authorization", "Bearer *oauth_access_token*");
-            var client = new ContentfulManagementClient(httpClient, deliveryApiKey, spaceId);
+            var client = new ContentfulManagementClient(httpClient, options);
             return client;
         }
     }
