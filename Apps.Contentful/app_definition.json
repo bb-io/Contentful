@@ -13,35 +13,16 @@
 				"ContentHeaders": {},
 				"Parameters": {
 					"state": "{{state}}",
-					"client_id": "{{client_id}}",
-					"scope": "{{scope}}",
-					"redirect_uri": "{{redirect_uri}}",
+					"client_id": "3KTZ5oCJSRtrVD89oxQxoNBnMpe36lZ1Qye1VPeJktQ",
+					"scope": "content_management_read",
+					"redirect_uri": "https://dev.blackbird.io/oauthImplicitGrant",
 					"response_type": "token"
 				}
 			}
 		]		
 	},
 	"definition": [
-		{
-			"name": "url",
-			"description": "The url of the service"
-		},
-		{
-			"name": "client_id",
-			"description": "Client id for oauth2 authorization"
-		},
-		{
-			"name": "client_secret",
-			"description": "Client secret for oauth2 authorization"
-		},
-		{
-			"name": "scope",
-			"description": "Scopes of token"
-		},
-		{
-			"name": "redirect_uri",
-			"description": "Scopes of token"
-		}
+	
 	],
 	"authenticationResponseMapping": {}
 }
