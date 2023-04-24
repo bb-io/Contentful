@@ -62,7 +62,7 @@ namespace Apps.Contentful
             var httpClient = new HttpClient();
             var options = new ContentfulOptions
             {
-                ManagementApiKey = accessToken.Split(' ')[1],
+                ManagementApiKey = accessToken,
                 SpaceId = spaceId
             };
             var client = new ContentfulManagementClient(httpClient, options);
