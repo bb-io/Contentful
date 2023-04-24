@@ -6,6 +6,7 @@ using Apps.Contentful.Dtos;
 using Contentful.Core.Configuration;
 using Contentful.Core;
 using Newtonsoft.Json.Linq;
+using Blackbird.Applications.Sdk.Common.Actions;
 
 namespace Apps.Contentful
 {
@@ -13,10 +14,10 @@ namespace Apps.Contentful
     public class Actions
     {
         [Action("Get content", Description = "Get content by id")]
-        public GetEntryResponse GetContent(AuthenticationCredentialsProvider authenticationCredentialsProvider, 
+        public GetEntryResponse GetContent(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders, 
             [ActionParameter] GetEntryRequest input)
         {
-            var client = GetContentfulClient(authenticationCredentialsProvider.Value, input.SpaceId);
+            var client = GetContentfulClient(authenticationCredentialsProviders, input.SpaceId);
             var fields = (JObject)(client.GetEntry(input.EntryId).Result.Fields);
             
             return new GetEntryResponse()
@@ -27,10 +28,10 @@ namespace Apps.Contentful
         }
 
         [Action("Get all content types", Description = "Get all content types in space")]
-        public GetAllContentTypesResponse GetAllContentTypes(AuthenticationCredentialsProvider authenticationCredentialsProvider,
+        public GetAllContentTypesResponse GetAllContentTypes(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
             [ActionParameter] GetContentTypesRequest input)
         {
-            var client = GetContentfulClient(authenticationCredentialsProvider.Value, input.SpaceId);
+            var client = GetContentfulClient(authenticationCredentialsProviders, input.SpaceId);
             var contentTypes = client.GetContentTypes().Result;
             var contentTypeDtos = contentTypes.Select(t => new ContentTypeDto() { Name = t.Name }).ToList();
             return new GetAllContentTypesResponse
@@ -40,10 +41,10 @@ namespace Apps.Contentful
         }
 
         [Action("Get asset", Description = "Get asset by Id")]
-        public GetAssetResponse GetAssetById(AuthenticationCredentialsProvider authenticationCredentialsProvider,
+        public GetAssetResponse GetAssetById(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
             [ActionParameter] GetAssetRequest input)
         {
-            var client = GetContentfulClient(authenticationCredentialsProvider.Value, input.SpaceId);
+            var client = GetContentfulClient(authenticationCredentialsProviders, input.SpaceId);
             var asset = client.GetAsset(input.AssetId).Result;
 
             return new GetAssetResponse()
@@ -54,8 +55,10 @@ namespace Apps.Contentful
             };
         }
 
-        private ContentfulManagementClient GetContentfulClient(string accessToken, string spaceId)
-        {     
+        private ContentfulManagementClient GetContentfulClient(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders, string spaceId)
+        {
+            var accessToken = authenticationCredentialsProviders.First(p => p.KeyName == "Authorization").Value;
+
             var httpClient = new HttpClient();
             var options = new ContentfulOptions
             {
