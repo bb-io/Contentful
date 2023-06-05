@@ -1,5 +1,6 @@
 ﻿using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Connections;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,23 +15,23 @@ namespace Apps.Contentful.Connections
         {
             new ConnectionPropertyGroup
             {
-                Name = "Developer API token",
-                AuthenticationType = ConnectionAuthenticationType.Undefined,
+                Name = "OAuth2",
+                AuthenticationType = ConnectionAuthenticationType.OAuth2,
                 ConnectionUsage = ConnectionUsage.Actions,
                 ConnectionProperties = new List<ConnectionProperty>()
                 {
-                    new ConnectionProperty("Authorization")
+                    new ConnectionProperty("client_id")
                 }
             }
         };
 
         public IEnumerable<AuthenticationCredentialsProvider> CreateAuthorizationCredentialsProviders(Dictionary<string, string> values)
         {
-            var accessToken = values.First(v => v.Key == "Authorization");
+            var accessToken = values.First(v => v.Key == "access_token");
             yield return new AuthenticationCredentialsProvider(
-                AuthenticationCredentialsRequestLocation.None,
-                accessToken.Key,
-                accessToken.Value
+                AuthenticationCredentialsRequestLocation.Header,
+                 "Authorization",
+                 accessToken.Value
             );
         }
     }

@@ -60,6 +60,7 @@ namespace Apps.Contentful
             var accessToken = authenticationCredentialsProviders.First(p => p.KeyName == "Authorization").Value;
 
             var httpClient = new HttpClient();
+            httpClient.DefaultRequestHeaders.Add("Authorization", accessToken);
             var options = new ContentfulOptions
             {
                 ManagementApiKey = accessToken,
