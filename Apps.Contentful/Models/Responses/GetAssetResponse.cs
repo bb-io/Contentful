@@ -12,6 +12,8 @@ namespace Apps.Contentful.Models.Responses
 
         public string Description { get; set; }
 
-        public long FileSize { get; set; }
+        public string Filename { get; set; }
+
+        public byte[] File { get; set; }
     }
 }

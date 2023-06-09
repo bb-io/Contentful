@@ -7,12 +7,10 @@ using System.Threading.Tasks;
 
 namespace Apps.Contentful.Models.Responses
 {
-    public class GetEntryResponse
+    public class GetTextContentResponse
     {
-        //public TestDto TestDto { get; set; }
 
-        public string TestText { get; set; }
+        public string TextContent { get; set; }
 
-        public bool TestBoolean { get; set; }
     }
 }

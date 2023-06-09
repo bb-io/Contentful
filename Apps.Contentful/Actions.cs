@@ -7,31 +7,47 @@ using Contentful.Core.Configuration;
 using Contentful.Core;
 using Newtonsoft.Json.Linq;
 using Blackbird.Applications.Sdk.Common.Actions;
+using RestSharp;
+using Contentful.Core.Models;
+using System.Dynamic;
 
 namespace Apps.Contentful
 {
     [ActionList]
     public class Actions
     {
-        [Action("Get content", Description = "Get content by id")]
-        public GetEntryResponse GetContent(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders, 
+        [Action("Get entry text content", Description = "Get entry text content by field id")]
+        public GetTextContentResponse GetTextContent(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders, 
             [ActionParameter] GetEntryRequest input)
         {
-            var client = GetContentfulClient(authenticationCredentialsProviders, input.SpaceId);
+            var client = new ContentfulClient(authenticationCredentialsProviders, input.SpaceId);
             var fields = (JObject)(client.GetEntry(input.EntryId).Result.Fields);
             
-            return new GetEntryResponse()
+            return new GetTextContentResponse()
             {
-                TestText = fields["testText"][input.Locale].ToString(),
-                TestBoolean = (bool)fields["testBoolean"][input.Locale]
+                TextContent = fields[input.FieldId][input.Locale].ToString(),
             };
+        }
+
+        [Action("Set entry text content", Description = "Set entry text content by field id")]
+        public void SetTextContent(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
+            [ActionParameter] SetTextRequest input)
+        {
+            var client = new ContentfulClient(authenticationCredentialsProviders, input.SpaceId);
+            client.CreateOrUpdateEntry(new Entry<dynamic>()
+            {
+                SystemProperties = new SystemProperties() { Id = input.EntryId },
+                Fields = new Dictionary<string, Object>() { { input.FieldId, 
+                        new Dictionary<string, string>() { { input.Locale, input.Text } } 
+                } }
+            }, version: client.GetEntry(input.EntryId).Result.SystemProperties.Version).Wait();
         }
 
         [Action("Get all content types", Description = "Get all content types in space")]
         public GetAllContentTypesResponse GetAllContentTypes(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
             [ActionParameter] GetContentTypesRequest input)
         {
-            var client = GetContentfulClient(authenticationCredentialsProviders, input.SpaceId);
+            var client = new ContentfulClient(authenticationCredentialsProviders, input.SpaceId);
             var contentTypes = client.GetContentTypes().Result;
             var contentTypeDtos = contentTypes.Select(t => new ContentTypeDto() { Name = t.Name }).ToList();
             return new GetAllContentTypesResponse
@@ -44,30 +60,23 @@ namespace Apps.Contentful
         public GetAssetResponse GetAssetById(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
             [ActionParameter] GetAssetRequest input)
         {
-            var client = GetContentfulClient(authenticationCredentialsProviders, input.SpaceId);
+            var client = new ContentfulClient(authenticationCredentialsProviders, input.SpaceId);
             var asset = client.GetAsset(input.AssetId).Result;
-
+            var file = asset.Files.First();
             return new GetAssetResponse()
             {
-                Title = asset.Title.First().Value,
-                Description = asset.Description.First().Value,
-                FileSize = asset.Files.First().Value.Details.Size
+                Title = asset.Title.FirstOrDefault().Value,
+                Description = asset.Description.FirstOrDefault().Value,
+                Filename = file.Value.FileName,
+                File = DownloadFileByUrl(file.Value.Url),
             };
         }
 
-        private ContentfulManagementClient GetContentfulClient(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders, string spaceId)
+        private byte[] DownloadFileByUrl(string url)
         {
-            var accessToken = authenticationCredentialsProviders.First(p => p.KeyName == "Authorization").Value;
-
-            var httpClient = new HttpClient();
-            httpClient.DefaultRequestHeaders.Add("Authorization", accessToken);
-            var options = new ContentfulOptions
-            {
-                ManagementApiKey = accessToken,
-                SpaceId = spaceId
-            };
-            var client = new ContentfulManagementClient(httpClient, options);
-            return client;
-        }
+            var client = new RestClient();
+            var request = new RestRequest($"https:{url}", Method.Get);
+            return client.Get(request).RawBytes;
+        }    
     }
 }

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Apps.Contentful.Models.Requests
 {
-    public class GetEntryRequest
+    public class SetTextRequest
     {
         public string EntryId { get; set; }
 
@@ -15,5 +15,7 @@ namespace Apps.Contentful.Models.Requests
         public string SpaceId { get; set; }
 
         public string Locale { get; set; }
+
+        public string Text { get; set; }
     }
 }
