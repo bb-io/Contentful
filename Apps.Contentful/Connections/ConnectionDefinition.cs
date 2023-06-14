@@ -22,6 +22,16 @@ namespace Apps.Contentful.Connections
                 {
                     new ConnectionProperty("client_id")
                 }
+            },
+            new ConnectionPropertyGroup
+            {
+                Name = "Webhooks data",
+                AuthenticationType = ConnectionAuthenticationType.Undefined,
+                ConnectionUsage = ConnectionUsage.Webhooks,
+                ConnectionProperties = new List<ConnectionProperty>()
+                {
+                    new ConnectionProperty("spaceId")
+                }
             }
         };
 
@@ -32,6 +42,12 @@ namespace Apps.Contentful.Connections
                 AuthenticationCredentialsRequestLocation.Header,
                  "Authorization",
                  accessToken.Value
+            );
+            var spaceId = values.First(v => v.Key == "spaceId");
+            yield return new AuthenticationCredentialsProvider(
+                AuthenticationCredentialsRequestLocation.Header,
+                 "spaceId",
+                 spaceId.Value
             );
         }
     }
