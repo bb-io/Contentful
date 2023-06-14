@@ -1,11 +1,13 @@
 ﻿using Apps.Contentful.Dtos;
 using Apps.Contentful.Models.Responses;
 using Apps.Contentful.Webhooks.Handlers;
+using Apps.Contentful.Webhooks.Handlers.EntryHandlers;
 using Apps.Contentful.Webhooks.Payload;
 using Blackbird.Applications.Sdk.Common.Webhooks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Text.Json;
+using System.Threading.Channels;
 
 namespace Apps.Contentful.Webhooks
 {
@@ -165,6 +167,151 @@ namespace Apps.Contentful.Webhooks
             {
                 HttpResponseMessage = null,
                 Result = new AddNewEntryResponse() { EntryId = data.Sys.Id }
+            };
+        }
+        #endregion
+
+        #region AssetWebhooks
+
+        [Webhook("On asset created", typeof(AssetCreatedHandler), Description = "On asset created")]
+        public async Task<WebhookResponse<CreateAssetResponse>> AssetCreation(WebhookRequest webhookRequest)
+        {
+            var data = JsonConvert.DeserializeObject<AssetPayload>(webhookRequest.Body.ToString());
+            if (data is null)
+            {
+                throw new InvalidCastException(nameof(webhookRequest.Body));
+            }
+            return new WebhookResponse<CreateAssetResponse>
+            {
+                HttpResponseMessage = null,
+                Result = new CreateAssetResponse() { AssetId = data.Sys.Id }
+            };
+        }
+
+        [Webhook("On asset saved", typeof(AssetSavedHandler), Description = "On asset saved")]
+        public async Task<WebhookResponse<AssetChangedResponse>> AssetSaved(WebhookRequest webhookRequest)
+        {
+            var data = JsonConvert.DeserializeObject<AssetPayload>(webhookRequest.Body.ToString());
+            if (data is null)
+            {
+                throw new InvalidCastException(nameof(webhookRequest.Body));
+            }
+            var changes = new AssetChangedResponse()
+            {
+                AssetId = data.Sys.Id,
+                FilesInfo = new List<AssetFileInfo>()
+            };
+            foreach (var propertyLocale in data.Fields.File.Properties())
+            {
+                var change = propertyLocale.Value.ToObject<AssetFileInfo>();
+                change.Locale = propertyLocale.Name;
+                changes.FilesInfo.Add(change);
+            }
+            return new WebhookResponse<AssetChangedResponse>
+            {
+                HttpResponseMessage = null,
+                Result = changes
+            };
+        }
+
+        [Webhook("On asset auto saved", typeof(AssetAutosavedHandler), Description = "On asset auto saved")]
+        public async Task<WebhookResponse<AssetChangedResponse>> AssetAutosaved(WebhookRequest webhookRequest)
+        {
+            var data = JsonConvert.DeserializeObject<AssetPayload>(webhookRequest.Body.ToString());
+            if (data is null)
+            {
+                throw new InvalidCastException(nameof(webhookRequest.Body));
+            }
+            var changes = new AssetChangedResponse()
+            {
+                AssetId = data.Sys.Id,
+                FilesInfo = new List<AssetFileInfo>()
+            };
+            foreach (var propertyLocale in data.Fields.File.Properties())
+            {
+                var change = propertyLocale.Value.ToObject<AssetFileInfo>();
+                change.Locale = propertyLocale.Name;
+                changes.FilesInfo.Add(change);
+            }
+            return new WebhookResponse<AssetChangedResponse>
+            {
+                HttpResponseMessage = null,
+                Result = changes
+            };
+        }
+
+        [Webhook("On asset published", typeof(AssetPublishedHandler), Description = "On asset published")]
+        public async Task<WebhookResponse<CreateAssetResponse>> AssetPublished(WebhookRequest webhookRequest)
+        {
+            var data = JsonConvert.DeserializeObject<AssetPayload>(webhookRequest.Body.ToString());
+            if (data is null)
+            {
+                throw new InvalidCastException(nameof(webhookRequest.Body));
+            }
+            return new WebhookResponse<CreateAssetResponse>
+            {
+                HttpResponseMessage = null,
+                Result = new CreateAssetResponse() { AssetId = data.Sys.Id }
+            };
+        }
+
+        [Webhook("On asset unpublished", typeof(AssetUnpublishedHandler), Description = "On asset unpublished")]
+        public async Task<WebhookResponse<CreateAssetResponse>> AssetUnpublished(WebhookRequest webhookRequest)
+        {
+            var data = JsonConvert.DeserializeObject<AssetPayload>(webhookRequest.Body.ToString());
+            if (data is null)
+            {
+                throw new InvalidCastException(nameof(webhookRequest.Body));
+            }
+            return new WebhookResponse<CreateAssetResponse>
+            {
+                HttpResponseMessage = null,
+                Result = new CreateAssetResponse() { AssetId = data.Sys.Id }
+            };
+        }
+
+        [Webhook("On asset archieved", typeof(AssetArchievedHandler), Description = "On asset archieved")]
+        public async Task<WebhookResponse<CreateAssetResponse>> AssetArchieved(WebhookRequest webhookRequest)
+        {
+            var data = JsonConvert.DeserializeObject<AssetPayload>(webhookRequest.Body.ToString());
+            if (data is null)
+            {
+                throw new InvalidCastException(nameof(webhookRequest.Body));
+            }
+            return new WebhookResponse<CreateAssetResponse>
+            {
+                HttpResponseMessage = null,
+                Result = new CreateAssetResponse() { AssetId = data.Sys.Id }
+            };
+        }
+
+        [Webhook("On asset unarchieved", typeof(AssetUnarchievedHandler), Description = "On asset unarchieved")]
+        public async Task<WebhookResponse<CreateAssetResponse>> AssetUnarchieved(WebhookRequest webhookRequest)
+        {
+            var data = JsonConvert.DeserializeObject<AssetPayload>(webhookRequest.Body.ToString());
+            if (data is null)
+            {
+                throw new InvalidCastException(nameof(webhookRequest.Body));
+            }
+            return new WebhookResponse<CreateAssetResponse>
+            {
+                HttpResponseMessage = null,
+                Result = new CreateAssetResponse() { AssetId = data.Sys.Id }
+            };
+        }
+
+        [Webhook("On asset deleted", typeof(AssetDeletedHandler), Description = "On asset deleted")]
+        public async Task<WebhookResponse<CreateAssetResponse>> AssetDeleted(WebhookRequest webhookRequest)
+        {
+            var data = JsonConvert.DeserializeObject<AssetPayload>(webhookRequest.Body.ToString());
+            if (data is null)
+            {
+                throw new InvalidCastException(nameof(webhookRequest.Body));
+            }
+            return new WebhookResponse<CreateAssetResponse>
+            {
+                HttpResponseMessage = null,
+                Result = new CreateAssetResponse() { AssetId = data.Sys.Id }
             };
         }
         #endregion
