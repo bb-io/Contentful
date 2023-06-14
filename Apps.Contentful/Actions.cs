@@ -144,13 +144,13 @@ namespace Apps.Contentful
         {
             var client = new ContentfulClient(authenticationCredentialsProviders, input.SpaceId);
             var asset = client.GetAsset(input.AssetId).Result;
-            var file = asset.Files.First();
+            var file = asset.Files[input.Locale];
             return new GetAssetResponse()
             {
-                Title = asset.Title.FirstOrDefault().Value,
-                Description = asset.Description.FirstOrDefault().Value,
-                Filename = file.Value.FileName,
-                File = DownloadFileByUrl(file.Value.Url),
+                Title = asset.Title[input.Locale],
+                Description = asset.Description[input.Locale],
+                Filename = file.FileName,
+                File = DownloadFileByUrl(file.Url),
             };
         }
 
