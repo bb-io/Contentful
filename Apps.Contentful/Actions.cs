@@ -144,13 +144,13 @@ namespace Apps.Contentful
         {
             var client = new ContentfulClient(authenticationCredentialsProviders, input.SpaceId);
             var asset = client.GetAsset(input.AssetId).Result;
-            var file = asset.Files[input.Locale];
+            var file = asset.Files?[input.Locale];
             return new GetAssetResponse()
             {
-                Title = asset.Title[input.Locale],
-                Description = asset.Description[input.Locale],
-                Filename = file.FileName,
-                File = DownloadFileByUrl(file.Url),
+                Title = asset.Title?[input.Locale],
+                Description = asset.Description?[input.Locale],
+                Filename = file?.FileName,
+                File = DownloadFileByUrl(file?.Url),
             };
         }
 
@@ -177,6 +177,29 @@ namespace Apps.Contentful
             {
                 AssetId = result.SystemProperties.Id
             };
+        }
+
+        [Action("Update asset file", Description = "Update asset file")]
+        public async void UpdateAssetFile(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
+            [ActionParameter] UpdateAssetFileRequest input)
+        {
+            var client = new ContentfulClient(authenticationCredentialsProviders, input.SpaceId);
+            var oldAsset = await client.GetAsset(input.AssetId);
+            var uploadReference = client.UploadFile(input.File).Result;
+            uploadReference.SystemProperties.CreatedAt = null;
+            uploadReference.SystemProperties.CreatedBy = null;
+            uploadReference.SystemProperties.Space = null;
+            uploadReference.SystemProperties.LinkType = "Upload";
+
+            oldAsset.Files.Add(input.Locale, new File() { FileName = input.Filename, ContentType = "text/plain", UploadReference = uploadReference });
+            await client.CreateOrUpdateAsset(new ManagementAsset()
+            {
+                SystemProperties = new SystemProperties() { Id = input.AssetId },
+                Title = oldAsset.Title,
+                Description = oldAsset.Description,
+                Files = oldAsset.Files
+            }, version: oldAsset.SystemProperties.Version);
+            await client.ProcessAsset(input.AssetId, (int)oldAsset.SystemProperties.Version, input.Locale);
         }
 
         [Action("Add new entry", Description = "Add new entry by content model id")]
@@ -231,11 +254,28 @@ namespace Apps.Contentful
             client.UnpublishAsset(input.AssetId, (int)client.GetAsset(input.AssetId).Result.SystemProperties.Version).Wait();
         }
 
-        private byte[] DownloadFileByUrl(string url)
+        [Action("Is asset locale present", Description = "Is asset locale present")]
+        public IsAssetLocalePresentResponse IsAssetLocalePresent(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
+            [ActionParameter] IsAssetLocalePresentRequest input)
         {
-            var client = new RestClient();
-            var request = new RestRequest($"https:{url}", Method.Get);
-            return client.Get(request).RawBytes;
+            var client = new ContentfulClient(authenticationCredentialsProviders, input.SpaceId);
+            var asset = client.GetAsset(input.AssetId).Result;
+            if(asset.Files.TryGetValue(input.Locale, out var file))
+            {
+                return new IsAssetLocalePresentResponse() { IsAssetLocalePresent = 1 };
+            }
+            return new IsAssetLocalePresentResponse() { IsAssetLocalePresent = 0 };
+        }
+
+        private byte[]? DownloadFileByUrl(string url)
+        {
+            if(url != null)
+            {
+                var client = new RestClient();
+                var request = new RestRequest($"https:{url}", Method.Get);
+                return client.Get(request).RawBytes;
+            }
+            return null;
         }    
     }
 }
