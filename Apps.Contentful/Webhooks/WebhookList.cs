@@ -1,13 +1,9 @@
-﻿using Apps.Contentful.Dtos;
-using Apps.Contentful.Models.Responses;
-using Apps.Contentful.Webhooks.Handlers;
+﻿using Apps.Contentful.Models.Responses;
 using Apps.Contentful.Webhooks.Handlers.EntryHandlers;
 using Apps.Contentful.Webhooks.Payload;
 using Blackbird.Applications.Sdk.Common.Webhooks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using System.Text.Json;
-using System.Threading.Channels;
 
 namespace Apps.Contentful.Webhooks
 {

@@ -1,5 +1,4 @@
 ﻿using Blackbird.Applications.Sdk.Common.Authentication.OAuth2;
-using System.Text.Json;
 
 namespace Apps.Contentful.Authorization.OAuth2
 {

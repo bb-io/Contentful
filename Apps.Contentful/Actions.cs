@@ -3,13 +3,10 @@ using Blackbird.Applications.Sdk.Common.Authentication;
 using Apps.Contentful.Models.Requests;
 using Apps.Contentful.Models.Responses;
 using Apps.Contentful.Dtos;
-using Contentful.Core.Configuration;
-using Contentful.Core;
 using Newtonsoft.Json.Linq;
 using Blackbird.Applications.Sdk.Common.Actions;
 using RestSharp;
 using Contentful.Core.Models;
-using System.Dynamic;
 using Contentful.Core.Models.Management;
 using File = Contentful.Core.Models.File;
 using Newtonsoft.Json;
@@ -21,12 +18,13 @@ namespace Apps.Contentful
     public class Actions
     {
         [Action("Get entry text content", Description = "Get entry text content by field id")]
-        public GetTextContentResponse GetTextContent(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders, 
+        public GetTextContentResponse GetTextContent(
+            IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
             [ActionParameter] GetEntryRequest input)
         {
             var client = new ContentfulClient(authenticationCredentialsProviders, input.SpaceId);
             var fields = (JObject)(client.GetEntry(input.EntryId).Result.Fields);
-            
+
             return new GetTextContentResponse()
             {
                 TextContent = fields[input.FieldId][input.Locale].ToString(),
@@ -40,12 +38,15 @@ namespace Apps.Contentful
             var client = new ContentfulClient(authenticationCredentialsProviders, input.SpaceId);
             var entry = client.GetEntry(input.EntryId).Result;
             JObject fields = (JObject)entry.Fields;
-            fields[input.FieldId] = JObject.Parse(JsonConvert.SerializeObject(new Dictionary<string, string>() { { input.Locale, input.Text } }));
-            client.CreateOrUpdateEntry(entry, version: client.GetEntry(input.EntryId).Result.SystemProperties.Version).Wait();
+            fields[input.FieldId] = JObject.Parse(JsonConvert.SerializeObject(new Dictionary<string, string>()
+                { { input.Locale, input.Text } }));
+            client.CreateOrUpdateEntry(entry, version: client.GetEntry(input.EntryId).Result.SystemProperties.Version)
+                .Wait();
         }
 
         [Action("Get entry number content", Description = "Get entry number content by field id")]
-        public GetNumberContentResponse GetNumberContent(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
+        public GetNumberContentResponse GetNumberContent(
+            IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
             [ActionParameter] GetEntryRequest input)
         {
             var client = new ContentfulClient(authenticationCredentialsProviders, input.SpaceId);
@@ -63,12 +64,15 @@ namespace Apps.Contentful
             var client = new ContentfulClient(authenticationCredentialsProviders, input.SpaceId);
             var entry = client.GetEntry(input.EntryId).Result;
             JObject fields = (JObject)entry.Fields;
-            fields[input.FieldId] = JObject.Parse(JsonConvert.SerializeObject(new Dictionary<string, int>() { { input.Locale, input.Number } }));
-            client.CreateOrUpdateEntry(entry, version: client.GetEntry(input.EntryId).Result.SystemProperties.Version).Wait();
+            fields[input.FieldId] = JObject.Parse(JsonConvert.SerializeObject(new Dictionary<string, int>()
+                { { input.Locale, input.Number } }));
+            client.CreateOrUpdateEntry(entry, version: client.GetEntry(input.EntryId).Result.SystemProperties.Version)
+                .Wait();
         }
 
         [Action("Get entry boolean content", Description = "Get entry boolean content by field id")]
-        public GetBoolContentResponse GetBoolContent(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
+        public GetBoolContentResponse GetBoolContent(
+            IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
             [ActionParameter] GetEntryRequest input)
         {
             var client = new ContentfulClient(authenticationCredentialsProviders, input.SpaceId);
@@ -86,12 +90,15 @@ namespace Apps.Contentful
             var client = new ContentfulClient(authenticationCredentialsProviders, input.SpaceId);
             var entry = client.GetEntry(input.EntryId).Result;
             JObject fields = (JObject)entry.Fields;
-            fields[input.FieldId] = JObject.Parse(JsonConvert.SerializeObject(new Dictionary<string, bool>() { { input.Locale, input.Boolean } }));
-            client.CreateOrUpdateEntry(entry, version: client.GetEntry(input.EntryId).Result.SystemProperties.Version).Wait();
+            fields[input.FieldId] = JObject.Parse(JsonConvert.SerializeObject(new Dictionary<string, bool>()
+                { { input.Locale, input.Boolean } }));
+            client.CreateOrUpdateEntry(entry, version: client.GetEntry(input.EntryId).Result.SystemProperties.Version)
+                .Wait();
         }
 
         [Action("Get entry media content", Description = "Get entry media content by field id")]
-        public GetMediaContentResponse GetMediaContent(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
+        public GetMediaContentResponse GetMediaContent(
+            IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
             [ActionParameter] GetEntryRequest input)
         {
             var client = new ContentfulClient(authenticationCredentialsProviders, input.SpaceId);
@@ -122,11 +129,13 @@ namespace Apps.Contentful
             {
                 { input.Locale, payload }
             }));
-            client.CreateOrUpdateEntry(entry, version: client.GetEntry(input.EntryId).Result.SystemProperties.Version).Wait();
+            client.CreateOrUpdateEntry(entry, version: client.GetEntry(input.EntryId).Result.SystemProperties.Version)
+                .Wait();
         }
 
         [Action("Get all content types", Description = "Get all content types in space")]
-        public GetAllContentTypesResponse GetAllContentTypes(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
+        public GetAllContentTypesResponse GetAllContentTypes(
+            IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
             [ActionParameter] GetContentTypesRequest input)
         {
             var client = new ContentfulClient(authenticationCredentialsProviders, input.SpaceId);
@@ -139,23 +148,26 @@ namespace Apps.Contentful
         }
 
         [Action("Get asset", Description = "Get asset by Id")]
-        public GetAssetResponse GetAssetById(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
+        public GetAssetResponse GetAssetById(
+            IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
             [ActionParameter] GetAssetRequest input)
         {
             var client = new ContentfulClient(authenticationCredentialsProviders, input.SpaceId);
             var asset = client.GetAsset(input.AssetId).Result;
-            var file = asset.Files?[input.Locale];
+            var fileData = asset.Files?[input.Locale];
+
+            var fileContent = DownloadFileByUrl(fileData);
             return new GetAssetResponse()
             {
                 Title = asset.Title?[input.Locale],
                 Description = asset.Description?[input.Locale],
-                Filename = file?.FileName,
-                File = DownloadFileByUrl(file?.Url),
+                File = fileContent,
             };
         }
 
         [Action("Create and upload asset", Description = "Create and upload asset")]
-        public CreateAssetResponse CreateAsset(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
+        public CreateAssetResponse CreateAsset(
+            IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
             [ActionParameter] CreateAssetRequest input)
         {
             var client = new ContentfulClient(authenticationCredentialsProviders, input.SpaceId);
@@ -163,15 +175,18 @@ namespace Apps.Contentful
             {
                 SystemProperties = new SystemProperties() { Id = Guid.NewGuid().ToString() },
                 Title = new Dictionary<string, string>()
-                            {
-                                { input.Locale, input.Title }
-                            },
+                {
+                    { input.Locale, input.Title }
+                },
                 Description = new Dictionary<string, string>() { { input.Locale, input.Description } },
                 Files = new Dictionary<string, File>()
                 {
-                    { input.Locale, new File(){ FileName = input.Filename, ContentType = "text/plain"} }
+                    {
+                        input.Locale,
+                        new File() { FileName = input.Filename ?? input.File.Name, ContentType = "text/plain" }
+                    }
                 },
-            }, input.File).Result;
+            }, input.File.Bytes).Result;
 
             return new CreateAssetResponse()
             {
@@ -180,18 +195,24 @@ namespace Apps.Contentful
         }
 
         [Action("Update asset file", Description = "Update asset file")]
-        public async void UpdateAssetFile(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
+        public async void UpdateAssetFile(
+            IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
             [ActionParameter] UpdateAssetFileRequest input)
         {
             var client = new ContentfulClient(authenticationCredentialsProviders, input.SpaceId);
             var oldAsset = await client.GetAsset(input.AssetId);
-            var uploadReference = client.UploadFile(input.File).Result;
+            var uploadReference = client.UploadFile(input.File.Bytes).Result;
             uploadReference.SystemProperties.CreatedAt = null;
             uploadReference.SystemProperties.CreatedBy = null;
             uploadReference.SystemProperties.Space = null;
             uploadReference.SystemProperties.LinkType = "Upload";
 
-            oldAsset.Files.Add(input.Locale, new File() { FileName = input.Filename, ContentType = "text/plain", UploadReference = uploadReference });
+            oldAsset.Files.Add(input.Locale,
+                new File()
+                {
+                    FileName = input.Filename ?? input.File.Name, ContentType = "text/plain",
+                    UploadReference = uploadReference
+                });
             await client.CreateOrUpdateAsset(new ManagementAsset()
             {
                 SystemProperties = new SystemProperties() { Id = input.AssetId },
@@ -203,7 +224,8 @@ namespace Apps.Contentful
         }
 
         [Action("Add new entry", Description = "Add new entry by content model id")]
-        public AddNewEntryResponse AddNewEntry(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
+        public AddNewEntryResponse AddNewEntry(
+            IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
             [ActionParameter] AddNewEntryRequest input)
         {
             var client = new ContentfulClient(authenticationCredentialsProviders, input.SpaceId);
@@ -219,7 +241,8 @@ namespace Apps.Contentful
             [ActionParameter] DeleteEntryRequest input)
         {
             var client = new ContentfulClient(authenticationCredentialsProviders, input.SpaceId);
-            client.DeleteEntry(input.EntryId, (int)client.GetEntry(input.EntryId).Result.SystemProperties.Version).Wait();
+            client.DeleteEntry(input.EntryId, (int)client.GetEntry(input.EntryId).Result.SystemProperties.Version)
+                .Wait();
         }
 
         [Action("Publish entry", Description = "Publish entry by id")]
@@ -227,7 +250,8 @@ namespace Apps.Contentful
             [ActionParameter] PublishEntryRequest input)
         {
             var client = new ContentfulClient(authenticationCredentialsProviders, input.SpaceId);
-            client.PublishEntry(input.EntryId, (int)client.GetEntry(input.EntryId).Result.SystemProperties.Version).Wait();
+            client.PublishEntry(input.EntryId, (int)client.GetEntry(input.EntryId).Result.SystemProperties.Version)
+                .Wait();
         }
 
         [Action("Unpublish entry", Description = "Unpublish entry by id")]
@@ -235,7 +259,8 @@ namespace Apps.Contentful
             [ActionParameter] PublishEntryRequest input)
         {
             var client = new ContentfulClient(authenticationCredentialsProviders, input.SpaceId);
-            client.UnpublishEntry(input.EntryId, (int)client.GetEntry(input.EntryId).Result.SystemProperties.Version).Wait();
+            client.UnpublishEntry(input.EntryId, (int)client.GetEntry(input.EntryId).Result.SystemProperties.Version)
+                .Wait();
         }
 
         [Action("Publish asset", Description = "Publish asset by id")]
@@ -243,7 +268,8 @@ namespace Apps.Contentful
             [ActionParameter] PublishAssetRequest input)
         {
             var client = new ContentfulClient(authenticationCredentialsProviders, input.SpaceId);
-            client.PublishAsset(input.AssetId, (int)client.GetAsset(input.AssetId).Result.SystemProperties.Version).Wait();
+            client.PublishAsset(input.AssetId, (int)client.GetAsset(input.AssetId).Result.SystemProperties.Version)
+                .Wait();
         }
 
         [Action("Unpublish asset", Description = "Unpublish asset by id")]
@@ -251,31 +277,38 @@ namespace Apps.Contentful
             [ActionParameter] PublishAssetRequest input)
         {
             var client = new ContentfulClient(authenticationCredentialsProviders, input.SpaceId);
-            client.UnpublishAsset(input.AssetId, (int)client.GetAsset(input.AssetId).Result.SystemProperties.Version).Wait();
+            client.UnpublishAsset(input.AssetId, (int)client.GetAsset(input.AssetId).Result.SystemProperties.Version)
+                .Wait();
         }
 
         [Action("Is asset locale present", Description = "Is asset locale present")]
-        public IsAssetLocalePresentResponse IsAssetLocalePresent(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
+        public IsAssetLocalePresentResponse IsAssetLocalePresent(
+            IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
             [ActionParameter] IsAssetLocalePresentRequest input)
         {
             var client = new ContentfulClient(authenticationCredentialsProviders, input.SpaceId);
             var asset = client.GetAsset(input.AssetId).Result;
-            if(asset.Files.TryGetValue(input.Locale, out var file))
+            if (asset.Files.TryGetValue(input.Locale, out var file))
             {
                 return new IsAssetLocalePresentResponse() { IsAssetLocalePresent = 1 };
             }
+
             return new IsAssetLocalePresentResponse() { IsAssetLocalePresent = 0 };
         }
 
-        private byte[]? DownloadFileByUrl(string url)
+        private Blackbird.Applications.Sdk.Common.Files.File? DownloadFileByUrl(File? file)
         {
-            if(url != null)
+            if (file is null)
+                return null;
+
+            var client = new RestClient();
+            var request = new RestRequest($"https:{file.Url}");
+            
+            return new Blackbird.Applications.Sdk.Common.Files.File(client.Get(request).RawBytes)
             {
-                var client = new RestClient();
-                var request = new RestRequest($"https:{url}", Method.Get);
-                return client.Get(request).RawBytes;
-            }
-            return null;
-        }    
+                Name = file.FileName,
+                ContentType = file.ContentType
+            };;
+        }
     }
 }
