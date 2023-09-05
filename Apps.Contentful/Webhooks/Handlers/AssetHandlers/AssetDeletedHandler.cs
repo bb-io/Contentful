@@ -1,8 +1,10 @@
-﻿namespace Apps.Contentful.Webhooks.Handlers.EntryHandlers
+﻿using Blackbird.Applications.Sdk.Common.Webhooks;
+
+namespace Apps.Contentful.Webhooks.Handlers.EntryHandlers
 {
     public class AssetDeletedHandler : BaseWebhookHandler
     {
-        public AssetDeletedHandler() : base("Asset", "delete")
+        public AssetDeletedHandler([WebhookParameter] string spaceId) : base("Asset", "delete", spaceId)
         {
         }
     }
