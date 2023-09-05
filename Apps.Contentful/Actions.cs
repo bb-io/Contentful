@@ -1,4 +1,5 @@
-﻿using Blackbird.Applications.Sdk.Common;
+﻿using System.Text;
+using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Apps.Contentful.Models.Requests;
 using Apps.Contentful.Models.Responses;
@@ -17,18 +18,40 @@ namespace Apps.Contentful
     [ActionList]
     public class Actions
     {
-        [Action("Get entry text content", Description = "Get entry text content by field id")]
-        public GetTextContentResponse GetTextContent(
+        [Action("Get text content of entry's field", Description = "Get the text content of the field of the specified " +
+                                                                   "entry. Field can be plain text or rich text. In " +
+                                                                   "both cases plain text is returned.")]
+        public async Task<GetTextContentResponse> GetFieldTextContent(
             IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
             [ActionParameter] GetEntryRequest input)
         {
             var client = new ContentfulClient(authenticationCredentialsProviders, input.SpaceId);
-            var fields = (JObject)(client.GetEntry(input.EntryId).Result.Fields);
 
-            return new GetTextContentResponse()
+            var entry = await client.GetEntry(input.EntryId);
+            var field = ((JObject)entry.Fields)[input.FieldId][input.Locale];
+            string textContent;
+            
+            var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
+            var contentType = client.GetContentType(contentTypeId).Result;
+            var fieldType = contentType.Fields.First(f => f.Id == input.FieldId).Type;
+
+            if (fieldType == "RichText")
             {
-                TextContent = fields[input.FieldId][input.Locale].ToString(),
-            };
+                var content = (JArray)field["content"];
+                var result = new StringBuilder();
+                foreach (var item in content)
+                {
+                    var text = string.Join("", item["content"].Select(c => c["value"]));
+                    result.Append(text);
+                }
+
+                textContent = result.ToString();
+            }
+
+            else
+                textContent = field.ToString();
+
+            return new GetTextContentResponse { TextContent = textContent };
         }
 
         [Action("Set entry text content", Description = "Set entry text content by field id")]
@@ -310,5 +333,12 @@ namespace Apps.Contentful
                 ContentType = file.ContentType
             };;
         }
+
+        // private async Task<string> GetContentType(string contentTypeId, string spaceId)
+        // {
+        //     var client = new RestClient(new RestClientOptions { BaseUrl = new Uri("https://api.contentful.com") });
+        //     var request = new RestRequest($"/spaces/{spaceId}/content_types/{contentTypeId}");
+        //     
+        // }
     }
 }
