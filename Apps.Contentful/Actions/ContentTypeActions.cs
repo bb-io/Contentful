@@ -2,7 +2,6 @@
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Apps.Contentful.Models.Responses;
 using Apps.Contentful.Dtos;
-using Apps.Contentful.Models.Identifiers;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 
@@ -17,9 +16,9 @@ public class ContentTypeActions : BaseInvocable
     public ContentTypeActions(InvocationContext invocationContext) : base(invocationContext) { }
     
     [Action("Get all content types", Description = "Get all content types in space")]
-    public async Task<GetAllContentTypesResponse> GetAllContentTypes([ActionParameter] SpaceIdentifier spaceIdentifier)
+    public async Task<GetAllContentTypesResponse> GetAllContentTypes()
     {
-        var client = new ContentfulClient(Creds, spaceIdentifier.Id);
+        var client = new ContentfulClient(Creds);
         var contentTypes = await client.GetContentTypes();
         var contentTypeDtos = contentTypes.Select(t => new ContentTypeDto { Name = t.Name }).ToList();
         return new GetAllContentTypesResponse

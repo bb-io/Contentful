@@ -16,7 +16,17 @@ namespace Apps.Contentful.Connections
                 {
                     new("client_id")
                 }
-            }
+            },
+            new()
+            {
+                Name = "Space ID",
+                AuthenticationType = ConnectionAuthenticationType.Undefined,
+                ConnectionUsage = ConnectionUsage.Actions & ConnectionUsage.Webhooks,
+                ConnectionProperties = new List<ConnectionProperty>
+                {
+                    new("spaceId")
+                }
+            },
         };
 
         public IEnumerable<AuthenticationCredentialsProvider> CreateAuthorizationCredentialsProviders(
@@ -27,6 +37,12 @@ namespace Apps.Contentful.Connections
                 AuthenticationCredentialsRequestLocation.Header,
                  "Authorization",
                  accessToken.Value
+            );
+            var spaceId = values.First(v => v.Key == "spaceId");
+            yield return new AuthenticationCredentialsProvider(
+                AuthenticationCredentialsRequestLocation.Header,
+                spaceId.Key,
+                spaceId.Value
             );
         }
     }

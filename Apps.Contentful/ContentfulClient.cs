@@ -6,11 +6,11 @@ namespace Apps.Contentful
 {
     public class ContentfulClient : ContentfulManagementClient
     {
-        public ContentfulClient(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
-            string spaceId) : base(new HttpClient(), new ContentfulOptions
+        public ContentfulClient(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders) 
+            : base(new HttpClient(), new ContentfulOptions
         {
             ManagementApiKey = authenticationCredentialsProviders.First(p => p.KeyName == "Authorization").Value,
-            SpaceId = spaceId
+            SpaceId = authenticationCredentialsProviders.First(p => p.KeyName == "spaceId").Value
         })
         {
         }

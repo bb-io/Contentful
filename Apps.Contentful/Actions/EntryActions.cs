@@ -26,12 +26,11 @@ public class EntryActions : BaseInvocable
                                                                "entry. Field can be plain text or rich text. In " +
                                                                "both cases plain text is returned.")]
     public async Task<GetTextContentResponse> GetFieldTextContent(
-        [ActionParameter] SpaceIdentifier spaceIdentifier,
         [ActionParameter] EntryIdentifier entryIdentifier,
         [ActionParameter] FieldIdentifier fieldIdentifier,
         [ActionParameter] LocaleIdentifier localeIdentifier)
     {
-        var client = new ContentfulClient(Creds, spaceIdentifier.Id);
+        var client = new ContentfulClient(Creds);
 
         var entry = await client.GetEntry(entryIdentifier.Id);
         var field = ((JObject)entry.Fields)[fieldIdentifier.Id][localeIdentifier.Locale];
@@ -61,13 +60,12 @@ public class EntryActions : BaseInvocable
 
     [Action("Set entry text content", Description = "Set entry text content by field id")]
     public async Task SetTextContent(
-        [ActionParameter] SpaceIdentifier spaceIdentifier,
         [ActionParameter] EntryIdentifier entryIdentifier,
         [ActionParameter] FieldIdentifier fieldIdentifier,
         [ActionParameter] LocaleIdentifier localeIdentifier,
         [ActionParameter] [Display("Text")] string text)
     {
-        var client = new ContentfulClient(Creds, spaceIdentifier.Id);
+        var client = new ContentfulClient(Creds);
         var entry = await client.GetEntry(entryIdentifier.Id);
         var fields = (JObject)entry.Fields;
         fields[fieldIdentifier.Id] = JObject.Parse(JsonConvert.SerializeObject(new Dictionary<string, string>
@@ -78,12 +76,11 @@ public class EntryActions : BaseInvocable
 
     [Action("Get entry number content", Description = "Get entry number content by field id")]
     public async Task<GetNumberContentResponse> GetNumberContent(
-        [ActionParameter] SpaceIdentifier spaceIdentifier,
         [ActionParameter] EntryIdentifier entryIdentifier,
         [ActionParameter] FieldIdentifier fieldIdentifier,
         [ActionParameter] LocaleIdentifier localeIdentifier)
     {
-        var client = new ContentfulClient(Creds, spaceIdentifier.Id);
+        var client = new ContentfulClient(Creds);
         var entry = await client.GetEntry(entryIdentifier.Id);
         var fields = (JObject)entry.Fields;
         return new GetNumberContentResponse
@@ -94,13 +91,12 @@ public class EntryActions : BaseInvocable
 
     [Action("Set entry number content", Description = "Set entry number content by field id")]
     public async Task SetNumberContent(
-        [ActionParameter] SpaceIdentifier spaceIdentifier,
         [ActionParameter] EntryIdentifier entryIdentifier,
         [ActionParameter] FieldIdentifier fieldIdentifier,
         [ActionParameter] LocaleIdentifier localeIdentifier,
         [ActionParameter] [Display("Number")] int number)
     {
-        var client = new ContentfulClient(Creds, spaceIdentifier.Id);
+        var client = new ContentfulClient(Creds);
         var entry = await client.GetEntry(entryIdentifier.Id);
         var fields = (JObject)entry.Fields;
         fields[fieldIdentifier.Id] = JObject.Parse(JsonConvert.SerializeObject(new Dictionary<string, int>
@@ -111,12 +107,11 @@ public class EntryActions : BaseInvocable
 
     [Action("Get entry boolean content", Description = "Get entry boolean content by field id")]
     public async Task<GetBoolContentResponse> GetBoolContent(
-        [ActionParameter] SpaceIdentifier spaceIdentifier,
         [ActionParameter] EntryIdentifier entryIdentifier,
         [ActionParameter] FieldIdentifier fieldIdentifier,
         [ActionParameter] LocaleIdentifier localeIdentifier)
     {
-        var client = new ContentfulClient(Creds, spaceIdentifier.Id);
+        var client = new ContentfulClient(Creds);
         var entry = await client.GetEntry(entryIdentifier.Id);
         var fields = (JObject)entry.Fields;
         return new GetBoolContentResponse
@@ -127,13 +122,12 @@ public class EntryActions : BaseInvocable
 
     [Action("Set entry boolean content", Description = "Set entry boolean content by field id")]
     public async Task SetBoolContent(
-        [ActionParameter] SpaceIdentifier spaceIdentifier,
         [ActionParameter] EntryIdentifier entryIdentifier,
         [ActionParameter] FieldIdentifier fieldIdentifier,
         [ActionParameter] LocaleIdentifier localeIdentifier,
         [ActionParameter] [Display("Boolean")] bool boolean)
     {
-        var client = new ContentfulClient(Creds, spaceIdentifier.Id);
+        var client = new ContentfulClient(Creds);
         var entry = await client.GetEntry(entryIdentifier.Id);
         var fields = (JObject)entry.Fields;
         fields[fieldIdentifier.Id] = JObject.Parse(JsonConvert.SerializeObject(new Dictionary<string, bool>
@@ -143,16 +137,15 @@ public class EntryActions : BaseInvocable
     }
 
     [Action("Get entry media content", Description = "Get entry media content by field id")]
-    public async Task<MediaIdentifier> GetMediaContent(
-        [ActionParameter] SpaceIdentifier spaceIdentifier,
+    public async Task<AssetIdentifier> GetMediaContent(
         [ActionParameter] EntryIdentifier entryIdentifier,
         [ActionParameter] FieldIdentifier fieldIdentifier,
         [ActionParameter] LocaleIdentifier localeIdentifier)
     {
-        var client = new ContentfulClient(Creds, spaceIdentifier.Id);
+        var client = new ContentfulClient(Creds);
         var entry = await client.GetEntry(entryIdentifier.Id);
         var fields = (JObject)entry.Fields;
-        return new MediaIdentifier
+        return new AssetIdentifier
         {
             Id = fields[fieldIdentifier.Id][localeIdentifier.Locale]["sys"]["id"].ToString()
         };
@@ -160,36 +153,32 @@ public class EntryActions : BaseInvocable
 
     [Action("Set entry media content", Description = "Set entry media content by field id")]
     public async Task SetMediaContent(
-        [ActionParameter] SpaceIdentifier spaceIdentifier,
         [ActionParameter] EntryIdentifier entryIdentifier,
         [ActionParameter] FieldIdentifier fieldIdentifier,
         [ActionParameter] LocaleIdentifier localeIdentifier,
-        [ActionParameter] MediaIdentifier mediaIdentifier)
+        [ActionParameter] AssetIdentifier assetIdentifier)
     {
-        var client = new ContentfulClient(Creds, spaceIdentifier.Id);
+        var client = new ContentfulClient(Creds);
         var payload = new
         {
             sys = new
             {
                 type = "Link",
                 linkType = "Asset",
-                id = mediaIdentifier.Id
+                id = assetIdentifier.Id
             }
         };
         var entry = await client.GetEntry(entryIdentifier.Id);
         var fields = (JObject)entry.Fields;
         fields[fieldIdentifier.Id] = JObject.Parse(JsonConvert.SerializeObject(new Dictionary<string, object>
             { { localeIdentifier.Locale, payload } }));
-        await client.CreateOrUpdateEntry(entry,
-            version: client.GetEntry(entryIdentifier.Id).Result.SystemProperties.Version);
+        await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version);
     }
 
     [Action("Add new entry", Description = "Add new entry by content model id")]
-    public async Task<EntryIdentifier> AddNewEntry(
-        [ActionParameter] SpaceIdentifier spaceIdentifier,
-        [ActionParameter] ContentModelIdentifier contentModelIdentifier)
+    public async Task<EntryIdentifier> AddNewEntry([ActionParameter] ContentModelIdentifier contentModelIdentifier)
     {
-        var client = new ContentfulClient(Creds, spaceIdentifier.Id);
+        var client = new ContentfulClient(Creds);
         var result = await client.CreateEntry(new Entry<dynamic>(), contentModelIdentifier.Id);
         return new EntryIdentifier
         {
@@ -198,31 +187,25 @@ public class EntryActions : BaseInvocable
     }
 
     [Action("Delete entry", Description = "Delete entry by id")]
-    public async Task DeleteEntry(
-        [ActionParameter] SpaceIdentifier spaceIdentifier,
-        [ActionParameter] EntryIdentifier entryIdentifier)
+    public async Task DeleteEntry([ActionParameter] EntryIdentifier entryIdentifier)
     {
-        var client = new ContentfulClient(Creds, spaceIdentifier.Id);
+        var client = new ContentfulClient(Creds);
         var entry = await client.GetEntry(entryIdentifier.Id);
         await client.DeleteEntry(entryIdentifier.Id, version: (int)entry.SystemProperties.Version);
     }
 
     [Action("Publish entry", Description = "Publish entry by id")]
-    public async Task PublishEntry(
-        [ActionParameter] SpaceIdentifier spaceIdentifier,
-        [ActionParameter] EntryIdentifier entryIdentifier)
+    public async Task PublishEntry([ActionParameter] EntryIdentifier entryIdentifier)
     {
-        var client = new ContentfulClient(Creds, spaceIdentifier.Id);
+        var client = new ContentfulClient(Creds);
         var entry = await client.GetEntry(entryIdentifier.Id);
         await client.PublishEntry(entryIdentifier.Id, version: (int)entry.SystemProperties.Version);
     }
 
     [Action("Unpublish entry", Description = "Unpublish entry by id")]
-    public async Task UnpublishEntry(
-        [ActionParameter] SpaceIdentifier spaceIdentifier,
-        [ActionParameter] EntryIdentifier entryIdentifier)
+    public async Task UnpublishEntry([ActionParameter] EntryIdentifier entryIdentifier)
     {
-        var client = new ContentfulClient(Creds, spaceIdentifier.Id);
+        var client = new ContentfulClient(Creds);
         var entry = await client.GetEntry(entryIdentifier.Id);
         await client.UnpublishEntry(entryIdentifier.Id, version: (int)entry.SystemProperties.Version);
     }

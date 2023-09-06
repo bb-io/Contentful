@@ -1,6 +1,10 @@
-﻿namespace Apps.Contentful.Models.Identifiers;
+﻿using Apps.Contentful.DataSourceHandlers;
+using Blackbird.Applications.Sdk.Common.Dynamic;
+
+namespace Apps.Contentful.Models.Identifiers;
 
 public class LocaleIdentifier
 {
+    [DataSource(typeof(LocaleDataSourceHandler))]
     public string Locale { get; set; }
 }

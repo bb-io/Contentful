@@ -25,10 +25,9 @@ public class AssetActions : BaseInvocable
     [Action("Get asset", Description = "Get asset by Id")]
     public async Task<GetAssetResponse> GetAssetById(
         [ActionParameter] AssetIdentifier assetIdentifier,
-        [ActionParameter] SpaceIdentifier spaceIdentifier,
         [ActionParameter] LocaleIdentifier localeIdentifier)
     {
-        var client = new ContentfulClient(Creds, spaceIdentifier.Id);
+        var client = new ContentfulClient(Creds);
         var asset = await client.GetAsset(assetIdentifier.Id);
         var fileData = asset.Files?[localeIdentifier.Locale];
         var fileContent = await DownloadFileByUrl(fileData);
@@ -43,11 +42,10 @@ public class AssetActions : BaseInvocable
 
     [Action("Create and upload asset", Description = "Create and upload asset")]
     public async Task<AssetIdentifier> CreateAsset(
-        [ActionParameter] SpaceIdentifier spaceIdentifier,
         [ActionParameter] LocaleIdentifier localeIdentifier,
         [ActionParameter] CreateAssetRequest input)
     {
-        var client = new ContentfulClient(Creds, spaceIdentifier.Id);
+        var client = new ContentfulClient(Creds);
         var result = client.UploadFileAndCreateAsset(new ManagementAsset
         {
             SystemProperties = new SystemProperties { Id = Guid.NewGuid().ToString() },
@@ -71,11 +69,10 @@ public class AssetActions : BaseInvocable
     [Action("Update asset file", Description = "Update asset file")]
     public async Task UpdateAssetFile(
         [ActionParameter] AssetIdentifier assetIdentifier,
-        [ActionParameter] SpaceIdentifier spaceIdentifier,
         [ActionParameter] LocaleIdentifier localeIdentifier,
         [ActionParameter] UpdateAssetFileRequest input)
     {
-        var client = new ContentfulClient(Creds, spaceIdentifier.Id);
+        var client = new ContentfulClient(Creds);
         var oldAsset = await client.GetAsset(assetIdentifier.Id);
         var uploadReference = await client.UploadFile(input.File.Bytes);
         uploadReference.SystemProperties.CreatedAt = null;
@@ -102,21 +99,17 @@ public class AssetActions : BaseInvocable
     }
 
     [Action("Publish asset", Description = "Publish asset by id")]
-    public async Task PublishAsset(
-        [ActionParameter] AssetIdentifier assetIdentifier,
-        [ActionParameter] SpaceIdentifier spaceIdentifier)
+    public async Task PublishAsset([ActionParameter] AssetIdentifier assetIdentifier)
     {
-        var client = new ContentfulClient(Creds, spaceIdentifier.Id);
+        var client = new ContentfulClient(Creds);
         var asset = await client.GetAsset(assetIdentifier.Id);
         await client.PublishAsset(assetIdentifier.Id, (int)asset.SystemProperties.Version);
     }
 
     [Action("Unpublish asset", Description = "Unpublish asset by id")]
-    public async Task UnpublishAsset(
-        [ActionParameter] AssetIdentifier assetIdentifier,
-        [ActionParameter] SpaceIdentifier spaceIdentifier)
+    public async Task UnpublishAsset([ActionParameter] AssetIdentifier assetIdentifier)
     {
-        var client = new ContentfulClient(Creds, spaceIdentifier.Id);
+        var client = new ContentfulClient(Creds);
         var asset = await client.GetAsset(assetIdentifier.Id);
         await client.UnpublishAsset(assetIdentifier.Id, (int)asset.SystemProperties.Version);
     }
@@ -124,10 +117,9 @@ public class AssetActions : BaseInvocable
     [Action("Is asset locale present", Description = "Is asset locale present")]
     public async Task<IsAssetLocalePresentResponse> IsAssetLocalePresent(
         [ActionParameter] AssetIdentifier assetIdentifier,
-        [ActionParameter] SpaceIdentifier spaceIdentifier,
         [ActionParameter] LocaleIdentifier localeIdentifier)
     {
-        var client = new ContentfulClient(Creds, spaceIdentifier.Id);
+        var client = new ContentfulClient(Creds);
         var asset = await client.GetAsset(assetIdentifier.Id);
         if (asset.Files.TryGetValue(localeIdentifier.Locale, out var file))
             return new IsAssetLocalePresentResponse { IsAssetLocalePresent = 1 };
