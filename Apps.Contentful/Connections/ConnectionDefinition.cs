@@ -5,21 +5,22 @@ namespace Apps.Contentful.Connections
 {
     public class ConnectionDefinition : IConnectionDefinition
     {
-        public IEnumerable<ConnectionPropertyGroup> ConnectionPropertyGroups => new List<ConnectionPropertyGroup>()
+        public IEnumerable<ConnectionPropertyGroup> ConnectionPropertyGroups => new List<ConnectionPropertyGroup>
         {
-            new ConnectionPropertyGroup
+            new()
             {
                 Name = "OAuth2",
                 AuthenticationType = ConnectionAuthenticationType.OAuth2,
                 ConnectionUsage = ConnectionUsage.Actions,
-                ConnectionProperties = new List<ConnectionProperty>()
+                ConnectionProperties = new List<ConnectionProperty>
                 {
-                    new ConnectionProperty("client_id")
+                    new("client_id")
                 }
             }
         };
 
-        public IEnumerable<AuthenticationCredentialsProvider> CreateAuthorizationCredentialsProviders(Dictionary<string, string> values)
+        public IEnumerable<AuthenticationCredentialsProvider> CreateAuthorizationCredentialsProviders(
+            Dictionary<string, string> values)
         {
             var accessToken = values.First(v => v.Key == "access_token");
             yield return new AuthenticationCredentialsProvider(

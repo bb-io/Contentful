@@ -2,8 +2,6 @@
 {
     public class GetTextContentResponse
     {
-
         public string TextContent { get; set; }
-
     }
 }

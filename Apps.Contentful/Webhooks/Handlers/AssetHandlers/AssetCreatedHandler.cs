@@ -1,10 +1,11 @@
-﻿using Blackbird.Applications.Sdk.Common.Webhooks;
+﻿using Apps.Contentful.Models.Identifiers;
+using Blackbird.Applications.Sdk.Common.Webhooks;
 
-namespace Apps.Contentful.Webhooks.Handlers.EntryHandlers
+namespace Apps.Contentful.Webhooks.Handlers.AssetHandlers
 {
     public class AssetCreatedHandler : BaseWebhookHandler
     {
-        public AssetCreatedHandler([WebhookParameter] string spaceId) : base("Asset", "create", spaceId)
+        public AssetCreatedHandler([WebhookParameter] SpaceIdentifier space) : base("Asset", "create", space)
         {
         }
     }

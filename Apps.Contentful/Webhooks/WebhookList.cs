@@ -1,4 +1,7 @@
-﻿using Apps.Contentful.Models.Responses;
+﻿using System.Net;
+using Apps.Contentful.Models.Identifiers;
+using Apps.Contentful.Models.Responses;
+using Apps.Contentful.Webhooks.Handlers.AssetHandlers;
 using Apps.Contentful.Webhooks.Handlers.EntryHandlers;
 using Apps.Contentful.Webhooks.Payload;
 using Blackbird.Applications.Sdk.Common.Webhooks;
@@ -13,38 +16,32 @@ namespace Apps.Contentful.Webhooks
         #region EntryWebhooks
 
         [Webhook("On entry created", typeof(EntryCreatedHandler), Description = "On entry created")]
-        public async Task<WebhookResponse<AddNewEntryResponse>> EntryCreation(WebhookRequest webhookRequest)
+        public async Task<WebhookResponse<EntryIdentifier>> EntryCreated(WebhookRequest webhookRequest)
         {
-            var data = JsonConvert.DeserializeObject<GenericEntryPayload>(webhookRequest.Body.ToString());
-            if(data is null)
+            var data = DeserializePayload<GenericEntryPayload>(webhookRequest);
+            return new WebhookResponse<EntryIdentifier>
             {
-                throw new InvalidCastException(nameof(webhookRequest.Body));
-            }
-            return new WebhookResponse<AddNewEntryResponse>
-            {
-                HttpResponseMessage = null,
-                Result = new AddNewEntryResponse() { EntryId = data.Sys.Id }
+                HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
+                Result = new EntryIdentifier { Id = data.Sys.Id }
             };
         }
 
         [Webhook("On entry saved", typeof(EntrySavedHandler), Description = "On entry saved")]
         public async Task<WebhookResponse<FieldsChangedResponse>> EntrySaved(WebhookRequest webhookRequest)
         {
-            var data = JsonConvert.DeserializeObject<GenericEntryPayload>(webhookRequest.Body.ToString());
-            if (data is null)
-            {
-                throw new InvalidCastException(nameof(webhookRequest.Body));
-            }
-            var changes = new FieldsChangedResponse()
+            var data = DeserializePayload<GenericEntryPayload>(webhookRequest);
+           
+            var changes = new FieldsChangedResponse
             {
                 EntryId = data.Sys.Id,
                 Fields = new List<FieldObject>()
             };
+            
             foreach (var propertyField in data.Fields.Properties())
             {
                 foreach (var propertyLocale in (JObject)propertyField.Value)
                 {
-                    changes.Fields.Add(new FieldObject()
+                    changes.Fields.Add(new FieldObject
                     {
                         FieldId = propertyField.Name,
                         Locale = propertyLocale.Key,
@@ -52,31 +49,30 @@ namespace Apps.Contentful.Webhooks
                     });
                 }
             }
+            
             return new WebhookResponse<FieldsChangedResponse>
             {
-                HttpResponseMessage = null,
+                HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
                 Result = changes
             };
         }
 
-        [Webhook("On entry auto saved", typeof(EntryAutosavedHandler), Description = "On entry auto saved")]
+        [Webhook("On entry auto saved", typeof(EntryAutoSavedHandler), Description = "On entry auto saved")]
         public async Task<WebhookResponse<FieldsChangedResponse>> EntryAutoSaved(WebhookRequest webhookRequest)
         {
-            var data = JsonConvert.DeserializeObject<GenericEntryPayload>(webhookRequest.Body.ToString());
-            if (data is null)
-            {
-                throw new InvalidCastException(nameof(webhookRequest.Body));
-            }
-            var changes = new FieldsChangedResponse() 
+            var data = DeserializePayload<GenericEntryPayload>(webhookRequest);
+
+            var changes = new FieldsChangedResponse
             { 
                 EntryId = data.Sys.Id,
                 Fields = new List<FieldObject>()
             };
+            
             foreach (var propertyField in data.Fields.Properties())
             {
                 foreach (var propertyLocale in (JObject) propertyField.Value)
                 {
-                    changes.Fields.Add(new FieldObject()
+                    changes.Fields.Add(new FieldObject
                     {
                         FieldId = propertyField.Name,
                         Locale = propertyLocale.Key,
@@ -84,85 +80,66 @@ namespace Apps.Contentful.Webhooks
                     });
                 }
             }
+            
             return new WebhookResponse<FieldsChangedResponse>
             {
-                HttpResponseMessage = null,
+                HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
                 Result = changes
             };
         }
 
         [Webhook("On entry published", typeof(EntryPublishedHandler), Description = "On entry published")]
-        public async Task<WebhookResponse<AddNewEntryResponse>> EntryPublished(WebhookRequest webhookRequest)
+        public async Task<WebhookResponse<EntryIdentifier>> EntryPublished(WebhookRequest webhookRequest)
         {
-            var data = JsonConvert.DeserializeObject<GenericEntryPayload>(webhookRequest.Body.ToString());
-            if (data is null)
+            var data = DeserializePayload<GenericEntryPayload>(webhookRequest);
+            return new WebhookResponse<EntryIdentifier>
             {
-                throw new InvalidCastException(nameof(webhookRequest.Body));
-            }
-            return new WebhookResponse<AddNewEntryResponse>
-            {
-                HttpResponseMessage = null,
-                Result = new AddNewEntryResponse() { EntryId = data.Sys.Id }
+                HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
+                Result = new EntryIdentifier { Id = data.Sys.Id }
             };
         }
 
         [Webhook("On entry unpublished", typeof(EntryUnpublishedHandler), Description = "On entry unpublished")]
-        public async Task<WebhookResponse<AddNewEntryResponse>> EntryUnpublished(WebhookRequest webhookRequest)
+        public async Task<WebhookResponse<EntryIdentifier>> EntryUnpublished(WebhookRequest webhookRequest)
         {
-            var data = JsonConvert.DeserializeObject<GenericEntryPayload>(webhookRequest.Body.ToString());
-            if (data is null)
+            var data = DeserializePayload<GenericEntryPayload>(webhookRequest);
+            return new WebhookResponse<EntryIdentifier>
             {
-                throw new InvalidCastException(nameof(webhookRequest.Body));
-            }
-            return new WebhookResponse<AddNewEntryResponse>
-            {
-                HttpResponseMessage = null,
-                Result = new AddNewEntryResponse() { EntryId = data.Sys.Id }
+                HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
+                Result = new EntryIdentifier { Id = data.Sys.Id }
             };
         }
 
-        [Webhook("On entry archieved", typeof(EntryArchievedHandler), Description = "On entry archieved")]
-        public async Task<WebhookResponse<AddNewEntryResponse>> EntryArchieved(WebhookRequest webhookRequest)
+        [Webhook("On entry archived", typeof(EntryArchivedHandler), Description = "On entry archived")]
+        public async Task<WebhookResponse<EntryIdentifier>> EntryArchived(WebhookRequest webhookRequest)
         {
-            var data = JsonConvert.DeserializeObject<GenericEntryPayload>(webhookRequest.Body.ToString());
-            if (data is null)
+            var data = DeserializePayload<GenericEntryPayload>(webhookRequest);
+            return new WebhookResponse<EntryIdentifier>
             {
-                throw new InvalidCastException(nameof(webhookRequest.Body));
-            }
-            return new WebhookResponse<AddNewEntryResponse>
-            {
-                HttpResponseMessage = null,
-                Result = new AddNewEntryResponse() { EntryId = data.Sys.Id }
+                HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
+                Result = new EntryIdentifier { Id = data.Sys.Id }
             };
         }
 
-        [Webhook("On entry unarchieved", typeof(EntryUnarchievedHandler), Description = "On entry unarchieved")]
-        public async Task<WebhookResponse<AddNewEntryResponse>> EntryUnarchieved(WebhookRequest webhookRequest)
+        [Webhook("On entry unarchived", typeof(EntryUnarchivedHandler), Description = "On entry unarchived")]
+        public async Task<WebhookResponse<EntryIdentifier>> EntryUnarchived(WebhookRequest webhookRequest)
         {
-            var data = JsonConvert.DeserializeObject<GenericEntryPayload>(webhookRequest.Body.ToString());
-            if (data is null)
+            var data = DeserializePayload<GenericEntryPayload>(webhookRequest);
+            return new WebhookResponse<EntryIdentifier>
             {
-                throw new InvalidCastException(nameof(webhookRequest.Body));
-            }
-            return new WebhookResponse<AddNewEntryResponse>
-            {
-                HttpResponseMessage = null,
-                Result = new AddNewEntryResponse() { EntryId = data.Sys.Id }
+                HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
+                Result = new EntryIdentifier { Id = data.Sys.Id }
             };
         }
 
         [Webhook("On entry deleted", typeof(EntryDeletedHandler), Description = "On entry deleted")]
-        public async Task<WebhookResponse<AddNewEntryResponse>> EntryDeleted(WebhookRequest webhookRequest)
+        public async Task<WebhookResponse<EntryIdentifier>> EntryDeleted(WebhookRequest webhookRequest)
         {
-            var data = JsonConvert.DeserializeObject<GenericEntryPayload>(webhookRequest.Body.ToString());
-            if (data is null)
+            var data = DeserializePayload<GenericEntryPayload>(webhookRequest);
+            return new WebhookResponse<EntryIdentifier>
             {
-                throw new InvalidCastException(nameof(webhookRequest.Body));
-            }
-            return new WebhookResponse<AddNewEntryResponse>
-            {
-                HttpResponseMessage = null,
-                Result = new AddNewEntryResponse() { EntryId = data.Sys.Id }
+                HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
+                Result = new EntryIdentifier { Id = data.Sys.Id }
             };
         }
         #endregion
@@ -170,146 +147,130 @@ namespace Apps.Contentful.Webhooks
         #region AssetWebhooks
 
         [Webhook("On asset created", typeof(AssetCreatedHandler), Description = "On asset created")]
-        public async Task<WebhookResponse<CreateAssetResponse>> AssetCreation(WebhookRequest webhookRequest)
+        public async Task<WebhookResponse<AssetIdentifier>> AssetCreated(WebhookRequest webhookRequest)
         {
-            var data = JsonConvert.DeserializeObject<AssetPayload>(webhookRequest.Body.ToString());
-            if (data is null)
+            var data = DeserializePayload<AssetPayload>(webhookRequest);
+            return new WebhookResponse<AssetIdentifier>
             {
-                throw new InvalidCastException(nameof(webhookRequest.Body));
-            }
-            return new WebhookResponse<CreateAssetResponse>
-            {
-                HttpResponseMessage = null,
-                Result = new CreateAssetResponse() { AssetId = data.Sys.Id }
+                HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
+                Result = new AssetIdentifier { Id = data.Sys.Id }
             };
         }
 
         [Webhook("On asset saved", typeof(AssetSavedHandler), Description = "On asset saved")]
         public async Task<WebhookResponse<AssetChangedResponse>> AssetSaved(WebhookRequest webhookRequest)
         {
-            var data = JsonConvert.DeserializeObject<AssetPayload>(webhookRequest.Body.ToString());
-            if (data is null)
-            {
-                throw new InvalidCastException(nameof(webhookRequest.Body));
-            }
-            var changes = new AssetChangedResponse()
+            var data = DeserializePayload<AssetPayload>(webhookRequest);
+            
+            var changes = new AssetChangedResponse
             {
                 AssetId = data.Sys.Id,
                 FilesInfo = new List<AssetFileInfo>()
             };
+            
             foreach (var propertyLocale in data.Fields.File.Properties())
             {
                 var change = propertyLocale.Value.ToObject<AssetFileInfo>();
                 change.Locale = propertyLocale.Name;
                 changes.FilesInfo.Add(change);
             }
+            
             return new WebhookResponse<AssetChangedResponse>
             {
-                HttpResponseMessage = null,
+                HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
                 Result = changes
             };
         }
 
-        [Webhook("On asset auto saved", typeof(AssetAutosavedHandler), Description = "On asset auto saved")]
-        public async Task<WebhookResponse<AssetChangedResponse>> AssetAutosaved(WebhookRequest webhookRequest)
+        [Webhook("On asset auto saved", typeof(AssetAutoSavedHandler), Description = "On asset auto saved")]
+        public async Task<WebhookResponse<AssetChangedResponse>> AssetAutoSaved(WebhookRequest webhookRequest)
         {
-            var data = JsonConvert.DeserializeObject<AssetPayload>(webhookRequest.Body.ToString());
-            if (data is null)
-            {
-                throw new InvalidCastException(nameof(webhookRequest.Body));
-            }
-            var changes = new AssetChangedResponse()
+            var data = DeserializePayload<AssetPayload>(webhookRequest);
+            
+            var changes = new AssetChangedResponse
             {
                 AssetId = data.Sys.Id,
                 FilesInfo = new List<AssetFileInfo>()
             };
+            
             foreach (var propertyLocale in data.Fields.File.Properties())
             {
                 var change = propertyLocale.Value.ToObject<AssetFileInfo>();
                 change.Locale = propertyLocale.Name;
                 changes.FilesInfo.Add(change);
             }
+            
             return new WebhookResponse<AssetChangedResponse>
             {
-                HttpResponseMessage = null,
+                HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
                 Result = changes
             };
         }
 
         [Webhook("On asset published", typeof(AssetPublishedHandler), Description = "On asset published")]
-        public async Task<WebhookResponse<CreateAssetResponse>> AssetPublished(WebhookRequest webhookRequest)
+        public async Task<WebhookResponse<AssetIdentifier>> AssetPublished(WebhookRequest webhookRequest)
         {
-            var data = JsonConvert.DeserializeObject<AssetPayload>(webhookRequest.Body.ToString());
-            if (data is null)
+            var data = DeserializePayload<AssetPayload>(webhookRequest);
+            return new WebhookResponse<AssetIdentifier>
             {
-                throw new InvalidCastException(nameof(webhookRequest.Body));
-            }
-            return new WebhookResponse<CreateAssetResponse>
-            {
-                HttpResponseMessage = null,
-                Result = new CreateAssetResponse() { AssetId = data.Sys.Id }
+                HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
+                Result = new AssetIdentifier { Id = data.Sys.Id }
             };
         }
 
         [Webhook("On asset unpublished", typeof(AssetUnpublishedHandler), Description = "On asset unpublished")]
-        public async Task<WebhookResponse<CreateAssetResponse>> AssetUnpublished(WebhookRequest webhookRequest)
+        public async Task<WebhookResponse<AssetIdentifier>> AssetUnpublished(WebhookRequest webhookRequest)
         {
-            var data = JsonConvert.DeserializeObject<AssetPayload>(webhookRequest.Body.ToString());
-            if (data is null)
+            var data = DeserializePayload<AssetPayload>(webhookRequest);
+            return new WebhookResponse<AssetIdentifier>
             {
-                throw new InvalidCastException(nameof(webhookRequest.Body));
-            }
-            return new WebhookResponse<CreateAssetResponse>
-            {
-                HttpResponseMessage = null,
-                Result = new CreateAssetResponse() { AssetId = data.Sys.Id }
+                HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
+                Result = new AssetIdentifier { Id = data.Sys.Id }
             };
         }
 
-        [Webhook("On asset archieved", typeof(AssetArchievedHandler), Description = "On asset archieved")]
-        public async Task<WebhookResponse<CreateAssetResponse>> AssetArchieved(WebhookRequest webhookRequest)
+        [Webhook("On asset archived", typeof(AssetArchivedHandler), Description = "On asset archived")]
+        public async Task<WebhookResponse<AssetIdentifier>> AssetArchived(WebhookRequest webhookRequest)
         {
-            var data = JsonConvert.DeserializeObject<AssetPayload>(webhookRequest.Body.ToString());
-            if (data is null)
+            var data = DeserializePayload<AssetPayload>(webhookRequest);
+            return new WebhookResponse<AssetIdentifier>
             {
-                throw new InvalidCastException(nameof(webhookRequest.Body));
-            }
-            return new WebhookResponse<CreateAssetResponse>
-            {
-                HttpResponseMessage = null,
-                Result = new CreateAssetResponse() { AssetId = data.Sys.Id }
+                HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
+                Result = new AssetIdentifier { Id = data.Sys.Id }
             };
         }
 
-        [Webhook("On asset unarchieved", typeof(AssetUnarchievedHandler), Description = "On asset unarchieved")]
-        public async Task<WebhookResponse<CreateAssetResponse>> AssetUnarchieved(WebhookRequest webhookRequest)
+        [Webhook("On asset unarchived", typeof(AssetUnarchivedHandler), Description = "On asset unarchived")]
+        public async Task<WebhookResponse<AssetIdentifier>> AssetUnarchived(WebhookRequest webhookRequest)
         {
-            var data = JsonConvert.DeserializeObject<AssetPayload>(webhookRequest.Body.ToString());
-            if (data is null)
+            var data = DeserializePayload<AssetPayload>(webhookRequest);
+            return new WebhookResponse<AssetIdentifier>
             {
-                throw new InvalidCastException(nameof(webhookRequest.Body));
-            }
-            return new WebhookResponse<CreateAssetResponse>
-            {
-                HttpResponseMessage = null,
-                Result = new CreateAssetResponse() { AssetId = data.Sys.Id }
+                HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
+                Result = new AssetIdentifier { Id = data.Sys.Id }
             };
         }
 
         [Webhook("On asset deleted", typeof(AssetDeletedHandler), Description = "On asset deleted")]
-        public async Task<WebhookResponse<CreateAssetResponse>> AssetDeleted(WebhookRequest webhookRequest)
+        public async Task<WebhookResponse<AssetIdentifier>> AssetDeleted(WebhookRequest webhookRequest)
         {
-            var data = JsonConvert.DeserializeObject<AssetPayload>(webhookRequest.Body.ToString());
-            if (data is null)
+            var data = DeserializePayload<AssetPayload>(webhookRequest);
+            return new WebhookResponse<AssetIdentifier>
             {
-                throw new InvalidCastException(nameof(webhookRequest.Body));
-            }
-            return new WebhookResponse<CreateAssetResponse>
-            {
-                HttpResponseMessage = null,
-                Result = new CreateAssetResponse() { AssetId = data.Sys.Id }
+                HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
+                Result = new AssetIdentifier { Id = data.Sys.Id }
             };
         }
         #endregion
+
+        private static T DeserializePayload<T>(WebhookRequest webhookRequest)
+        {
+            var payload = JsonConvert.DeserializeObject<T>(webhookRequest.Body.ToString());
+            
+            if (payload is null)
+                throw new InvalidCastException(nameof(webhookRequest.Body));
+
+            return payload;
+        }
     }
 }

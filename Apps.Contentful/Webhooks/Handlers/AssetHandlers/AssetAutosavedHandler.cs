@@ -1,10 +1,11 @@
-﻿using Blackbird.Applications.Sdk.Common.Webhooks;
+﻿using Apps.Contentful.Models.Identifiers;
+using Blackbird.Applications.Sdk.Common.Webhooks;
 
-namespace Apps.Contentful.Webhooks.Handlers.EntryHandlers
+namespace Apps.Contentful.Webhooks.Handlers.AssetHandlers
 {
-    public class AssetAutosavedHandler : BaseWebhookHandler
+    public class AssetAutoSavedHandler : BaseWebhookHandler
     {
-        public AssetAutosavedHandler([WebhookParameter] string spaceId) : base("Asset", "auto_save", spaceId)
+        public AssetAutoSavedHandler([WebhookParameter] SpaceIdentifier space) : base("Asset", "auto_save", space)
         {
         }
     }

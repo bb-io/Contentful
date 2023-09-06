@@ -1,10 +1,11 @@
-﻿using Blackbird.Applications.Sdk.Common.Webhooks;
+﻿using Apps.Contentful.Models.Identifiers;
+using Blackbird.Applications.Sdk.Common.Webhooks;
 
 namespace Apps.Contentful.Webhooks.Handlers.EntryHandlers
 {
-    public class EntryAutosavedHandler : BaseWebhookHandler
+    public class EntryAutoSavedHandler : BaseWebhookHandler
     {
-        public EntryAutosavedHandler([WebhookParameter] string spaceId) : base("Entry", "auto_save", spaceId)
+        public EntryAutoSavedHandler([WebhookParameter] SpaceIdentifier space) : base("Entry", "auto_save", space)
         {
         }
     }

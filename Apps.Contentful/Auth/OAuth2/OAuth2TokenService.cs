@@ -1,11 +1,9 @@
 ﻿using Blackbird.Applications.Sdk.Common.Authentication.OAuth2;
 
-namespace Apps.Contentful.Authorization.OAuth2
+namespace Apps.Contentful.Auth.OAuth2
 {
     public class OAuth2TokenService : IOAuth2TokenService
     {
-        private const string ExpiresAtKeyName = "expires_at";
-
         public bool IsRefreshToken(Dictionary<string, string> values)
         {
             return false;

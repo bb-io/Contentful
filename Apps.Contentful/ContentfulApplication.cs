@@ -1,4 +1,4 @@
-﻿using Apps.Contentful.Authorization.OAuth2;
+﻿using Apps.Contentful.Auth.OAuth2;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication.OAuth2;
 
@@ -6,19 +6,17 @@ namespace Apps.Contentful
 {
     public class ContentfulApplication : IApplication
     {
-        private string _name;
         private readonly Dictionary<Type, object> _typesInstances;
 
         public ContentfulApplication()
         {
-            _name = "Contentful";
             _typesInstances = CreateTypesInstances();
         }
 
         public string Name
         {
-            get => _name;
-            set => _name = value;
+            get => "Contentful";
+            set { }
         }
 
         public T GetInstance<T>()

@@ -1,10 +1,11 @@
-﻿using Blackbird.Applications.Sdk.Common.Webhooks;
+﻿using Apps.Contentful.Models.Identifiers;
+using Blackbird.Applications.Sdk.Common.Webhooks;
 
 namespace Apps.Contentful.Webhooks.Handlers.EntryHandlers
 {
-    public class EntryArchievedHandler : BaseWebhookHandler
+    public class EntryArchivedHandler : BaseWebhookHandler
     {
-        public EntryArchievedHandler([WebhookParameter] string spaceId) : base("Entry", "archive", spaceId)
+        public EntryArchivedHandler([WebhookParameter] SpaceIdentifier space) : base("Entry", "archive", space)
         {
         }
     }
