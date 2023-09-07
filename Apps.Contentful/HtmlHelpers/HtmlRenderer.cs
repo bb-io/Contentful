@@ -74,19 +74,19 @@ public class HtmlRenderer
             case "asset-hyperlink":
                 var assetId = jsonObject["data"]["target"]["sys"]["id"].ToString();
                 uri = $"https://app.contentful.com/spaces/{_spaceId}/assets/{assetId}";
-                return $"<a href=\"{uri}\">{ConvertContentToHtml(jsonObject["content"])}</a>";
+                return $"<a id=\"{nodeType}_{assetId}\" href=\"{uri}\">{ConvertContentToHtml(jsonObject["content"])}</a>";
             case "entry-hyperlink":
                 var entryId = jsonObject["data"]["target"]["sys"]["id"].ToString();
                 uri = $"https://app.contentful.com/spaces/{_spaceId}/entries/{entryId}";
-                return $"<a href=\"{uri}\">{ConvertContentToHtml(jsonObject["content"])}</a>";
+                return $"<a id=\"{nodeType}_{entryId}\" href=\"{uri}\">{ConvertContentToHtml(jsonObject["content"])}</a>";
             case "embedded-entry-block" or "embedded-entry-inline":
                 entryId = jsonObject["data"]["target"]["sys"]["id"].ToString();
                 uri = $"https://app.contentful.com/spaces/{_spaceId}/entries/{entryId}";
-                return $"<a href=\"{uri}\">Entry {entryId}</a>";
+                return $"<a id=\"{nodeType}_{entryId}\" href=\"{uri}\">Entry {entryId}</a>";
             case "embedded-asset-block":
                 assetId = jsonObject["data"]["target"]["sys"]["id"].ToString();
                 uri = $"https://app.contentful.com/spaces/{_spaceId}/assets/{assetId}";
-                return $"<a href=\"{uri}\">Asset {assetId}</a>";
+                return $"<a id=\"{nodeType}_{assetId}\" href=\"{uri}\">Asset {assetId}</a>";
             default:
                 return ConvertContentToHtml(jsonObject["content"]);
         }
