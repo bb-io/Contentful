@@ -8,5 +8,5 @@ public class AssetIdentifier
 {
     [Display("Asset")]
     [DataSource(typeof(AssetDataSourceHandler))]
-    public string Id { get; set; }
+    public string AssetId { get; set; }
 }

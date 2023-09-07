@@ -22,7 +22,7 @@ namespace Apps.Contentful.Webhooks
             return new WebhookResponse<EntryIdentifier>
             {
                 HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
-                Result = new EntryIdentifier { Id = data.Sys.Id }
+                Result = new EntryIdentifier { EntryId = data.Sys.Id }
             };
         }
 
@@ -95,7 +95,7 @@ namespace Apps.Contentful.Webhooks
             return new WebhookResponse<EntryIdentifier>
             {
                 HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
-                Result = new EntryIdentifier { Id = data.Sys.Id }
+                Result = new EntryIdentifier { EntryId = data.Sys.Id }
             };
         }
 
@@ -106,7 +106,7 @@ namespace Apps.Contentful.Webhooks
             return new WebhookResponse<EntryIdentifier>
             {
                 HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
-                Result = new EntryIdentifier { Id = data.Sys.Id }
+                Result = new EntryIdentifier { EntryId = data.Sys.Id }
             };
         }
 
@@ -117,7 +117,7 @@ namespace Apps.Contentful.Webhooks
             return new WebhookResponse<EntryIdentifier>
             {
                 HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
-                Result = new EntryIdentifier { Id = data.Sys.Id }
+                Result = new EntryIdentifier { EntryId = data.Sys.Id }
             };
         }
 
@@ -128,7 +128,7 @@ namespace Apps.Contentful.Webhooks
             return new WebhookResponse<EntryIdentifier>
             {
                 HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
-                Result = new EntryIdentifier { Id = data.Sys.Id }
+                Result = new EntryIdentifier { EntryId = data.Sys.Id }
             };
         }
 
@@ -139,7 +139,7 @@ namespace Apps.Contentful.Webhooks
             return new WebhookResponse<EntryIdentifier>
             {
                 HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
-                Result = new EntryIdentifier { Id = data.Sys.Id }
+                Result = new EntryIdentifier { EntryId = data.Sys.Id }
             };
         }
         #endregion
@@ -153,7 +153,7 @@ namespace Apps.Contentful.Webhooks
             return new WebhookResponse<AssetIdentifier>
             {
                 HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
-                Result = new AssetIdentifier { Id = data.Sys.Id }
+                Result = new AssetIdentifier { AssetId = data.Sys.Id }
             };
         }
 
@@ -214,7 +214,7 @@ namespace Apps.Contentful.Webhooks
             return new WebhookResponse<AssetIdentifier>
             {
                 HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
-                Result = new AssetIdentifier { Id = data.Sys.Id }
+                Result = new AssetIdentifier { AssetId = data.Sys.Id }
             };
         }
 
@@ -225,7 +225,7 @@ namespace Apps.Contentful.Webhooks
             return new WebhookResponse<AssetIdentifier>
             {
                 HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
-                Result = new AssetIdentifier { Id = data.Sys.Id }
+                Result = new AssetIdentifier { AssetId = data.Sys.Id }
             };
         }
 
@@ -236,7 +236,7 @@ namespace Apps.Contentful.Webhooks
             return new WebhookResponse<AssetIdentifier>
             {
                 HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
-                Result = new AssetIdentifier { Id = data.Sys.Id }
+                Result = new AssetIdentifier { AssetId = data.Sys.Id }
             };
         }
 
@@ -247,7 +247,7 @@ namespace Apps.Contentful.Webhooks
             return new WebhookResponse<AssetIdentifier>
             {
                 HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
-                Result = new AssetIdentifier { Id = data.Sys.Id }
+                Result = new AssetIdentifier { AssetId = data.Sys.Id }
             };
         }
 
@@ -258,7 +258,7 @@ namespace Apps.Contentful.Webhooks
             return new WebhookResponse<AssetIdentifier>
             {
                 HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
-                Result = new AssetIdentifier { Id = data.Sys.Id }
+                Result = new AssetIdentifier { AssetId = data.Sys.Id }
             };
         }
         #endregion

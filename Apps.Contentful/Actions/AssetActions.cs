@@ -28,7 +28,7 @@ public class AssetActions : BaseInvocable
         [ActionParameter] LocaleIdentifier localeIdentifier)
     {
         var client = new ContentfulClient(Creds);
-        var asset = await client.GetAsset(assetIdentifier.Id);
+        var asset = await client.GetAsset(assetIdentifier.AssetId);
         var fileData = asset.Files?[localeIdentifier.Locale];
         var fileContent = await DownloadFileByUrl(fileData);
 
@@ -62,7 +62,7 @@ public class AssetActions : BaseInvocable
 
         return new AssetIdentifier 
         {
-            Id = result.SystemProperties.Id
+            AssetId = result.SystemProperties.Id
         };
     }
 
@@ -73,7 +73,7 @@ public class AssetActions : BaseInvocable
         [ActionParameter] UpdateAssetFileRequest input)
     {
         var client = new ContentfulClient(Creds);
-        var oldAsset = await client.GetAsset(assetIdentifier.Id);
+        var oldAsset = await client.GetAsset(assetIdentifier.AssetId);
         var uploadReference = await client.UploadFile(input.File.Bytes);
         uploadReference.SystemProperties.CreatedAt = null;
         uploadReference.SystemProperties.CreatedBy = null;
@@ -89,29 +89,29 @@ public class AssetActions : BaseInvocable
 
         await client.CreateOrUpdateAsset(new ManagementAsset
         {
-            SystemProperties = new SystemProperties { Id = assetIdentifier.Id },
+            SystemProperties = new SystemProperties { Id = assetIdentifier.AssetId },
             Title = oldAsset.Title,
             Description = oldAsset.Description,
             Files = oldAsset.Files
         }, version: oldAsset.SystemProperties.Version);
 
-        await client.ProcessAsset(assetIdentifier.Id, (int)oldAsset.SystemProperties.Version, localeIdentifier.Locale);
+        await client.ProcessAsset(assetIdentifier.AssetId, (int)oldAsset.SystemProperties.Version, localeIdentifier.Locale);
     }
 
     [Action("Publish asset", Description = "Publish asset by id")]
     public async Task PublishAsset([ActionParameter] AssetIdentifier assetIdentifier)
     {
         var client = new ContentfulClient(Creds);
-        var asset = await client.GetAsset(assetIdentifier.Id);
-        await client.PublishAsset(assetIdentifier.Id, (int)asset.SystemProperties.Version);
+        var asset = await client.GetAsset(assetIdentifier.AssetId);
+        await client.PublishAsset(assetIdentifier.AssetId, (int)asset.SystemProperties.Version);
     }
 
     [Action("Unpublish asset", Description = "Unpublish asset by id")]
     public async Task UnpublishAsset([ActionParameter] AssetIdentifier assetIdentifier)
     {
         var client = new ContentfulClient(Creds);
-        var asset = await client.GetAsset(assetIdentifier.Id);
-        await client.UnpublishAsset(assetIdentifier.Id, (int)asset.SystemProperties.Version);
+        var asset = await client.GetAsset(assetIdentifier.AssetId);
+        await client.UnpublishAsset(assetIdentifier.AssetId, (int)asset.SystemProperties.Version);
     }
 
     [Action("Is asset locale present", Description = "Is asset locale present")]
@@ -120,7 +120,7 @@ public class AssetActions : BaseInvocable
         [ActionParameter] LocaleIdentifier localeIdentifier)
     {
         var client = new ContentfulClient(Creds);
-        var asset = await client.GetAsset(assetIdentifier.Id);
+        var asset = await client.GetAsset(assetIdentifier.AssetId);
         if (asset.Files.TryGetValue(localeIdentifier.Locale, out var file))
             return new IsAssetLocalePresentResponse { IsAssetLocalePresent = 1 };
 

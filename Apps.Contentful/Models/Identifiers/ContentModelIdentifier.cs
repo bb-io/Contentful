@@ -8,5 +8,5 @@ public class ContentModelIdentifier
 {
     [Display("Content model")]
     [DataSource(typeof(ContentModelDataSourceHandler))]
-    public string Id { get; set; }
+    public string ContentModelId { get; set; }
 }

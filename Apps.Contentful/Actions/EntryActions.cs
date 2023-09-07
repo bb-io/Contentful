@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Net.Mime;
+using System.Text;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Apps.Contentful.Models.Responses;
@@ -9,6 +10,8 @@ using Blackbird.Applications.Sdk.Common.Invocation;
 using Contentful.Core.Models;
 using Newtonsoft.Json;
 using Contentful.Core.Extensions;
+using File = Blackbird.Applications.Sdk.Common.Files.File;
+using HtmlRenderer = Apps.Contentful.HtmlHelpers.HtmlRenderer;
 
 namespace Apps.Contentful.Actions;
 
@@ -31,12 +34,11 @@ public class EntryActions : BaseInvocable
         [ActionParameter] LocaleIdentifier localeIdentifier)
     {
         var client = new ContentfulClient(Creds);
-
-        var entry = await client.GetEntry(entryIdentifier.Id);
-        var field = ((JObject)entry.Fields)[fieldIdentifier.Id][localeIdentifier.Locale];
+        var entry = await client.GetEntry(entryIdentifier.EntryId);
+        var field = ((JObject)entry.Fields)[fieldIdentifier.FieldId][localeIdentifier.Locale];
         var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
         var contentType = await client.GetContentType(contentTypeId);
-        var fieldType = contentType.Fields.First(f => f.Id == fieldIdentifier.Id).Type;
+        var fieldType = contentType.Fields.First(f => f.Id == fieldIdentifier.FieldId).Type;
         string textContent;
 
         if (fieldType == "RichText")
@@ -51,11 +53,53 @@ public class EntryActions : BaseInvocable
 
             textContent = result.ToString();
         }
-
-        else
+        else if (fieldType == "Text")
             textContent = field.ToString();
+        else
+            throw new Exception("The specified field must be of the text or rich text type."); 
 
         return new GetTextContentResponse { TextContent = textContent };
+    }
+    
+    [Action("Get text content of entry's field as HTML file", Description = "Get the text content of the field of the " +
+                                                                            "specified entry as HTML file. Field can be " +
+                                                                            "plain text or rich text. In both cases " +
+                                                                            "HTML file is returned.")]
+    public async Task<FileResponse> GetFieldTextContentAsHtmlFile(
+        [ActionParameter] EntryIdentifier entryIdentifier,
+        [ActionParameter] FieldIdentifier fieldIdentifier,
+        [ActionParameter] LocaleIdentifier localeIdentifier)
+    {
+        var client = new ContentfulClient(Creds);
+        var entry = await client.GetEntry(entryIdentifier.EntryId);
+        var field = ((JObject)entry.Fields)[fieldIdentifier.FieldId][localeIdentifier.Locale];
+        var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
+        var contentType = await client.GetContentType(contentTypeId);
+        var fieldType = contentType.Fields.First(f => f.Id == fieldIdentifier.FieldId).Type;
+        string html;
+
+        if (fieldType == "RichText")
+        {
+            var content = (JArray)field["content"];
+            var spaceId = Creds.First(p => p.KeyName == "spaceId").Value;
+            var htmlRenderer = new HtmlRenderer(content, spaceId);
+            html = htmlRenderer.ToHtml();
+        }
+        else if (fieldType == "Text")
+            html = $"<p>{field}</p>";
+        else
+            throw new Exception("The specified field must be of the text or rich text type."); 
+
+        html = $"<html><body>{html}</body></html>";
+
+        return new FileResponse
+        {
+            File = new File(Encoding.UTF8.GetBytes(html))
+            {
+                Name = $"{entryIdentifier.EntryId}_{fieldIdentifier.FieldId}_{localeIdentifier.Locale}.html",
+                ContentType = MediaTypeNames.Text.Html
+            }
+        };
     }
 
     [Action("Set entry text content", Description = "Set entry text content by field id")]
@@ -66,12 +110,12 @@ public class EntryActions : BaseInvocable
         [ActionParameter] [Display("Text")] string text)
     {
         var client = new ContentfulClient(Creds);
-        var entry = await client.GetEntry(entryIdentifier.Id);
+        var entry = await client.GetEntry(entryIdentifier.EntryId);
         var fields = (JObject)entry.Fields;
-        fields[fieldIdentifier.Id] = JObject.Parse(JsonConvert.SerializeObject(new Dictionary<string, string>
+        fields[fieldIdentifier.FieldId] = JObject.Parse(JsonConvert.SerializeObject(new Dictionary<string, string>
             { { localeIdentifier.Locale, text } }));
         await client.CreateOrUpdateEntry(entry,
-            version: client.GetEntry(entryIdentifier.Id).Result.SystemProperties.Version);
+            version: client.GetEntry(entryIdentifier.EntryId).Result.SystemProperties.Version);
     }
 
     [Action("Get entry number content", Description = "Get entry number content by field id")]
@@ -81,11 +125,11 @@ public class EntryActions : BaseInvocable
         [ActionParameter] LocaleIdentifier localeIdentifier)
     {
         var client = new ContentfulClient(Creds);
-        var entry = await client.GetEntry(entryIdentifier.Id);
+        var entry = await client.GetEntry(entryIdentifier.EntryId);
         var fields = (JObject)entry.Fields;
         return new GetNumberContentResponse
         {
-            NumberContent = fields[fieldIdentifier.Id][localeIdentifier.Locale].ToInt()
+            NumberContent = fields[fieldIdentifier.FieldId][localeIdentifier.Locale].ToInt()
         };
     }
 
@@ -97,12 +141,12 @@ public class EntryActions : BaseInvocable
         [ActionParameter] [Display("Number")] int number)
     {
         var client = new ContentfulClient(Creds);
-        var entry = await client.GetEntry(entryIdentifier.Id);
+        var entry = await client.GetEntry(entryIdentifier.EntryId);
         var fields = (JObject)entry.Fields;
-        fields[fieldIdentifier.Id] = JObject.Parse(JsonConvert.SerializeObject(new Dictionary<string, int>
+        fields[fieldIdentifier.FieldId] = JObject.Parse(JsonConvert.SerializeObject(new Dictionary<string, int>
             { { localeIdentifier.Locale, number } }));
         await client.CreateOrUpdateEntry(entry,
-            version: client.GetEntry(entryIdentifier.Id).Result.SystemProperties.Version);
+            version: client.GetEntry(entryIdentifier.EntryId).Result.SystemProperties.Version);
     }
 
     [Action("Get entry boolean content", Description = "Get entry boolean content by field id")]
@@ -112,11 +156,11 @@ public class EntryActions : BaseInvocable
         [ActionParameter] LocaleIdentifier localeIdentifier)
     {
         var client = new ContentfulClient(Creds);
-        var entry = await client.GetEntry(entryIdentifier.Id);
+        var entry = await client.GetEntry(entryIdentifier.EntryId);
         var fields = (JObject)entry.Fields;
         return new GetBoolContentResponse
         {
-            BooleanContent = fields[fieldIdentifier.Id][localeIdentifier.Locale].ToObject<bool>()
+            BooleanContent = fields[fieldIdentifier.FieldId][localeIdentifier.Locale].ToObject<bool>()
         };
     }
 
@@ -128,12 +172,12 @@ public class EntryActions : BaseInvocable
         [ActionParameter] [Display("Boolean")] bool boolean)
     {
         var client = new ContentfulClient(Creds);
-        var entry = await client.GetEntry(entryIdentifier.Id);
+        var entry = await client.GetEntry(entryIdentifier.EntryId);
         var fields = (JObject)entry.Fields;
-        fields[fieldIdentifier.Id] = JObject.Parse(JsonConvert.SerializeObject(new Dictionary<string, bool>
+        fields[fieldIdentifier.FieldId] = JObject.Parse(JsonConvert.SerializeObject(new Dictionary<string, bool>
             { { localeIdentifier.Locale, boolean } }));
         await client.CreateOrUpdateEntry(entry,
-            version: client.GetEntry(entryIdentifier.Id).Result.SystemProperties.Version);
+            version: client.GetEntry(entryIdentifier.EntryId).Result.SystemProperties.Version);
     }
 
     [Action("Get entry media content", Description = "Get entry media content by field id")]
@@ -143,11 +187,11 @@ public class EntryActions : BaseInvocable
         [ActionParameter] LocaleIdentifier localeIdentifier)
     {
         var client = new ContentfulClient(Creds);
-        var entry = await client.GetEntry(entryIdentifier.Id);
+        var entry = await client.GetEntry(entryIdentifier.EntryId);
         var fields = (JObject)entry.Fields;
         return new AssetIdentifier
         {
-            Id = fields[fieldIdentifier.Id][localeIdentifier.Locale]["sys"]["id"].ToString()
+            AssetId = fields[fieldIdentifier.FieldId][localeIdentifier.Locale]["sys"]["id"].ToString()
         };
     }
 
@@ -165,12 +209,12 @@ public class EntryActions : BaseInvocable
             {
                 type = "Link",
                 linkType = "Asset",
-                id = assetIdentifier.Id
+                id = assetIdentifier.AssetId
             }
         };
-        var entry = await client.GetEntry(entryIdentifier.Id);
+        var entry = await client.GetEntry(entryIdentifier.EntryId);
         var fields = (JObject)entry.Fields;
-        fields[fieldIdentifier.Id] = JObject.Parse(JsonConvert.SerializeObject(new Dictionary<string, object>
+        fields[fieldIdentifier.FieldId] = JObject.Parse(JsonConvert.SerializeObject(new Dictionary<string, object>
             { { localeIdentifier.Locale, payload } }));
         await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version);
     }
@@ -179,10 +223,10 @@ public class EntryActions : BaseInvocable
     public async Task<EntryIdentifier> AddNewEntry([ActionParameter] ContentModelIdentifier contentModelIdentifier)
     {
         var client = new ContentfulClient(Creds);
-        var result = await client.CreateEntry(new Entry<dynamic>(), contentModelIdentifier.Id);
+        var result = await client.CreateEntry(new Entry<dynamic>(), contentModelIdentifier.ContentModelId);
         return new EntryIdentifier
         {
-            Id = result.SystemProperties.Id
+            EntryId = result.SystemProperties.Id
         };
     }
 
@@ -190,23 +234,23 @@ public class EntryActions : BaseInvocable
     public async Task DeleteEntry([ActionParameter] EntryIdentifier entryIdentifier)
     {
         var client = new ContentfulClient(Creds);
-        var entry = await client.GetEntry(entryIdentifier.Id);
-        await client.DeleteEntry(entryIdentifier.Id, version: (int)entry.SystemProperties.Version);
+        var entry = await client.GetEntry(entryIdentifier.EntryId);
+        await client.DeleteEntry(entryIdentifier.EntryId, version: (int)entry.SystemProperties.Version);
     }
 
     [Action("Publish entry", Description = "Publish entry by id")]
     public async Task PublishEntry([ActionParameter] EntryIdentifier entryIdentifier)
     {
         var client = new ContentfulClient(Creds);
-        var entry = await client.GetEntry(entryIdentifier.Id);
-        await client.PublishEntry(entryIdentifier.Id, version: (int)entry.SystemProperties.Version);
+        var entry = await client.GetEntry(entryIdentifier.EntryId);
+        await client.PublishEntry(entryIdentifier.EntryId, version: (int)entry.SystemProperties.Version);
     }
 
     [Action("Unpublish entry", Description = "Unpublish entry by id")]
     public async Task UnpublishEntry([ActionParameter] EntryIdentifier entryIdentifier)
     {
         var client = new ContentfulClient(Creds);
-        var entry = await client.GetEntry(entryIdentifier.Id);
-        await client.UnpublishEntry(entryIdentifier.Id, version: (int)entry.SystemProperties.Version);
+        var entry = await client.GetEntry(entryIdentifier.EntryId);
+        await client.UnpublishEntry(entryIdentifier.EntryId, version: (int)entry.SystemProperties.Version);
     }
 }

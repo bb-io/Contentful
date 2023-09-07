@@ -8,5 +8,5 @@ public class EntryIdentifier
 {
     [Display("Entry")]
     [DataSource(typeof(EntryDataSourceHandler))]
-    public string Id { get; set; }
+    public string EntryId { get; set; }
 }
