@@ -14,7 +14,7 @@ namespace Apps.Contentful.Connections
                 ConnectionUsage = ConnectionUsage.Actions,
                 ConnectionProperties = new List<ConnectionProperty>
                 {
-                    new("client_id")
+                    new("client_id") { DisplayName = "Client ID" }
                 }
             },
             new()
@@ -24,9 +24,9 @@ namespace Apps.Contentful.Connections
                 ConnectionUsage = ConnectionUsage.Actions & ConnectionUsage.Webhooks,
                 ConnectionProperties = new List<ConnectionProperty>
                 {
-                    new("spaceId")
+                    new("spaceId") { DisplayName = "Space ID" }
                 }
-            },
+            }
         };
 
         public IEnumerable<AuthenticationCredentialsProvider> CreateAuthorizationCredentialsProviders(

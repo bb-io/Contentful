@@ -54,7 +54,7 @@ public class EntryActions : BaseInvocable
     [Action("Get entry's text/rich text field", Description = "Get the text content of the field of the specified entry. " +
                                                               "Field can be plain text or rich text. In both cases plain " +
                                                               "text is returned.")]
-    public async Task<GetTextContentResponse> GetFieldTextContent(
+    public async Task<GetTextContentResponse> GetTextFieldContent(
         [ActionParameter] EntryIdentifier entryIdentifier,
         [ActionParameter] FieldIdentifier fieldIdentifier,
         [ActionParameter] LocaleIdentifier localeIdentifier)
@@ -91,7 +91,7 @@ public class EntryActions : BaseInvocable
                                                                            "specified entry as HTML file. Field can be " +
                                                                            "plain text or rich text. In both cases HTML " +
                                                                            "file is returned.")]
-    public async Task<FileResponse> GetFieldTextContentAsHtmlFile(
+    public async Task<FileResponse> GetTextFieldContentAsHtmlFile(
         [ActionParameter] EntryIdentifier entryIdentifier,
         [ActionParameter] FieldIdentifier fieldIdentifier,
         [ActionParameter] LocaleIdentifier localeIdentifier)
@@ -130,7 +130,7 @@ public class EntryActions : BaseInvocable
 
     [Action("Set entry's text/rich text field", Description = "Set content of the field of the specified entry. Field " +
                                                               "can be plain text or rich text.")]
-    public async Task SetTextContent(
+    public async Task SetTextFieldContent(
         [ActionParameter] EntryIdentifier entryIdentifier,
         [ActionParameter] FieldIdentifier fieldIdentifier,
         [ActionParameter] LocaleIdentifier localeIdentifier,
@@ -168,7 +168,7 @@ public class EntryActions : BaseInvocable
                                                                              "text or rich text. For plain text only the " +
                                                                              "text extracted from HTML is put in the field. " +
                                                                              "For rich text all HTML structure is preserved.")]
-    public async Task SetTextContentFromHtml(
+    public async Task SetTextFieldContentFromHtml(
         [ActionParameter] EntryIdentifier entryIdentifier,
         [ActionParameter] FieldIdentifier fieldIdentifier,
         [ActionParameter] LocaleIdentifier localeIdentifier,
@@ -207,8 +207,8 @@ public class EntryActions : BaseInvocable
         await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version);
     }
 
-    [Action("Get entry number content", Description = "Get entry number content by field id")]
-    public async Task<GetNumberContentResponse> GetNumberContent(
+    [Action("Get entry's number field", Description = "Get entry's number field value by field ID.")]
+    public async Task<GetNumberContentResponse> GetNumberFieldContent(
         [ActionParameter] EntryIdentifier entryIdentifier,
         [ActionParameter] FieldIdentifier fieldIdentifier,
         [ActionParameter] LocaleIdentifier localeIdentifier)
@@ -221,9 +221,9 @@ public class EntryActions : BaseInvocable
             NumberContent = fields[fieldIdentifier.FieldId][localeIdentifier.Locale].ToInt()
         };
     }
-
-    [Action("Set entry number content", Description = "Set entry number content by field id")]
-    public async Task SetNumberContent(
+    
+    [Action("Set entry's number field", Description = "Set entry's number field value by field ID.")]
+    public async Task SetNumberFieldContent(
         [ActionParameter] EntryIdentifier entryIdentifier,
         [ActionParameter] FieldIdentifier fieldIdentifier,
         [ActionParameter] LocaleIdentifier localeIdentifier,
@@ -238,8 +238,8 @@ public class EntryActions : BaseInvocable
             version: client.GetEntry(entryIdentifier.EntryId).Result.SystemProperties.Version);
     }
 
-    [Action("Get entry boolean content", Description = "Get entry boolean content by field id")]
-    public async Task<GetBoolContentResponse> GetBoolContent(
+    [Action("Get entry's boolean field", Description = "Get entry's boolean field by field ID.")]
+    public async Task<GetBoolContentResponse> GetBoolFieldContent(
         [ActionParameter] EntryIdentifier entryIdentifier,
         [ActionParameter] FieldIdentifier fieldIdentifier,
         [ActionParameter] LocaleIdentifier localeIdentifier)
@@ -253,8 +253,8 @@ public class EntryActions : BaseInvocable
         };
     }
 
-    [Action("Set entry boolean content", Description = "Set entry boolean content by field id")]
-    public async Task SetBoolContent(
+    [Action("Set entry's boolean field", Description = "Set entry's boolean field by field ID.")]
+    public async Task SetBoolFieldContent(
         [ActionParameter] EntryIdentifier entryIdentifier,
         [ActionParameter] FieldIdentifier fieldIdentifier,
         [ActionParameter] LocaleIdentifier localeIdentifier,
@@ -269,8 +269,8 @@ public class EntryActions : BaseInvocable
             version: client.GetEntry(entryIdentifier.EntryId).Result.SystemProperties.Version);
     }
 
-    [Action("Get entry media content", Description = "Get entry media content by field id")]
-    public async Task<AssetIdentifier> GetMediaContent(
+    [Action("Get entry's media content", Description = "Get entry's media content by field ID.")]
+    public async Task<AssetIdentifier> GetMediaFieldContent(
         [ActionParameter] EntryIdentifier entryIdentifier,
         [ActionParameter] FieldIdentifier fieldIdentifier,
         [ActionParameter] LocaleIdentifier localeIdentifier)
@@ -284,8 +284,8 @@ public class EntryActions : BaseInvocable
         };
     }
 
-    [Action("Set entry media content", Description = "Set entry media content by field id")]
-    public async Task SetMediaContent(
+    [Action("Set entry's media field", Description = "Set entry's media field by field ID.")]
+    public async Task SetMediaFieldContent(
         [ActionParameter] EntryIdentifier entryIdentifier,
         [ActionParameter] FieldIdentifier fieldIdentifier,
         [ActionParameter] LocaleIdentifier localeIdentifier,
@@ -308,7 +308,7 @@ public class EntryActions : BaseInvocable
         await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version);
     }
 
-    [Action("Add new entry", Description = "Add new entry by content model id")]
+    [Action("Add new entry", Description = "Add new entry with specified content model.")]
     public async Task<EntryIdentifier> AddNewEntry([ActionParameter] ContentModelIdentifier contentModelIdentifier)
     {
         var client = new ContentfulClient(Creds);
@@ -319,7 +319,7 @@ public class EntryActions : BaseInvocable
         };
     }
 
-    [Action("Delete entry", Description = "Delete entry by id")]
+    [Action("Delete entry", Description = "Delete specified entry.")]
     public async Task DeleteEntry([ActionParameter] EntryIdentifier entryIdentifier)
     {
         var client = new ContentfulClient(Creds);
@@ -327,7 +327,7 @@ public class EntryActions : BaseInvocable
         await client.DeleteEntry(entryIdentifier.EntryId, version: (int)entry.SystemProperties.Version);
     }
 
-    [Action("Publish entry", Description = "Publish entry by id")]
+    [Action("Publish entry", Description = "Publish specified entry.")]
     public async Task PublishEntry([ActionParameter] EntryIdentifier entryIdentifier)
     {
         var client = new ContentfulClient(Creds);
@@ -335,7 +335,7 @@ public class EntryActions : BaseInvocable
         await client.PublishEntry(entryIdentifier.EntryId, version: (int)entry.SystemProperties.Version);
     }
 
-    [Action("Unpublish entry", Description = "Unpublish entry by id")]
+    [Action("Unpublish entry", Description = "Unpublish specified entry.")]
     public async Task UnpublishEntry([ActionParameter] EntryIdentifier entryIdentifier)
     {
         var client = new ContentfulClient(Creds);

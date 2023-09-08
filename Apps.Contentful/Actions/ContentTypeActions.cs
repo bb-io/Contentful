@@ -15,7 +15,7 @@ public class ContentTypeActions : BaseInvocable
 
     public ContentTypeActions(InvocationContext invocationContext) : base(invocationContext) { }
     
-    [Action("Get all content types", Description = "Get all content types in space")]
+    [Action("Get all content types", Description = "Get all content types in space.")]
     public async Task<GetAllContentTypesResponse> GetAllContentTypes()
     {
         var client = new ContentfulClient(Creds);

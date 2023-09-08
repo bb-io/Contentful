@@ -22,7 +22,7 @@ public class AssetActions : BaseInvocable
     {
     }
 
-    [Action("Get asset", Description = "Get asset by Id")]
+    [Action("Get asset", Description = "Get specified asset.")]
     public async Task<GetAssetResponse> GetAssetById(
         [ActionParameter] AssetIdentifier assetIdentifier,
         [ActionParameter] LocaleIdentifier localeIdentifier)
@@ -40,7 +40,7 @@ public class AssetActions : BaseInvocable
         };
     }
 
-    [Action("Create and upload asset", Description = "Create and upload asset")]
+    [Action("Create and upload asset", Description = "Create and upload an asset.")]
     public async Task<AssetIdentifier> CreateAsset(
         [ActionParameter] LocaleIdentifier localeIdentifier,
         [ActionParameter] CreateAssetRequest input)
@@ -65,8 +65,8 @@ public class AssetActions : BaseInvocable
             AssetId = result.SystemProperties.Id
         };
     }
-
-    [Action("Update asset file", Description = "Update asset file")]
+    
+    [Action("Update asset file", Description = "Update asset file.")]
     public async Task UpdateAssetFile(
         [ActionParameter] AssetIdentifier assetIdentifier,
         [ActionParameter] LocaleIdentifier localeIdentifier,
@@ -98,7 +98,7 @@ public class AssetActions : BaseInvocable
         await client.ProcessAsset(assetIdentifier.AssetId, (int)oldAsset.SystemProperties.Version, localeIdentifier.Locale);
     }
 
-    [Action("Publish asset", Description = "Publish asset by id")]
+    [Action("Publish asset", Description = "Publish specified asset.")]
     public async Task PublishAsset([ActionParameter] AssetIdentifier assetIdentifier)
     {
         var client = new ContentfulClient(Creds);
@@ -106,7 +106,7 @@ public class AssetActions : BaseInvocable
         await client.PublishAsset(assetIdentifier.AssetId, (int)asset.SystemProperties.Version);
     }
 
-    [Action("Unpublish asset", Description = "Unpublish asset by id")]
+    [Action("Unpublish asset", Description = "Unpublish specified asset.")]
     public async Task UnpublishAsset([ActionParameter] AssetIdentifier assetIdentifier)
     {
         var client = new ContentfulClient(Creds);
@@ -114,7 +114,7 @@ public class AssetActions : BaseInvocable
         await client.UnpublishAsset(assetIdentifier.AssetId, (int)asset.SystemProperties.Version);
     }
 
-    [Action("Is asset locale present", Description = "Is asset locale present")]
+    [Action("Is asset locale present", Description = "Is asset locale present.")]
     public async Task<IsAssetLocalePresentResponse> IsAssetLocalePresent(
         [ActionParameter] AssetIdentifier assetIdentifier,
         [ActionParameter] LocaleIdentifier localeIdentifier)
