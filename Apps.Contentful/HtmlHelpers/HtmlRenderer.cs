@@ -53,7 +53,7 @@ public class HtmlRenderer
             case "blockquote":
                 return $"<blockquote>{ConvertContentToHtml(jsonObject["content"])}</blockquote>";
             case "table":
-                return ConvertTableToHtml(jsonObject["content"]);
+                return $"<table>{ConvertContentToHtml(jsonObject["content"])}</table>";
             case "table-row":
                 return $"<tr>{ConvertContentToHtml(jsonObject["content"])}</tr>";
             case "table-header-cell":
@@ -109,35 +109,6 @@ public class HtmlRenderer
         }
 
         return htmlBuilder.ToString();
-    }
-    
-    private string ConvertTableToHtml(JToken content)
-    {
-        var tableBuilder = new StringBuilder();
-        tableBuilder.Append("<table>");
-
-        foreach (var row in content)
-        {
-            tableBuilder.Append("<tr>");
-
-            if (row is JObject tableRow)
-            {
-                foreach (var cell in tableRow["content"])
-                {
-                    if (cell is JObject tableCell)
-                    {
-                        tableBuilder.Append("<td>");
-                        tableBuilder.Append(ConvertJsonObjectToHtml(tableCell));
-                        tableBuilder.Append("</td>");
-                    }
-                }
-            }
-
-            tableBuilder.Append("</tr>");
-        }
-
-        tableBuilder.Append("</table>");
-        return tableBuilder.ToString();
     }
 
     private void GetMarksHtml(JToken marks, out string openingMarks, out string closingMarks)
