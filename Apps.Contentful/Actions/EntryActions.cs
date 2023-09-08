@@ -29,6 +29,28 @@ public class EntryActions : BaseInvocable
     {
     }
 
+    [Action("List entries", Description = "List all entries. If a content model is specified, only entries that have " +
+                                          "this content model are listed.")]
+    public async Task<ListEntriesResponse> ListEntries(
+        [ActionParameter] ContentModelIdentifier? contentModelIdentifier)
+    {
+        var client = new ContentfulClient(Creds);
+        ContentfulCollection<Entry<dynamic>> entries;
+
+        if (contentModelIdentifier == null)
+            entries = await client.GetEntriesCollection<Entry<dynamic>>();
+        else
+        {
+            var queryString = $"?content_type={contentModelIdentifier.ContentModelId}";
+            entries = await client.GetEntriesCollection<Entry<dynamic>>(queryString);
+        }
+
+        return new ListEntriesResponse
+        {
+            Entries = entries.Select(e => new EntryIdentifier { EntryId = e.SystemProperties.Id } )
+        };
+    }
+
     [Action("Get entry's text/rich text field", Description = "Get the text content of the field of the specified entry. " +
                                                               "Field can be plain text or rich text. In both cases plain " +
                                                               "text is returned.")]
