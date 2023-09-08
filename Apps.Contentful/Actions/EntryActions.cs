@@ -1,15 +1,19 @@
 ﻿using System.Net.Mime;
 using System.Text;
+using Apps.Contentful.HtmlHelpers;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Apps.Contentful.Models.Responses;
 using Apps.Contentful.Models.Identifiers;
+using Apps.Contentful.Models.Requests;
 using Newtonsoft.Json.Linq;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Contentful.Core.Models;
 using Newtonsoft.Json;
 using Contentful.Core.Extensions;
+using HtmlAgilityPack;
+using Newtonsoft.Json.Serialization;
 using File = Blackbird.Applications.Sdk.Common.Files.File;
 using HtmlRenderer = Apps.Contentful.HtmlHelpers.HtmlRenderer;
 
@@ -25,9 +29,9 @@ public class EntryActions : BaseInvocable
     {
     }
 
-    [Action("Get text content of entry's field", Description = "Get the text content of the field of the specified " +
-                                                               "entry. Field can be plain text or rich text. In " +
-                                                               "both cases plain text is returned.")]
+    [Action("Get entry's text/rich text field", Description = "Get the text content of the field of the specified entry. " +
+                                                              "Field can be plain text or rich text. In both cases plain " +
+                                                              "text is returned.")]
     public async Task<GetTextContentResponse> GetFieldTextContent(
         [ActionParameter] EntryIdentifier entryIdentifier,
         [ActionParameter] FieldIdentifier fieldIdentifier,
@@ -61,10 +65,10 @@ public class EntryActions : BaseInvocable
         return new GetTextContentResponse { TextContent = textContent };
     }
     
-    [Action("Get text content of entry's field as HTML file", Description = "Get the text content of the field of the " +
-                                                                            "specified entry as HTML file. Field can be " +
-                                                                            "plain text or rich text. In both cases " +
-                                                                            "HTML file is returned.")]
+    [Action("Get entry's text/rich text field as HTML file", Description = "Get the text content of the field of the " +
+                                                                           "specified entry as HTML file. Field can be " +
+                                                                           "plain text or rich text. In both cases HTML " +
+                                                                           "file is returned.")]
     public async Task<FileResponse> GetFieldTextContentAsHtmlFile(
         [ActionParameter] EntryIdentifier entryIdentifier,
         [ActionParameter] FieldIdentifier fieldIdentifier,
@@ -102,7 +106,8 @@ public class EntryActions : BaseInvocable
         };
     }
 
-    [Action("Set entry text content", Description = "Set entry text content by field id")]
+    [Action("Set entry's text/rich text field", Description = "Set content of the field of the specified entry. Field " +
+                                                              "can be plain text or rich text.")]
     public async Task SetTextContent(
         [ActionParameter] EntryIdentifier entryIdentifier,
         [ActionParameter] FieldIdentifier fieldIdentifier,
@@ -112,10 +117,72 @@ public class EntryActions : BaseInvocable
         var client = new ContentfulClient(Creds);
         var entry = await client.GetEntry(entryIdentifier.EntryId);
         var fields = (JObject)entry.Fields;
-        fields[fieldIdentifier.FieldId] = JObject.Parse(JsonConvert.SerializeObject(new Dictionary<string, string>
-            { { localeIdentifier.Locale, text } }));
-        await client.CreateOrUpdateEntry(entry,
-            version: client.GetEntry(entryIdentifier.EntryId).Result.SystemProperties.Version);
+        var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
+        var contentType = await client.GetContentType(contentTypeId);
+        var fieldType = contentType.Fields.First(f => f.Id == fieldIdentifier.FieldId).Type;
+
+        if (fieldType == "RichText")
+        {
+            var html = $"<p>{text}</p>";
+            var documentRenderer = new RichTextRenderer();
+            var richText = documentRenderer.ToRichText(html);
+            var serializerSettings = new JsonSerializerSettings();
+            serializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
+            serializerSettings.NullValueHandling = NullValueHandling.Ignore;
+            fields[fieldIdentifier.FieldId] = JObject.Parse(JsonConvert.SerializeObject(new Dictionary<string, Document>
+                { { localeIdentifier.Locale, richText } }, serializerSettings));
+        }
+        else if (fieldType == "Text") 
+            fields[fieldIdentifier.FieldId] = JObject.Parse(JsonConvert.SerializeObject(new Dictionary<string, string>
+                { { localeIdentifier.Locale, text } }));
+        else
+            throw new Exception("The specified field must be of the text or rich text type.");
+        
+        await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version);
+    }
+    
+    [Action("Set entry's text/rich text field from HTML file", Description = "Set content of the field of the specified " +
+                                                                             "entry from HTML file. Field can be plain " +
+                                                                             "text or rich text. For plain text only the " +
+                                                                             "text extracted from HTML is put in the field. " +
+                                                                             "For rich text all HTML structure is preserved.")]
+    public async Task SetTextContentFromHtml(
+        [ActionParameter] EntryIdentifier entryIdentifier,
+        [ActionParameter] FieldIdentifier fieldIdentifier,
+        [ActionParameter] LocaleIdentifier localeIdentifier,
+        [ActionParameter] FileRequest input)
+    {
+        var client = new ContentfulClient(Creds);
+        var entry = await client.GetEntry(entryIdentifier.EntryId);
+        var fields = (JObject)entry.Fields;
+        var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
+        var contentType = await client.GetContentType(contentTypeId);
+        var fieldType = contentType.Fields.First(f => f.Id == fieldIdentifier.FieldId).Type;
+        var html = Encoding.UTF8.GetString(input.File.Bytes);
+
+        if (fieldType == "RichText")
+        {
+            var documentRenderer = new RichTextRenderer();
+            var richText = documentRenderer.ToRichText(html);
+            var serializerSettings = new JsonSerializerSettings();
+            serializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
+            serializerSettings.NullValueHandling = NullValueHandling.Ignore;
+            fields[fieldIdentifier.FieldId] = JObject.Parse(JsonConvert.SerializeObject(new Dictionary<string, Document>
+                { { localeIdentifier.Locale, richText } }, serializerSettings));
+            
+        }
+        else if (fieldType == "Text")
+        {
+            var htmlDocument = new HtmlDocument();
+            htmlDocument.LoadHtml(html);
+            var text = string.Join("", htmlDocument.DocumentNode.SelectNodes("//text()").Select(node => node.InnerText));
+            fields[fieldIdentifier.FieldId] = JObject.Parse(JsonConvert.SerializeObject(new Dictionary<string, string>
+                { { localeIdentifier.Locale, text } }));
+        }
+        else
+            throw new Exception("The specified field must be of the text or rich text type."); 
+
+        await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version);
     }
 
     [Action("Get entry number content", Description = "Get entry number content by field id")]
