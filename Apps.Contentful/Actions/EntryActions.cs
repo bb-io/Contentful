@@ -130,12 +130,11 @@ public class EntryActions : BaseInvocable
             var serializerSettings = new JsonSerializerSettings();
             serializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
             serializerSettings.NullValueHandling = NullValueHandling.Ignore;
-            fields[fieldIdentifier.FieldId] = JObject.Parse(JsonConvert.SerializeObject(new Dictionary<string, Document>
-                { { localeIdentifier.Locale, richText } }, serializerSettings));
+            fields[fieldIdentifier.FieldId][localeIdentifier.Locale] =
+                JObject.Parse(JsonConvert.SerializeObject(richText, serializerSettings));
         }
-        else if (fieldType == "Text" || fieldType == "Symbol") 
-            fields[fieldIdentifier.FieldId] = JObject.Parse(JsonConvert.SerializeObject(new Dictionary<string, string>
-                { { localeIdentifier.Locale, text } }));
+        else if (fieldType == "Text" || fieldType == "Symbol")
+            fields[fieldIdentifier.FieldId][localeIdentifier.Locale] = text;
         else
             throw new Exception("The specified field must be of the short text, long text or rich text type.");
         
@@ -169,8 +168,8 @@ public class EntryActions : BaseInvocable
             var serializerSettings = new JsonSerializerSettings();
             serializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
             serializerSettings.NullValueHandling = NullValueHandling.Ignore;
-            fields[fieldIdentifier.FieldId] = JObject.Parse(JsonConvert.SerializeObject(new Dictionary<string, Document>
-                { { localeIdentifier.Locale, richText } }, serializerSettings));
+            fields[fieldIdentifier.FieldId][localeIdentifier.Locale] =
+                JObject.Parse(JsonConvert.SerializeObject(richText, serializerSettings));
             
         }
         else if (fieldType == "Text" || fieldType == "Symbol")
@@ -178,8 +177,7 @@ public class EntryActions : BaseInvocable
             var htmlDocument = new HtmlDocument();
             htmlDocument.LoadHtml(html);
             var text = string.Join("", htmlDocument.DocumentNode.SelectNodes("//text()").Select(node => node.InnerText));
-            fields[fieldIdentifier.FieldId] = JObject.Parse(JsonConvert.SerializeObject(new Dictionary<string, string>
-                { { localeIdentifier.Locale, text } }));
+            fields[fieldIdentifier.FieldId][localeIdentifier.Locale] = text;
         }
         else
             throw new Exception("The specified field must be of the short text, long text or rich text type."); 
@@ -216,8 +214,7 @@ public class EntryActions : BaseInvocable
         var client = new ContentfulClient(Creds);
         var entry = await client.GetEntry(entryIdentifier.EntryId);
         var fields = (JObject)entry.Fields;
-        fields[fieldIdentifier.FieldId] = JObject.Parse(JsonConvert.SerializeObject(new Dictionary<string, int>
-            { { localeIdentifier.Locale, number } }));
+        fields[fieldIdentifier.FieldId][localeIdentifier.Locale] = number;
         await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version);
     }
     
@@ -250,8 +247,7 @@ public class EntryActions : BaseInvocable
         var client = new ContentfulClient(Creds);
         var entry = await client.GetEntry(entryIdentifier.EntryId);
         var fields = (JObject)entry.Fields;
-        fields[fieldIdentifier.FieldId] = JObject.Parse(JsonConvert.SerializeObject(new Dictionary<string, bool>
-            { { localeIdentifier.Locale, boolean } }));
+        fields[fieldIdentifier.FieldId][localeIdentifier.Locale] = boolean;
         await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version);
     }
     
@@ -293,8 +289,7 @@ public class EntryActions : BaseInvocable
         };
         var entry = await client.GetEntry(entryIdentifier.EntryId);
         var fields = (JObject)entry.Fields;
-        fields[fieldIdentifier.FieldId] = JObject.Parse(JsonConvert.SerializeObject(new Dictionary<string, object>
-            { { localeIdentifier.Locale, payload } }));
+        fields[fieldIdentifier.FieldId][localeIdentifier.Locale] = JObject.Parse(JsonConvert.SerializeObject(payload));
         await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version);
     }
     

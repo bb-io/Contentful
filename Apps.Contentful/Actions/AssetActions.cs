@@ -8,7 +8,6 @@ using Blackbird.Applications.Sdk.Common.Invocation;
 using RestSharp;
 using Contentful.Core.Models;
 using Contentful.Core.Models.Management;
-using Newtonsoft.Json;
 using File = Contentful.Core.Models.File;
 
 namespace Apps.Contentful.Actions;
@@ -47,7 +46,7 @@ public class AssetActions : BaseInvocable
         [ActionParameter] CreateAssetRequest input)
     {
         var client = new ContentfulClient(Creds);
-        var result = client.UploadFileAndCreateAsset(new ManagementAsset
+        var result = await client.UploadFileAndCreateAsset(new ManagementAsset
         {
             SystemProperties = new SystemProperties { Id = Guid.NewGuid().ToString() },
             Title = new Dictionary<string, string> { { localeIdentifier.Locale, input.Title } },
@@ -59,7 +58,7 @@ public class AssetActions : BaseInvocable
                     new File { FileName = input.Filename ?? input.File.Name, ContentType = "text/plain" }
                 }
             },
-        }, input.File.Bytes).Result;
+        }, input.File.Bytes);
 
         return new AssetIdentifier 
         {
@@ -122,7 +121,7 @@ public class AssetActions : BaseInvocable
     {
         var client = new ContentfulClient(Creds);
         var asset = await client.GetAsset(assetIdentifier.AssetId);
-        if (asset.Files.TryGetValue(localeIdentifier.Locale, out var file))
+        if (asset.Files.TryGetValue(localeIdentifier.Locale, out _))
             return new IsAssetLocalePresentResponse { IsAssetLocalePresent = 1 };
 
         return new IsAssetLocalePresentResponse { IsAssetLocalePresent = 0 };
