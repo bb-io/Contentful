@@ -8,6 +8,7 @@ using Blackbird.Applications.Sdk.Common.Invocation;
 using RestSharp;
 using Contentful.Core.Models;
 using Contentful.Core.Models.Management;
+using Newtonsoft.Json;
 using File = Contentful.Core.Models.File;
 
 namespace Apps.Contentful.Actions;
@@ -126,6 +127,25 @@ public class AssetActions : BaseInvocable
 
         return new IsAssetLocalePresentResponse { IsAssetLocalePresent = 0 };
     }
+    
+    [Action("List missing locales for an asset", Description = "Retrieve a list of missing locales for an asset.")]
+    public async Task<ListLocalesResponse> ListMissingLocalesForAsset([ActionParameter] AssetIdentifier assetIdentifier)
+    {
+        var client = new ContentfulClient(InvocationContext.AuthenticationCredentialsProviders);
+        var asset = await client.GetAsset(assetIdentifier.AssetId);
+        var availableLocales = (await client.GetLocalesCollection()).Select(l => l.Code);
+        IEnumerable<LocaleIdentifier> missingLocales;
+        
+        if (asset.Files == null)
+            missingLocales = availableLocales.Select(l => new LocaleIdentifier { Locale = l });
+        else
+        {
+            var presentLocales = asset.Files.Select(f => f.Key);
+            missingLocales = availableLocales.Except(presentLocales).Select(l => new LocaleIdentifier { Locale = l });
+        }
+
+        return new ListLocalesResponse { Locales = missingLocales };
+    } 
 
     private async Task<Blackbird.Applications.Sdk.Common.Files.File?> DownloadFileByUrl(File? file)
     {

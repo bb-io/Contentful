@@ -186,7 +186,7 @@ public class EntryActions : BaseInvocable
 
         await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version);
     }
-    
+
     #endregion
 
     #region Number fields
@@ -218,8 +218,7 @@ public class EntryActions : BaseInvocable
         var fields = (JObject)entry.Fields;
         fields[fieldIdentifier.FieldId] = JObject.Parse(JsonConvert.SerializeObject(new Dictionary<string, int>
             { { localeIdentifier.Locale, number } }));
-        await client.CreateOrUpdateEntry(entry,
-            version: client.GetEntry(entryIdentifier.EntryId).Result.SystemProperties.Version);
+        await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version);
     }
     
     #endregion
@@ -253,8 +252,7 @@ public class EntryActions : BaseInvocable
         var fields = (JObject)entry.Fields;
         fields[fieldIdentifier.FieldId] = JObject.Parse(JsonConvert.SerializeObject(new Dictionary<string, bool>
             { { localeIdentifier.Locale, boolean } }));
-        await client.CreateOrUpdateEntry(entry,
-            version: client.GetEntry(entryIdentifier.EntryId).Result.SystemProperties.Version);
+        await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version);
     }
     
     #endregion
@@ -350,6 +348,29 @@ public class EntryActions : BaseInvocable
         var client = new ContentfulClient(Creds);
         var entry = await client.GetEntry(entryIdentifier.EntryId);
         await client.UnpublishEntry(entryIdentifier.EntryId, version: (int)entry.SystemProperties.Version);
+    }
+    
+    [Action("List missing locales for a field", Description = "Retrieve a list of missing locales for a field.")]
+    public async Task<ListLocalesResponse> ListMissingLocalesForField(
+        [ActionParameter] EntryIdentifier entryIdentifier,
+        [ActionParameter] FieldIdentifier fieldIdentifier)
+    {
+        var client = new ContentfulClient(InvocationContext.AuthenticationCredentialsProviders);
+        var entry = await client.GetEntry(entryIdentifier.EntryId);
+        var availableLocales = (await client.GetLocalesCollection()).Select(l => l.Code);
+        var field = ((JObject)entry.Fields)[fieldIdentifier.FieldId];
+        IEnumerable<LocaleIdentifier> missingLocales;
+
+        if (field == null)
+            missingLocales = availableLocales.Select(l => new LocaleIdentifier { Locale = l });
+        else
+        {
+            var fieldDictionary = JsonConvert.DeserializeObject<Dictionary<string, object>>(field.ToString());
+            var presentLocales = fieldDictionary.Select(f => f.Key);
+            missingLocales = availableLocales.Except(presentLocales).Select(l => new LocaleIdentifier { Locale = l });
+        }
+
+        return new ListLocalesResponse { Locales = missingLocales };
     }
     
     #endregion
