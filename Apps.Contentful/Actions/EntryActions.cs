@@ -29,27 +29,7 @@ public class EntryActions : BaseInvocable
     {
     }
 
-    [Action("List entries", Description = "List all entries. If a content model is specified, only entries that have " +
-                                          "this content model are listed.")]
-    public async Task<ListEntriesResponse> ListEntries(
-        [ActionParameter] ContentModelIdentifier? contentModelIdentifier)
-    {
-        var client = new ContentfulClient(Creds);
-        ContentfulCollection<Entry<dynamic>> entries;
-
-        if (contentModelIdentifier == null)
-            entries = await client.GetEntriesCollection<Entry<dynamic>>();
-        else
-        {
-            var queryString = $"?content_type={contentModelIdentifier.ContentModelId}";
-            entries = await client.GetEntriesCollection<Entry<dynamic>>(queryString);
-        }
-
-        return new ListEntriesResponse
-        {
-            Entries = entries.Select(e => new EntryIdentifier { EntryId = e.SystemProperties.Id } )
-        };
-    }
+    #region Text/Rich text fields
 
     [Action("Get entry's text/rich text field", Description = "Get the text content of the field of the specified entry. " +
                                                               "Field can be plain text or rich text. In both cases plain " +
@@ -206,6 +186,10 @@ public class EntryActions : BaseInvocable
 
         await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version);
     }
+    
+    #endregion
+
+    #region Number fields
 
     [Action("Get entry's number field", Description = "Get entry's number field value by field ID.")]
     public async Task<GetNumberContentResponse> GetNumberFieldContent(
@@ -237,6 +221,10 @@ public class EntryActions : BaseInvocable
         await client.CreateOrUpdateEntry(entry,
             version: client.GetEntry(entryIdentifier.EntryId).Result.SystemProperties.Version);
     }
+    
+    #endregion
+
+    #region Boolean fields
 
     [Action("Get entry's boolean field", Description = "Get entry's boolean field by field ID.")]
     public async Task<GetBoolContentResponse> GetBoolFieldContent(
@@ -268,6 +256,10 @@ public class EntryActions : BaseInvocable
         await client.CreateOrUpdateEntry(entry,
             version: client.GetEntry(entryIdentifier.EntryId).Result.SystemProperties.Version);
     }
+    
+    #endregion
+
+    #region Media fields
 
     [Action("Get entry's media content", Description = "Get entry's media content by field ID.")]
     public async Task<AssetIdentifier> GetMediaFieldContent(
@@ -307,7 +299,24 @@ public class EntryActions : BaseInvocable
             { { localeIdentifier.Locale, payload } }));
         await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version);
     }
+    
+    #endregion
 
+    #region Entries
+
+    [Action("List entries", Description = "List all entries. If a content model is specified, only entries that have " +
+                                          "this content model are listed.")]
+    public async Task<ListEntriesResponse> ListEntries([ActionParameter] ContentModelIdentifier contentModelIdentifier)
+    {
+        var client = new ContentfulClient(Creds);
+        var queryString = $"?content_type={contentModelIdentifier.ContentModelId}";
+        var entries = await client.GetEntriesCollection<Entry<dynamic>>(queryString);
+        return new ListEntriesResponse
+        {
+            Entries = entries.Select(e => new EntryIdentifier { EntryId = e.SystemProperties.Id } )
+        };
+    }
+    
     [Action("Add new entry", Description = "Add new entry with specified content model.")]
     public async Task<EntryIdentifier> AddNewEntry([ActionParameter] ContentModelIdentifier contentModelIdentifier)
     {
@@ -342,4 +351,6 @@ public class EntryActions : BaseInvocable
         var entry = await client.GetEntry(entryIdentifier.EntryId);
         await client.UnpublishEntry(entryIdentifier.EntryId, version: (int)entry.SystemProperties.Version);
     }
+    
+    #endregion
 }
