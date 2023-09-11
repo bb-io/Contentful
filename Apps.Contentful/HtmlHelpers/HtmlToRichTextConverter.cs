@@ -3,7 +3,7 @@ using HtmlAgilityPack;
 
 namespace Apps.Contentful.HtmlHelpers;
 
-public class RichTextRenderer
+public class HtmlToRichTextConverter
 {
     public Document ToRichText(string html)
     {

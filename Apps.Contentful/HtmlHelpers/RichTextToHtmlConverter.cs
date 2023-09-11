@@ -4,12 +4,12 @@ using Newtonsoft.Json.Linq;
 
 namespace Apps.Contentful.HtmlHelpers;
 
-public class HtmlRenderer
+public class RichTextToHtmlConverter
 {
     private readonly JArray _content;
     private readonly string _spaceId;
     
-    public HtmlRenderer(JArray content, string spaceId)
+    public RichTextToHtmlConverter(JArray content, string spaceId)
     {
         _content = content;
         _spaceId = spaceId;
