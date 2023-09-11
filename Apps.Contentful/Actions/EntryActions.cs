@@ -32,8 +32,8 @@ public class EntryActions : BaseInvocable
     #region Text/Rich text fields
 
     [Action("Get entry's text/rich text field", Description = "Get the text content of the field of the specified entry. " +
-                                                              "Field can be plain text or rich text. In both cases plain " +
-                                                              "text is returned.")]
+                                                              "Field can be short text, long text or rich text. In all " +
+                                                              "cases plain text is returned.")]
     public async Task<GetTextContentResponse> GetTextFieldContent(
         [ActionParameter] EntryIdentifier entryIdentifier,
         [ActionParameter] FieldIdentifier fieldIdentifier,
@@ -59,18 +59,18 @@ public class EntryActions : BaseInvocable
 
             textContent = result.ToString();
         }
-        else if (fieldType == "Text")
+        else if (fieldType == "Text" || fieldType == "Symbol")
             textContent = field.ToString();
         else
-            throw new Exception("The specified field must be of the text or rich text type."); 
+            throw new Exception("The specified field must be of the short text, long text or rich text type."); 
 
         return new GetTextContentResponse { TextContent = textContent };
     }
     
     [Action("Get entry's text/rich text field as HTML file", Description = "Get the text content of the field of the " +
                                                                            "specified entry as HTML file. Field can be " +
-                                                                           "plain text or rich text. In both cases HTML " +
-                                                                           "file is returned.")]
+                                                                           "short text, long text or rich text. In all " +
+                                                                           "cases HTML file is returned.")]
     public async Task<FileResponse> GetTextFieldContentAsHtmlFile(
         [ActionParameter] EntryIdentifier entryIdentifier,
         [ActionParameter] FieldIdentifier fieldIdentifier,
@@ -91,10 +91,10 @@ public class EntryActions : BaseInvocable
             var htmlRenderer = new HtmlRenderer(content, spaceId);
             html = htmlRenderer.ToHtml();
         }
-        else if (fieldType == "Text")
+        else if (fieldType == "Text" || fieldType == "Symbol")
             html = $"<p>{field}</p>";
         else
-            throw new Exception("The specified field must be of the text or rich text type."); 
+            throw new Exception("The specified field must be of the short text, long text or rich text type."); 
 
         html = $"<html><body>{html}</body></html>";
 
@@ -109,7 +109,7 @@ public class EntryActions : BaseInvocable
     }
 
     [Action("Set entry's text/rich text field", Description = "Set content of the field of the specified entry. Field " +
-                                                              "can be plain text or rich text.")]
+                                                              "can be short text, long text or rich text.")]
     public async Task SetTextFieldContent(
         [ActionParameter] EntryIdentifier entryIdentifier,
         [ActionParameter] FieldIdentifier fieldIdentifier,
@@ -134,20 +134,21 @@ public class EntryActions : BaseInvocable
             fields[fieldIdentifier.FieldId] = JObject.Parse(JsonConvert.SerializeObject(new Dictionary<string, Document>
                 { { localeIdentifier.Locale, richText } }, serializerSettings));
         }
-        else if (fieldType == "Text") 
+        else if (fieldType == "Text" || fieldType == "Symbol") 
             fields[fieldIdentifier.FieldId] = JObject.Parse(JsonConvert.SerializeObject(new Dictionary<string, string>
                 { { localeIdentifier.Locale, text } }));
         else
-            throw new Exception("The specified field must be of the text or rich text type.");
+            throw new Exception("The specified field must be of the short text, long text or rich text type.");
         
         await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version);
     }
     
     [Action("Set entry's text/rich text field from HTML file", Description = "Set content of the field of the specified " +
-                                                                             "entry from HTML file. Field can be plain " +
-                                                                             "text or rich text. For plain text only the " +
-                                                                             "text extracted from HTML is put in the field. " +
-                                                                             "For rich text all HTML structure is preserved.")]
+                                                                             "entry from HTML file. Field can be short " +
+                                                                             "text, long text or rich text. For short/long " +
+                                                                             "text only the text extracted from HTML is " +
+                                                                             "put in the field. For rich text all HTML " +
+                                                                             "structure is preserved.")]
     public async Task SetTextFieldContentFromHtml(
         [ActionParameter] EntryIdentifier entryIdentifier,
         [ActionParameter] FieldIdentifier fieldIdentifier,
@@ -173,7 +174,7 @@ public class EntryActions : BaseInvocable
                 { { localeIdentifier.Locale, richText } }, serializerSettings));
             
         }
-        else if (fieldType == "Text")
+        else if (fieldType == "Text" || fieldType == "Symbol")
         {
             var htmlDocument = new HtmlDocument();
             htmlDocument.LoadHtml(html);
@@ -182,7 +183,7 @@ public class EntryActions : BaseInvocable
                 { { localeIdentifier.Locale, text } }));
         }
         else
-            throw new Exception("The specified field must be of the text or rich text type."); 
+            throw new Exception("The specified field must be of the short text, long text or rich text type."); 
 
         await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version);
     }
@@ -372,6 +373,6 @@ public class EntryActions : BaseInvocable
 
         return new ListLocalesResponse { Locales = missingLocales };
     }
-    
+
     #endregion
 }
