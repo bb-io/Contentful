@@ -297,8 +297,7 @@ public class EntryActions : BaseInvocable
 
     #region Entries
 
-    [Action("List entries", Description = "List all entries. If a content model is specified, only entries that have " +
-                                          "this content model are listed.")]
+    [Action("List entries", Description = "List all entries with specified content model.")]
     public async Task<ListEntriesResponse> ListEntries([ActionParameter] ContentModelIdentifier contentModelIdentifier)
     {
         var client = new ContentfulClient(Creds);
@@ -368,12 +367,11 @@ public class EntryActions : BaseInvocable
         return new ListLocalesResponse { Locales = missingLocales };
     }
     
-    [Action("Get entry as HTML file", Description = "Get the entire entry as HTML file. To include only fields with " +
-                                                    "localization enabled, set the respective bool flag to true.")]
-    public async Task<FileResponse> GetEntryAsHtmlFile(
+    [Action("Get entry's localizable fields as HTML file", Description = "Get all localizable fields of specified entry " +
+                                                                         "as HTML file.")]
+    public async Task<FileResponse> GetEntryLocalizableFieldsAsHtmlFile(
         [ActionParameter] EntryIdentifier entryIdentifier,
-        [ActionParameter] LocaleIdentifier localeIdentifier,
-        [ActionParameter] [Display("Include only fields with localization enabled")] bool localizedFieldsOnly)
+        [ActionParameter] LocaleIdentifier localeIdentifier)
     {
         string WrapFieldInDiv(string fieldType, string fieldId, string fieldContent = "", 
             Dictionary<string, string>? additionalAttributes = null)
@@ -390,7 +388,7 @@ public class EntryActions : BaseInvocable
         var entry = await client.GetEntry(entryIdentifier.EntryId);
         var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
         var contentType = await client.GetContentType(contentTypeId);
-        var fields = contentType.Fields.Where(f => !localizedFieldsOnly || f.Localized);
+        var fields = contentType.Fields.Where(f => f.Localized);
         var entryFields = (JObject)entry.Fields;
         var html = new StringBuilder();
 
@@ -471,8 +469,9 @@ public class EntryActions : BaseInvocable
         };
     }
 
-    [Action("Set entry from HTML file", Description = "Set entry from HTML file.")]
-    public async Task SetEntryFromHtmlFile(
+    [Action("Set entry's localizable fields from HTML file", Description = "Set all localizable fields of specified entry " +
+                                                                           "from HTML file.")]
+    public async Task SetEntryLocalizableFieldsFromHtmlFile(
         [ActionParameter] EntryIdentifier entryIdentifier,
         [ActionParameter] LocaleIdentifier localeIdentifier,
         [ActionParameter] FileRequest input)
