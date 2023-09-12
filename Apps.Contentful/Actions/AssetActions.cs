@@ -133,14 +133,14 @@ public class AssetActions : BaseInvocable
         var client = new ContentfulClient(InvocationContext.AuthenticationCredentialsProviders);
         var asset = await client.GetAsset(assetIdentifier.AssetId);
         var availableLocales = (await client.GetLocalesCollection()).Select(l => l.Code);
-        IEnumerable<LocaleIdentifier> missingLocales;
+        IEnumerable<string> missingLocales;
         
         if (asset.Files == null)
-            missingLocales = availableLocales.Select(l => new LocaleIdentifier { Locale = l });
+            missingLocales = availableLocales;
         else
         {
             var presentLocales = asset.Files.Select(f => f.Key);
-            missingLocales = availableLocales.Except(presentLocales).Select(l => new LocaleIdentifier { Locale = l });
+            missingLocales = availableLocales.Except(presentLocales);
         }
 
         return new ListLocalesResponse { Locales = missingLocales };

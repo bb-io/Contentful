@@ -353,15 +353,15 @@ public class EntryActions : BaseInvocable
         var entry = await client.GetEntry(entryIdentifier.EntryId);
         var availableLocales = (await client.GetLocalesCollection()).Select(l => l.Code);
         var field = ((JObject)entry.Fields)[fieldIdentifier.FieldId];
-        IEnumerable<LocaleIdentifier> missingLocales;
+        IEnumerable<string> missingLocales;
 
         if (field == null)
-            missingLocales = availableLocales.Select(l => new LocaleIdentifier { Locale = l });
+            missingLocales = availableLocales;
         else
         {
             var fieldDictionary = JsonConvert.DeserializeObject<Dictionary<string, object>>(field.ToString());
             var presentLocales = fieldDictionary.Select(f => f.Key);
-            missingLocales = availableLocales.Except(presentLocales).Select(l => new LocaleIdentifier { Locale = l });
+            missingLocales = availableLocales.Except(presentLocales);
         }
 
         return new ListLocalesResponse { Locales = missingLocales };
@@ -390,7 +390,7 @@ public class EntryActions : BaseInvocable
             }
         }
 
-        return new ListLocalesResponse { Locales = missingLocales.Select(l => new LocaleIdentifier { Locale = l }) };
+        return new ListLocalesResponse { Locales = missingLocales };
     }
     
     [Action("Get entry's localizable fields as HTML file", Description = "Get all localizable fields of specified entry " +
