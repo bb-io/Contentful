@@ -77,9 +77,9 @@ Follow [this guide](https://www.contentful.com/help/working-with-translations/) 
 - **Is asset locale present** checks if specified file translation is present for the asset.
 - **List missing locales for an asset** returns a list of all missing translations for the asset.
 
-### Content types
+### Content models
 
-- **Get all content types** returns all content types available in space.
+- **List all content models** returns all content models available in space.
 
 ## Events
 

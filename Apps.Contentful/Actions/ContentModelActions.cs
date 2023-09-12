@@ -8,22 +8,21 @@ using Blackbird.Applications.Sdk.Common.Invocation;
 namespace Apps.Contentful.Actions;
 
 [ActionList]
-public class ContentTypeActions : BaseInvocable
+public class ContentModelActions : BaseInvocable
 {
     private IEnumerable<AuthenticationCredentialsProvider> Creds =>
         InvocationContext.AuthenticationCredentialsProviders;
 
-    public ContentTypeActions(InvocationContext invocationContext) : base(invocationContext) { }
+    public ContentModelActions(InvocationContext invocationContext) : base(invocationContext) { }
     
-    [Action("Get all content types", Description = "Get all content types in space.")]
-    public async Task<GetAllContentTypesResponse> GetAllContentTypes()
+    [Action("List all content models", Description = "List all content models in space.")]
+    public async Task<ListAllContentModelsResponse> ListAllContentModels()
     {
         var client = new ContentfulClient(Creds);
         var contentTypes = await client.GetContentTypes();
-        var contentTypeDtos = contentTypes.Select(t => new ContentTypeDto { Name = t.Name }).ToList();
-        return new GetAllContentTypesResponse
+        return new ListAllContentModelsResponse
         {
-            ContentTypes = contentTypeDtos
+            ContentModels = contentTypes.Select(t => new ContentModelDto(t))
         };
     }
 }
