@@ -367,6 +367,32 @@ public class EntryActions : BaseInvocable
         return new ListLocalesResponse { Locales = missingLocales };
     }
     
+    [Action("List missing locales for entry", Description = "Retrieve a list of missing locales for specified entry.")]
+    public async Task<ListLocalesResponse> ListMissingLocalesForEntry([ActionParameter] EntryIdentifier entryIdentifier)
+    {
+        var client = new ContentfulClient(InvocationContext.AuthenticationCredentialsProviders);
+        var availableLocales = (await client.GetLocalesCollection()).Select(l => l.Code).ToArray();
+        var entry = await client.GetEntry(entryIdentifier.EntryId);
+        var contentModel = await client.GetContentType(entry.SystemProperties.ContentType.SystemProperties.Id);
+        var contentModelLocalizableFields = contentModel.Fields.Where(f => f.Localized);
+        var entryFields = (JObject)entry.Fields;
+        var missingLocales = new HashSet<string>();
+        
+        foreach (var field in contentModelLocalizableFields)
+        {
+            if (!entryFields.TryGetValue(field.Id, out var entryField))
+                continue;
+            
+            foreach (var locale in availableLocales)
+            {
+                if (!((JObject)entryField).TryGetValue(locale, out _))
+                    missingLocales.Add(locale);
+            }
+        }
+
+        return new ListLocalesResponse { Locales = missingLocales.Select(l => new LocaleIdentifier { Locale = l }) };
+    }
+    
     [Action("Get entry's localizable fields as HTML file", Description = "Get all localizable fields of specified entry " +
                                                                          "as HTML file.")]
     public async Task<FileResponse> GetEntryLocalizableFieldsAsHtmlFile(
