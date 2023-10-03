@@ -2,7 +2,6 @@
 using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Contentful.Core.Models;
-using Contentful.Core.Search;
 using Newtonsoft.Json.Linq;
 
 namespace Apps.Contentful.DataSourceHandlers;
