@@ -31,6 +31,13 @@ public class TagActions : ContentfulInvocable
         return new(tag);
     }
 
+    [Action("Get tag", Description = "Get details of a specific tag")]
+    public async Task<TagEntity> GetTag([ActionParameter] TagRequest input)
+    {
+        var tag = await Client.GetContentTag(input.TagId);
+        return new(tag);
+    }
+
     [Action("Delete tag", Description = "Delete specific content tag")]
     public Task DeleteTag([ActionParameter] DeleteTagRequest input)
         => Client.DeleteContentTag(input.TagId, input.Version);

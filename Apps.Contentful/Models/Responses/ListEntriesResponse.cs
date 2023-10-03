@@ -1,8 +1,8 @@
-﻿using Apps.Contentful.Models.Identifiers;
+﻿using Apps.Contentful.Models.Entities;
 
 namespace Apps.Contentful.Models.Responses;
 
 public class ListEntriesResponse
 {
-    public IEnumerable<EntryIdentifier> Entries { get; set; }
+    public IEnumerable<EntryEntity> Entries { get; set; }
 }

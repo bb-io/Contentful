@@ -11,13 +11,13 @@ public class TagEntity
 
     [Display("Created at")] public DateTime? CreatedAt { get; set; }
 
-    public int? Version { get; set; }
+    public int Version { get; set; }
 
     public TagEntity(ContentTag tag)
     {
         Id = tag.SystemProperties.Id;
         Name = tag.Name;
         CreatedAt = tag.SystemProperties.CreatedAt;
-        Version = tag.SystemProperties.Version;
+        Version = tag.SystemProperties.Version ?? default;
     }
 }
