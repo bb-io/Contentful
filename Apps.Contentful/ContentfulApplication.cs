@@ -2,39 +2,38 @@
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication.OAuth2;
 
-namespace Apps.Contentful
+namespace Apps.Contentful;
+
+public class ContentfulApplication : IApplication
 {
-    public class ContentfulApplication : IApplication
+    private readonly Dictionary<Type, object> _typesInstances;
+
+    public ContentfulApplication()
     {
-        private readonly Dictionary<Type, object> _typesInstances;
+        _typesInstances = CreateTypesInstances();
+    }
 
-        public ContentfulApplication()
-        {
-            _typesInstances = CreateTypesInstances();
-        }
+    public string Name
+    {
+        get => "Contentful";
+        set { }
+    }
 
-        public string Name
+    public T GetInstance<T>()
+    {
+        if (!_typesInstances.TryGetValue(typeof(T), out var value))
         {
-            get => "Contentful";
-            set { }
+            throw new InvalidOperationException($"Instance of type '{typeof(T)}' not found");
         }
+        return (T)value;
+    }
 
-        public T GetInstance<T>()
+    private Dictionary<Type, object> CreateTypesInstances()
+    {
+        return new Dictionary<Type, object>
         {
-            if (!_typesInstances.TryGetValue(typeof(T), out var value))
-            {
-                throw new InvalidOperationException($"Instance of type '{typeof(T)}' not found");
-            }
-            return (T)value;
-        }
-
-        private Dictionary<Type, object> CreateTypesInstances()
-        {
-            return new Dictionary<Type, object>
-            {
-                { typeof(IOAuth2AuthorizeService), new OAuth2AuthorizeService() },
-                { typeof(IOAuth2TokenService), new OAuth2TokenService() }
-            };
-        }
+            { typeof(IOAuth2AuthorizeService), new OAuth2AuthorizeService() },
+            { typeof(IOAuth2TokenService), new OAuth2TokenService() }
+        };
     }
 }

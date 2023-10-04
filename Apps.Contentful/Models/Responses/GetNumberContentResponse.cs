@@ -1,10 +1,9 @@
 ﻿using Blackbird.Applications.Sdk.Common;
 
-namespace Apps.Contentful.Models.Responses
+namespace Apps.Contentful.Models.Responses;
+
+public class GetNumberContentResponse
 {
-    public class GetNumberContentResponse
-    {
-        [Display("Number content")]
-        public int NumberContent { get; set; }
-    }
+    [Display("Number content")]
+    public int NumberContent { get; set; }
 }

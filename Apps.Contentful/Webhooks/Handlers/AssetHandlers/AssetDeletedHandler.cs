@@ -1,9 +1,8 @@
-﻿namespace Apps.Contentful.Webhooks.Handlers.AssetHandlers
+﻿namespace Apps.Contentful.Webhooks.Handlers.AssetHandlers;
+
+public class AssetDeletedHandler : BaseWebhookHandler
 {
-    public class AssetDeletedHandler : BaseWebhookHandler
+    public AssetDeletedHandler() : base("Asset", "delete")
     {
-        public AssetDeletedHandler() : base("Asset", "delete")
-        {
-        }
     }
 }

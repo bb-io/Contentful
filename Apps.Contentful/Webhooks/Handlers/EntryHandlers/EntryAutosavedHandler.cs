@@ -1,9 +1,8 @@
-﻿namespace Apps.Contentful.Webhooks.Handlers.EntryHandlers
+﻿namespace Apps.Contentful.Webhooks.Handlers.EntryHandlers;
+
+public class EntryAutoSavedHandler : BaseWebhookHandler
 {
-    public class EntryAutoSavedHandler : BaseWebhookHandler
+    public EntryAutoSavedHandler() : base("Entry", "auto_save")
     {
-        public EntryAutoSavedHandler() : base("Entry", "auto_save")
-        {
-        }
     }
 }

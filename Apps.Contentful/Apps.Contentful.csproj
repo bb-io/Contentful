@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="Blackbird.Applications.Sdk.Common" Version="2.2.0-alpha3" />
+    <PackageReference Include="Blackbird.Applications.Sdk.Utils" Version="1.0.12" />
     <PackageReference Include="contentful.csharp" Version="7.3.0" />
     <PackageReference Include="HtmlAgilityPack" Version="1.11.52" />
     <PackageReference Include="Microsoft.AspNetCore.WebUtilities" Version="2.2.0" />

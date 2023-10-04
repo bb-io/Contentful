@@ -1,9 +1,8 @@
-﻿namespace Apps.Contentful.Webhooks.Handlers.EntryHandlers
+﻿namespace Apps.Contentful.Webhooks.Handlers.EntryHandlers;
+
+public class EntryPublishedHandler : BaseWebhookHandler
 {
-    public class EntryPublishedHandler : BaseWebhookHandler
+    public EntryPublishedHandler() : base("Entry", "publish")
     {
-        public EntryPublishedHandler() : base("Entry", "publish")
-        {
-        }
     }
 }

@@ -1,9 +1,8 @@
-﻿namespace Apps.Contentful.Webhooks.Handlers.AssetHandlers
+﻿namespace Apps.Contentful.Webhooks.Handlers.AssetHandlers;
+
+public class AssetCreatedHandler : BaseWebhookHandler
 {
-    public class AssetCreatedHandler : BaseWebhookHandler
+    public AssetCreatedHandler() : base("Asset", "create")
     {
-        public AssetCreatedHandler() : base("Asset", "create")
-        {
-        }
     }
 }

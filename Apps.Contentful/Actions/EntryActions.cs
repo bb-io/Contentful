@@ -1,5 +1,6 @@
 ﻿using System.Net.Mime;
 using System.Text;
+using Apps.Contentful.Api;
 using Apps.Contentful.HtmlHelpers;
 using Apps.Contentful.Models.Entities;
 using Blackbird.Applications.Sdk.Common;
@@ -311,6 +312,15 @@ public class EntryActions : BaseInvocable
         {
             Entries = entries.Select(e => new EntryEntity(e)).ToArray()
         };
+    }
+
+    [Action("Get entry", Description = "Get details of a specific entry")]
+    public async Task<EntryEntity> GetEntry([ActionParameter] EntryIdentifier input)
+    {
+        var client = new ContentfulClient(Creds);
+
+        var entry = await client.GetEntry(input.EntryId);
+        return new(entry);
     }
 
     [Action("Add new entry", Description = "Add new entry with specified content model.")]

@@ -1,4 +1,5 @@
-﻿using Apps.Contentful.Models.Identifiers;
+﻿using Apps.Contentful.Api;
+using Apps.Contentful.Models.Identifiers;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Apps.Contentful.Models.Requests;

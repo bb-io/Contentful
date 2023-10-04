@@ -1,9 +1,8 @@
-﻿namespace Apps.Contentful.Webhooks.Handlers.AssetHandlers
+﻿namespace Apps.Contentful.Webhooks.Handlers.AssetHandlers;
+
+public class AssetAutoSavedHandler : BaseWebhookHandler
 {
-    public class AssetAutoSavedHandler : BaseWebhookHandler
+    public AssetAutoSavedHandler() : base("Asset", "auto_save")
     {
-        public AssetAutoSavedHandler() : base("Asset", "auto_save")
-        {
-        }
     }
 }
