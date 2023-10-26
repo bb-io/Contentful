@@ -101,5 +101,5 @@ If you want to have a more convenient experience managing your Contentful with B
 ## Feedback
 
 Feedback to our implementation of Contentful is always very welcome. Reach out to us using the established channels or create an issue.
-
+ 
 <!-- end docs -->
