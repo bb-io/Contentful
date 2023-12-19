@@ -1,13 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Apps.Contentful
+﻿namespace Apps.Contentful
 {
     public class ApplicationConstants
     {
-        public const string Scope = "#{CONTENTFUL_SCOPE}#";
+        //public const string Scope = "#{CONTENTFUL_SCOPE}#";
+        public const string Scope = "content_management_manage";
     }
 }

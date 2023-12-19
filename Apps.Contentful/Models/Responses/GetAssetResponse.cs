@@ -7,6 +7,8 @@ public class GetAssetResponse
     public string? Title { get; set; }
 
     public string? Description { get; set; }
+    
+    public IEnumerable<string> Tags { get; set; }
 
     public File? File { get; set; }
 }
