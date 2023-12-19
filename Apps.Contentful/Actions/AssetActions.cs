@@ -3,6 +3,7 @@ using Apps.Contentful.Models.Identifiers;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Apps.Contentful.Models.Requests;
+using Apps.Contentful.Models.Requests.Tags;
 using Apps.Contentful.Models.Responses;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Invocation;
@@ -33,11 +34,12 @@ public class AssetActions : BaseInvocable
         var fileData = asset.Files?[localeIdentifier.Locale];
         var fileContent = await DownloadFileByUrl(fileData);
 
-        return new GetAssetResponse
+        return new()
         {
             Title = asset.Title?[localeIdentifier.Locale],
             Description = asset.Description?[localeIdentifier.Locale],
-            File = fileContent
+            File = fileContent,
+            Tags = asset.Metadata.Tags.Select(x => x.Sys.Id)
         };
     }
 
@@ -61,12 +63,12 @@ public class AssetActions : BaseInvocable
             },
         }, input.File.Bytes);
 
-        return new AssetIdentifier 
+        return new AssetIdentifier
         {
             AssetId = result.SystemProperties.Id
         };
     }
-    
+
     [Action("Update asset file", Description = "Update asset file.")]
     public async Task UpdateAssetFile(
         [ActionParameter] AssetIdentifier assetIdentifier,
@@ -96,7 +98,8 @@ public class AssetActions : BaseInvocable
             Files = oldAsset.Files
         }, version: oldAsset.SystemProperties.Version);
 
-        await client.ProcessAsset(assetIdentifier.AssetId, (int)oldAsset.SystemProperties.Version, localeIdentifier.Locale);
+        await client.ProcessAsset(assetIdentifier.AssetId, (int)oldAsset.SystemProperties.Version,
+            localeIdentifier.Locale);
     }
 
     [Action("Publish asset", Description = "Publish specified asset.")]
@@ -127,7 +130,7 @@ public class AssetActions : BaseInvocable
 
         return new IsAssetLocalePresentResponse { IsAssetLocalePresent = 0 };
     }
-    
+
     [Action("List missing locales for an asset", Description = "Retrieve a list of missing locales for an asset.")]
     public async Task<ListLocalesResponse> ListMissingLocalesForAsset([ActionParameter] AssetIdentifier assetIdentifier)
     {
@@ -135,7 +138,7 @@ public class AssetActions : BaseInvocable
         var asset = await client.GetAsset(assetIdentifier.AssetId);
         var availableLocales = (await client.GetLocalesCollection()).Select(l => l.Code);
         IEnumerable<string> missingLocales;
-        
+
         if (asset.Files == null)
             missingLocales = availableLocales;
         else
@@ -145,7 +148,38 @@ public class AssetActions : BaseInvocable
         }
 
         return new ListLocalesResponse { Locales = missingLocales };
-    } 
+    }
+
+    [Action("Add asset tag", Description = "Add a new tag to the specified asset")]
+    public async Task AddAssetTag(
+        [ActionParameter] AssetIdentifier assetIdentifier,
+        [ActionParameter] TagRequest tag)
+    {
+        var client = new ContentfulClient(InvocationContext.AuthenticationCredentialsProviders);
+        var asset = await client.GetAsset(assetIdentifier.AssetId);
+        asset.Metadata.Tags.Add(new()
+        {
+            Sys = new()
+            {
+                LinkType = "Tag",
+                Id = tag.TagId,
+            }
+        });
+
+        await client.CreateOrUpdateAsset(asset, version: asset.SystemProperties.Version);
+    }
+
+    [Action("Remove asset tag", Description = "Remove a specific tag from the asset")]
+    public async Task RemoveAssetTag(
+        [ActionParameter] AssetIdentifier assetIdentifier,
+        [ActionParameter] TagRequest tag)
+    {
+        var client = new ContentfulClient(InvocationContext.AuthenticationCredentialsProviders);
+        var asset = await client.GetAsset(assetIdentifier.AssetId);
+        asset.Metadata.Tags = asset.Metadata.Tags.Where(x => x.Sys.Id != tag.TagId).ToList();
+
+        await client.CreateOrUpdateAsset(asset, version: asset.SystemProperties.Version);
+    }
 
     private async Task<Blackbird.Applications.Sdk.Common.Files.File?> DownloadFileByUrl(File? file)
     {

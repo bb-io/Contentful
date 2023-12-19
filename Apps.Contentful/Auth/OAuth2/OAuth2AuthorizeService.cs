@@ -17,7 +17,7 @@ public class OAuth2AuthorizeService : BaseInvocable, IOAuth2AuthorizeService
         var parameters = new Dictionary<string, string>
         {
             { "client_id", values["client_id"] },
-            { "redirect_uri", InvocationContext.UriInfo.ImplicitGrantRedirectUri.ToString() },
+            { "redirect_uri", "https://youtube.com"},//InvocationContext.UriInfo.ImplicitGrantRedirectUri.ToString() },
             { "response_type", "token" },
             { "scope", ApplicationConstants.Scope },
             { "state", values["state"] }
