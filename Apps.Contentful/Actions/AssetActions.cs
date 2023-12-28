@@ -7,6 +7,8 @@ using Apps.Contentful.Models.Requests.Tags;
 using Apps.Contentful.Models.Responses;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Invocation;
+using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
+using Blackbird.Applications.Sdk.Utils.Extensions.Files;
 using RestSharp;
 using Contentful.Core.Models;
 using Contentful.Core.Models.Management;
@@ -20,8 +22,12 @@ public class AssetActions : BaseInvocable
     private IEnumerable<AuthenticationCredentialsProvider> Creds =>
         InvocationContext.AuthenticationCredentialsProviders;
 
-    public AssetActions(InvocationContext invocationContext) : base(invocationContext)
+    private readonly IFileManagementClient _fileManagementClient;
+
+    public AssetActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient) : base(
+        invocationContext)
     {
+        _fileManagementClient = fileManagementClient;
     }
 
     [Action("Get asset", Description = "Get specified asset.")]
@@ -49,6 +55,8 @@ public class AssetActions : BaseInvocable
         [ActionParameter] CreateAssetRequest input)
     {
         var client = new ContentfulClient(Creds);
+
+        var file = await _fileManagementClient.DownloadAsync(input.File);
         var result = await client.UploadFileAndCreateAsset(new ManagementAsset
         {
             SystemProperties = new SystemProperties { Id = Guid.NewGuid().ToString() },
@@ -61,9 +69,9 @@ public class AssetActions : BaseInvocable
                     new File { FileName = input.Filename ?? input.File.Name, ContentType = "text/plain" }
                 }
             },
-        }, input.File.Bytes);
+        }, await file.GetByteData());
 
-        return new AssetIdentifier
+        return new()
         {
             AssetId = result.SystemProperties.Id
         };
@@ -77,7 +85,9 @@ public class AssetActions : BaseInvocable
     {
         var client = new ContentfulClient(Creds);
         var oldAsset = await client.GetAsset(assetIdentifier.AssetId);
-        var uploadReference = await client.UploadFile(input.File.Bytes);
+
+        var file = await _fileManagementClient.DownloadAsync(input.File);
+        var uploadReference = await client.UploadFile(await file.GetByteData());
         uploadReference.SystemProperties.CreatedAt = null;
         uploadReference.SystemProperties.CreatedBy = null;
         uploadReference.SystemProperties.Space = null;
@@ -181,7 +191,7 @@ public class AssetActions : BaseInvocable
         await client.CreateOrUpdateAsset(asset, version: asset.SystemProperties.Version);
     }
 
-    private async Task<Blackbird.Applications.Sdk.Common.Files.File?> DownloadFileByUrl(File? file)
+    private async Task<Blackbird.Applications.Sdk.Common.Files.FileReference?> DownloadFileByUrl(File? file)
     {
         if (file is null)
             return null;
@@ -190,10 +200,7 @@ public class AssetActions : BaseInvocable
         var request = new RestRequest($"https:{file.Url}");
         var response = await client.GetAsync(request);
 
-        return new Blackbird.Applications.Sdk.Common.Files.File(response.RawBytes)
-        {
-            Name = file.FileName,
-            ContentType = file.ContentType
-        };
+        return await _fileManagementClient.UploadAsync(new MemoryStream(response.RawBytes!), file.FileName,
+            file.ContentType);
     }
 }
