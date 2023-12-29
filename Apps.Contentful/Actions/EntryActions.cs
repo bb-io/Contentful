@@ -11,12 +11,13 @@ using Apps.Contentful.Models.Requests;
 using Newtonsoft.Json.Linq;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Invocation;
+using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
+using Blackbird.Applications.Sdk.Utils.Extensions.Files;
 using Contentful.Core.Models;
 using Newtonsoft.Json;
 using Contentful.Core.Extensions;
 using HtmlAgilityPack;
 using Newtonsoft.Json.Serialization;
-using File = Blackbird.Applications.Sdk.Common.Files.File;
 
 namespace Apps.Contentful.Actions;
 
@@ -26,8 +27,12 @@ public class EntryActions : BaseInvocable
     private IEnumerable<AuthenticationCredentialsProvider> Creds =>
         InvocationContext.AuthenticationCredentialsProviders;
 
-    public EntryActions(InvocationContext invocationContext) : base(invocationContext)
+    private readonly IFileManagementClient _fileManagementClient;
+
+    public EntryActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient) : base(
+        invocationContext)
     {
+        _fileManagementClient = fileManagementClient;
     }
 
     #region Text/Rich text fields
@@ -100,13 +105,12 @@ public class EntryActions : BaseInvocable
 
         html = $"<html><body>{html}</body></html>";
 
-        return new FileResponse
+        var file = await _fileManagementClient.UploadAsync(new MemoryStream(Encoding.UTF8.GetBytes(html)),
+            MediaTypeNames.Text.Html,
+            $"{entryIdentifier.EntryId}_{fieldIdentifier.FieldId}_{localeIdentifier.Locale}.html");
+        return new()
         {
-            File = new File(Encoding.UTF8.GetBytes(html))
-            {
-                Name = $"{entryIdentifier.EntryId}_{fieldIdentifier.FieldId}_{localeIdentifier.Locale}.html",
-                ContentType = MediaTypeNames.Text.Html
-            }
+            File = file
         };
     }
 
@@ -164,7 +168,9 @@ public class EntryActions : BaseInvocable
         var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
         var contentType = await client.GetContentType(contentTypeId);
         var fieldType = contentType.Fields.First(f => f.Id == fieldIdentifier.FieldId).Type;
-        var html = Encoding.UTF8.GetString(input.File.Bytes);
+
+        var file = await _fileManagementClient.DownloadAsync(input.File);
+        var html = Encoding.UTF8.GetString(await file.GetByteData());
 
         if (fieldType == "RichText")
         {
@@ -502,13 +508,11 @@ public class EntryActions : BaseInvocable
 
         var resultHtml = $"<html><body>{html}</body></html>";
 
-        return new FileResponse
+        var file = await _fileManagementClient.UploadAsync(new MemoryStream(Encoding.UTF8.GetBytes(resultHtml)),
+            MediaTypeNames.Text.Html, $"{entryIdentifier.EntryId}_{localeIdentifier.Locale}.html");
+        return new()
         {
-            File = new File(Encoding.UTF8.GetBytes(resultHtml))
-            {
-                Name = $"{entryIdentifier.EntryId}_{localeIdentifier.Locale}.html",
-                ContentType = MediaTypeNames.Text.Html
-            }
+            File = file
         };
     }
 
@@ -525,7 +529,9 @@ public class EntryActions : BaseInvocable
         var client = new ContentfulClient(Creds);
         var entry = await client.GetEntry(entryIdentifier.EntryId);
         var fields = (JObject)entry.Fields;
-        var html = Encoding.UTF8.GetString(input.File.Bytes);
+
+        var file = await _fileManagementClient.DownloadAsync(input.File);
+        var html = Encoding.UTF8.GetString(await file.GetByteData());
         var htmlDocument = new HtmlDocument();
         htmlDocument.LoadHtml(html);
 
