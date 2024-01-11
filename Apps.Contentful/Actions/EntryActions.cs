@@ -42,13 +42,12 @@ public class EntryActions : BaseInvocable
         "Field can be short text, long text or rich text. In all " +
         "cases plain text is returned.")]
     public async Task<GetTextContentResponse> GetTextFieldContent(
-        [ActionParameter] EntryIdentifier entryIdentifier,
-        [ActionParameter] FieldIdentifier fieldIdentifier,
-        [ActionParameter] LocaleIdentifier localeIdentifier)
+        [ActionParameter] EntryLocaleIdentifier entryIdentifier,
+        [ActionParameter] FieldIdentifier fieldIdentifier)
     {
-        var client = new ContentfulClient(Creds);
+        var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var entry = await client.GetEntry(entryIdentifier.EntryId);
-        var field = ((JObject)entry.Fields)[fieldIdentifier.FieldId][localeIdentifier.Locale];
+        var field = ((JObject)entry.Fields)[fieldIdentifier.FieldId][entryIdentifier.Locale];
         var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
         var contentType = await client.GetContentType(contentTypeId);
         var fieldType = contentType.Fields.First(f => f.Id == fieldIdentifier.FieldId).Type;
@@ -79,13 +78,12 @@ public class EntryActions : BaseInvocable
                                                                            "short text, long text or rich text. In all " +
                                                                            "cases HTML file is returned.")]
     public async Task<FileResponse> GetTextFieldContentAsHtmlFile(
-        [ActionParameter] EntryIdentifier entryIdentifier,
-        [ActionParameter] FieldIdentifier fieldIdentifier,
-        [ActionParameter] LocaleIdentifier localeIdentifier)
+        [ActionParameter] EntryLocaleIdentifier entryIdentifier,
+        [ActionParameter] FieldIdentifier fieldIdentifier)
     {
-        var client = new ContentfulClient(Creds);
+        var client = new ContentfulClient(Creds, entryIdentifier.Locale);
         var entry = await client.GetEntry(entryIdentifier.EntryId);
-        var field = ((JObject)entry.Fields)[fieldIdentifier.FieldId][localeIdentifier.Locale];
+        var field = ((JObject)entry.Fields)[fieldIdentifier.FieldId][entryIdentifier.Locale];
         var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
         var contentType = await client.GetContentType(contentTypeId);
         var fieldType = contentType.Fields.First(f => f.Id == fieldIdentifier.FieldId).Type;
@@ -107,7 +105,7 @@ public class EntryActions : BaseInvocable
 
         var file = await _fileManagementClient.UploadAsync(new MemoryStream(Encoding.UTF8.GetBytes(html)),
             MediaTypeNames.Text.Html,
-            $"{entryIdentifier.EntryId}_{fieldIdentifier.FieldId}_{localeIdentifier.Locale}.html");
+            $"{entryIdentifier.EntryId}_{fieldIdentifier.FieldId}_{entryIdentifier.Locale}.html");
         return new()
         {
             File = file
@@ -118,12 +116,11 @@ public class EntryActions : BaseInvocable
         "Set content of the field of the specified entry. Field " +
         "can be short text, long text or rich text.")]
     public async Task SetTextFieldContent(
-        [ActionParameter] EntryIdentifier entryIdentifier,
+        [ActionParameter] EntryLocaleIdentifier entryIdentifier,
         [ActionParameter] FieldIdentifier fieldIdentifier,
-        [ActionParameter] LocaleIdentifier localeIdentifier,
         [ActionParameter] [Display("Text")] string text)
     {
-        var client = new ContentfulClient(Creds);
+        var client = new ContentfulClient(Creds, entryIdentifier.Locale);
         var entry = await client.GetEntry(entryIdentifier.EntryId);
         var fields = (JObject)entry.Fields;
         var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
@@ -138,11 +135,11 @@ public class EntryActions : BaseInvocable
             var serializerSettings = new JsonSerializerSettings();
             serializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
             serializerSettings.NullValueHandling = NullValueHandling.Ignore;
-            fields[fieldIdentifier.FieldId][localeIdentifier.Locale] =
+            fields[fieldIdentifier.FieldId][entryIdentifier.Locale] =
                 JObject.Parse(JsonConvert.SerializeObject(richText, serializerSettings));
         }
         else if (fieldType == "Text" || fieldType == "Symbol")
-            fields[fieldIdentifier.FieldId][localeIdentifier.Locale] = text;
+            fields[fieldIdentifier.FieldId][entryIdentifier.Locale] = text;
         else
             throw new Exception("The specified field must be of the short text, long text or rich text type.");
 
@@ -157,12 +154,11 @@ public class EntryActions : BaseInvocable
         "put in the field. For rich text all HTML " +
         "structure is preserved.")]
     public async Task SetTextFieldContentFromHtml(
-        [ActionParameter] EntryIdentifier entryIdentifier,
+        [ActionParameter] EntryLocaleIdentifier entryIdentifier,
         [ActionParameter] FieldIdentifier fieldIdentifier,
-        [ActionParameter] LocaleIdentifier localeIdentifier,
         [ActionParameter] FileRequest input)
     {
-        var client = new ContentfulClient(Creds);
+        var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var entry = await client.GetEntry(entryIdentifier.EntryId);
         var fields = (JObject)entry.Fields;
         var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
@@ -179,7 +175,7 @@ public class EntryActions : BaseInvocable
             var serializerSettings = new JsonSerializerSettings();
             serializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
             serializerSettings.NullValueHandling = NullValueHandling.Ignore;
-            fields[fieldIdentifier.FieldId][localeIdentifier.Locale] =
+            fields[fieldIdentifier.FieldId][entryIdentifier.Locale] =
                 JObject.Parse(JsonConvert.SerializeObject(richText, serializerSettings));
         }
         else if (fieldType == "Text" || fieldType == "Symbol")
@@ -188,7 +184,7 @@ public class EntryActions : BaseInvocable
             htmlDocument.LoadHtml(html);
             var text = string.Join("",
                 htmlDocument.DocumentNode.SelectNodes("//text()").Select(node => node.InnerText));
-            fields[fieldIdentifier.FieldId][localeIdentifier.Locale] = text;
+            fields[fieldIdentifier.FieldId][entryIdentifier.Locale] = text;
         }
         else
             throw new Exception("The specified field must be of the short text, long text or rich text type.");
@@ -202,30 +198,28 @@ public class EntryActions : BaseInvocable
 
     [Action("Get entry's number field", Description = "Get entry's number field value by field ID.")]
     public async Task<GetNumberContentResponse> GetNumberFieldContent(
-        [ActionParameter] EntryIdentifier entryIdentifier,
-        [ActionParameter] FieldIdentifier fieldIdentifier,
-        [ActionParameter] LocaleIdentifier localeIdentifier)
+        [ActionParameter] EntryLocaleIdentifier entryIdentifier,
+        [ActionParameter] FieldIdentifier fieldIdentifier)
     {
-        var client = new ContentfulClient(Creds);
+        var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var entry = await client.GetEntry(entryIdentifier.EntryId);
         var fields = (JObject)entry.Fields;
         return new GetNumberContentResponse
         {
-            NumberContent = fields[fieldIdentifier.FieldId][localeIdentifier.Locale].ToInt()
+            NumberContent = fields[fieldIdentifier.FieldId][entryIdentifier.Locale].ToInt()
         };
     }
 
     [Action("Set entry's number field", Description = "Set entry's number field value by field ID.")]
     public async Task SetNumberFieldContent(
-        [ActionParameter] EntryIdentifier entryIdentifier,
+        [ActionParameter] EntryLocaleIdentifier entryIdentifier,
         [ActionParameter] FieldIdentifier fieldIdentifier,
-        [ActionParameter] LocaleIdentifier localeIdentifier,
         [ActionParameter] [Display("Number")] int number)
     {
-        var client = new ContentfulClient(Creds);
+        var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var entry = await client.GetEntry(entryIdentifier.EntryId);
         var fields = (JObject)entry.Fields;
-        fields[fieldIdentifier.FieldId][localeIdentifier.Locale] = number;
+        fields[fieldIdentifier.FieldId][entryIdentifier.Locale] = number;
         await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version);
     }
 
@@ -235,30 +229,28 @@ public class EntryActions : BaseInvocable
 
     [Action("Get entry's boolean field", Description = "Get entry's boolean field by field ID.")]
     public async Task<GetBoolContentResponse> GetBoolFieldContent(
-        [ActionParameter] EntryIdentifier entryIdentifier,
-        [ActionParameter] FieldIdentifier fieldIdentifier,
-        [ActionParameter] LocaleIdentifier localeIdentifier)
+        [ActionParameter] EntryLocaleIdentifier entryIdentifier,
+        [ActionParameter] FieldIdentifier fieldIdentifier)
     {
-        var client = new ContentfulClient(Creds);
+        var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var entry = await client.GetEntry(entryIdentifier.EntryId);
         var fields = (JObject)entry.Fields;
         return new GetBoolContentResponse
         {
-            BooleanContent = fields[fieldIdentifier.FieldId][localeIdentifier.Locale].ToObject<bool>()
+            BooleanContent = fields[fieldIdentifier.FieldId][entryIdentifier.Locale].ToObject<bool>()
         };
     }
 
     [Action("Set entry's boolean field", Description = "Set entry's boolean field by field ID.")]
     public async Task SetBoolFieldContent(
-        [ActionParameter] EntryIdentifier entryIdentifier,
+        [ActionParameter] EntryLocaleIdentifier entryIdentifier,
         [ActionParameter] FieldIdentifier fieldIdentifier,
-        [ActionParameter] LocaleIdentifier localeIdentifier,
         [ActionParameter] [Display("Boolean")] bool boolean)
     {
-        var client = new ContentfulClient(Creds);
+        var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var entry = await client.GetEntry(entryIdentifier.EntryId);
         var fields = (JObject)entry.Fields;
-        fields[fieldIdentifier.FieldId][localeIdentifier.Locale] = boolean;
+        fields[fieldIdentifier.FieldId][entryIdentifier.Locale] = boolean;
         await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version);
     }
 
@@ -268,27 +260,25 @@ public class EntryActions : BaseInvocable
 
     [Action("Get entry's media content", Description = "Get entry's media content by field ID.")]
     public async Task<AssetIdentifier> GetMediaFieldContent(
-        [ActionParameter] EntryIdentifier entryIdentifier,
-        [ActionParameter] FieldIdentifier fieldIdentifier,
-        [ActionParameter] LocaleIdentifier localeIdentifier)
+        [ActionParameter] EntryLocaleIdentifier entryIdentifier,
+        [ActionParameter] FieldIdentifier fieldIdentifier)
     {
-        var client = new ContentfulClient(Creds);
+        var client = new ContentfulClient(Creds, entryIdentifier.Locale);
         var entry = await client.GetEntry(entryIdentifier.EntryId);
         var fields = (JObject)entry.Fields;
         return new AssetIdentifier
         {
-            AssetId = fields[fieldIdentifier.FieldId][localeIdentifier.Locale]["sys"]["id"].ToString()
+            AssetId = fields[fieldIdentifier.FieldId][entryIdentifier.Locale]["sys"]["id"].ToString()
         };
     }
 
     [Action("Set entry's media field", Description = "Set entry's media field by field ID.")]
     public async Task SetMediaFieldContent(
-        [ActionParameter] EntryIdentifier entryIdentifier,
+        [ActionParameter] EntryLocaleIdentifier entryIdentifier,
         [ActionParameter] FieldIdentifier fieldIdentifier,
-        [ActionParameter] LocaleIdentifier localeIdentifier,
         [ActionParameter] AssetIdentifier assetIdentifier)
     {
-        var client = new ContentfulClient(Creds);
+        var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var payload = new
         {
             sys = new
@@ -300,7 +290,7 @@ public class EntryActions : BaseInvocable
         };
         var entry = await client.GetEntry(entryIdentifier.EntryId);
         var fields = (JObject)entry.Fields;
-        fields[fieldIdentifier.FieldId][localeIdentifier.Locale] = JObject.Parse(JsonConvert.SerializeObject(payload));
+        fields[fieldIdentifier.FieldId][entryIdentifier.Locale] = JObject.Parse(JsonConvert.SerializeObject(payload));
         await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version);
     }
 
@@ -311,7 +301,7 @@ public class EntryActions : BaseInvocable
     [Action("List entries", Description = "List all entries with specified content model.")]
     public async Task<ListEntriesResponse> ListEntries([ActionParameter] ContentModelIdentifier contentModelIdentifier)
     {
-        var client = new ContentfulClient(Creds);
+        var client = new ContentfulClient(Creds, contentModelIdentifier.Environment);
         var queryString = $"?content_type={contentModelIdentifier.ContentModelId}";
         var entries = await client.GetEntriesCollection<Entry<object>>(queryString);
         return new ListEntriesResponse
@@ -323,7 +313,7 @@ public class EntryActions : BaseInvocable
     [Action("Get entry", Description = "Get details of a specific entry")]
     public async Task<EntryEntity> GetEntry([ActionParameter] EntryIdentifier input)
     {
-        var client = new ContentfulClient(Creds);
+        var client = new ContentfulClient(Creds, input.Environment);
 
         var entry = await client.GetEntry(input.EntryId);
         return new(entry);
@@ -332,7 +322,7 @@ public class EntryActions : BaseInvocable
     [Action("Add new entry", Description = "Add new entry with specified content model.")]
     public async Task<EntryIdentifier> AddNewEntry([ActionParameter] ContentModelIdentifier contentModelIdentifier)
     {
-        var client = new ContentfulClient(Creds);
+        var client = new ContentfulClient(Creds, contentModelIdentifier.Environment);
         var result = await client.CreateEntry(new Entry<dynamic>(), contentModelIdentifier.ContentModelId);
         return new EntryIdentifier
         {
@@ -343,7 +333,7 @@ public class EntryActions : BaseInvocable
     [Action("Delete entry", Description = "Delete specified entry.")]
     public async Task DeleteEntry([ActionParameter] EntryIdentifier entryIdentifier)
     {
-        var client = new ContentfulClient(Creds);
+        var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var entry = await client.GetEntry(entryIdentifier.EntryId);
         await client.DeleteEntry(entryIdentifier.EntryId, version: (int)entry.SystemProperties.Version);
     }
@@ -351,7 +341,7 @@ public class EntryActions : BaseInvocable
     [Action("Publish entry", Description = "Publish specified entry.")]
     public async Task PublishEntry([ActionParameter] EntryIdentifier entryIdentifier)
     {
-        var client = new ContentfulClient(Creds);
+        var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var entry = await client.GetEntry(entryIdentifier.EntryId);
         await client.PublishEntry(entryIdentifier.EntryId, version: (int)entry.SystemProperties.Version);
     }
@@ -359,7 +349,7 @@ public class EntryActions : BaseInvocable
     [Action("Unpublish entry", Description = "Unpublish specified entry.")]
     public async Task UnpublishEntry([ActionParameter] EntryIdentifier entryIdentifier)
     {
-        var client = new ContentfulClient(Creds);
+        var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var entry = await client.GetEntry(entryIdentifier.EntryId);
         await client.UnpublishEntry(entryIdentifier.EntryId, version: (int)entry.SystemProperties.Version);
     }
@@ -369,7 +359,8 @@ public class EntryActions : BaseInvocable
         [ActionParameter] EntryIdentifier entryIdentifier,
         [ActionParameter] FieldIdentifier fieldIdentifier)
     {
-        var client = new ContentfulClient(InvocationContext.AuthenticationCredentialsProviders);
+        var client = new ContentfulClient(InvocationContext.AuthenticationCredentialsProviders,
+            entryIdentifier.Environment);
         var entry = await client.GetEntry(entryIdentifier.EntryId);
         var availableLocales = (await client.GetLocalesCollection()).Select(l => l.Code);
         var field = ((JObject)entry.Fields)[fieldIdentifier.FieldId];
@@ -390,7 +381,8 @@ public class EntryActions : BaseInvocable
     [Action("List missing locales for entry", Description = "Retrieve a list of missing locales for specified entry.")]
     public async Task<ListLocalesResponse> ListMissingLocalesForEntry([ActionParameter] EntryIdentifier entryIdentifier)
     {
-        var client = new ContentfulClient(InvocationContext.AuthenticationCredentialsProviders);
+        var client = new ContentfulClient(InvocationContext.AuthenticationCredentialsProviders,
+            entryIdentifier.Environment);
         var availableLocales = (await client.GetLocalesCollection()).Select(l => l.Code).ToArray();
         var entry = await client.GetEntry(entryIdentifier.EntryId);
         var contentModel = await client.GetContentType(entry.SystemProperties.ContentType.SystemProperties.Id);
@@ -417,8 +409,7 @@ public class EntryActions : BaseInvocable
         "Get all localizable fields of specified entry " +
         "as HTML file.")]
     public async Task<FileResponse> GetEntryLocalizableFieldsAsHtmlFile(
-        [ActionParameter] EntryIdentifier entryIdentifier,
-        [ActionParameter] LocaleIdentifier localeIdentifier)
+        [ActionParameter] EntryLocaleIdentifier entryIdentifier)
     {
         string WrapFieldInDiv(string fieldType, string fieldId, string fieldContent = "",
             Dictionary<string, string>? additionalAttributes = null)
@@ -432,7 +423,7 @@ public class EntryActions : BaseInvocable
             return $"<div {attributesList}>" + $"{fieldContent}</div>";
         }
 
-        var client = new ContentfulClient(Creds);
+        var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var entry = await client.GetEntry(entryIdentifier.EntryId);
         var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
         var contentType = await client.GetContentType(contentTypeId);
@@ -449,26 +440,26 @@ public class EntryActions : BaseInvocable
             {
                 case "Integer" or "Number" or "Symbol" or "Text" or "Date"
                     : // Number - decimal; Symbol - short text; Text - long text.
-                    var fieldContent = entryField[localeIdentifier.Locale].ToString();
+                    var fieldContent = entryField[entryIdentifier.Locale].ToString();
                     var div = WrapFieldInDiv(field.Type, field.Id, fieldContent);
                     html.Append(div);
                     break;
                 case "Object" or "Location":
-                    var jsonValue = entryField[localeIdentifier.Locale].ToString();
+                    var jsonValue = entryField[entryIdentifier.Locale].ToString();
                     var additionalAttributes = new Dictionary<string, string>
                         { { "data-contentful-json-value", jsonValue } };
                     div = WrapFieldInDiv(field.Type, field.Id, additionalAttributes: additionalAttributes);
                     html.Append(div);
                     break;
                 case "Boolean":
-                    var boolValue = (bool)entryField[localeIdentifier.Locale];
+                    var boolValue = (bool)entryField[entryIdentifier.Locale];
                     additionalAttributes = new Dictionary<string, string>
                         { { "data-contentful-bool-value", boolValue.ToString() } };
                     div = WrapFieldInDiv(field.Type, field.Id, additionalAttributes: additionalAttributes);
                     html.Append(div);
                     break;
                 case "RichText":
-                    var content = (JArray)entryField[localeIdentifier.Locale]["content"];
+                    var content = (JArray)entryField[entryIdentifier.Locale]["content"];
                     var spaceId = Creds.First(p => p.KeyName == "spaceId").Value;
                     var richTextToHtmlConverter = new RichTextToHtmlConverter(content, spaceId);
                     fieldContent = richTextToHtmlConverter.ToHtml();
@@ -476,7 +467,7 @@ public class EntryActions : BaseInvocable
                     html.Append(div);
                     break;
                 case "Link": // media or reference
-                    var linkData = entryField[localeIdentifier.Locale]["sys"];
+                    var linkData = entryField[entryIdentifier.Locale]["sys"];
                     additionalAttributes = new Dictionary<string, string>
                     {
                         { "data-contentful-link-type", linkData["linkType"].ToString() },
@@ -487,7 +478,7 @@ public class EntryActions : BaseInvocable
                     break;
                 case "Array": // array of links or symbols
                     var itemType = field.Items.Type;
-                    var arrayItems = (JArray)entryField[localeIdentifier.Locale];
+                    var arrayItems = (JArray)entryField[entryIdentifier.Locale];
                     if (itemType == "Link")
                     {
                         var itemIds = string.Join(",", arrayItems.Select(i => i["sys"]["id"]));
@@ -509,7 +500,7 @@ public class EntryActions : BaseInvocable
         var resultHtml = $"<html><body>{html}</body></html>";
 
         var file = await _fileManagementClient.UploadAsync(new MemoryStream(Encoding.UTF8.GetBytes(resultHtml)),
-            MediaTypeNames.Text.Html, $"{entryIdentifier.EntryId}_{localeIdentifier.Locale}.html");
+            MediaTypeNames.Text.Html, $"{entryIdentifier.EntryId}_{entryIdentifier.Locale}.html");
         return new()
         {
             File = file
@@ -520,13 +511,12 @@ public class EntryActions : BaseInvocable
         "Set all localizable fields of specified entry " +
         "from HTML file.")]
     public async Task SetEntryLocalizableFieldsFromHtmlFile(
-        [ActionParameter] EntryIdentifier entryIdentifier,
-        [ActionParameter] LocaleIdentifier localeIdentifier,
+        [ActionParameter] EntryLocaleIdentifier entryIdentifier,
         [ActionParameter] FileRequest input)
     {
         const string contentfulFieldTypeAttribute = "data-contentful-field-type";
         const string contentfulFieldIdAttribute = "data-contentful-field-id";
-        var client = new ContentfulClient(Creds);
+        var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var entry = await client.GetEntry(entryIdentifier.EntryId);
         var fields = (JObject)entry.Fields;
 
@@ -549,23 +539,23 @@ public class EntryActions : BaseInvocable
                 {
                     case "Integer":
                         var intValue = Convert.ToInt32(element.InnerText);
-                        fields[fieldId][localeIdentifier.Locale] = intValue;
+                        fields[fieldId][entryIdentifier.Locale] = intValue;
                         break;
                     case "Number":
                         var decimalValue = Convert.ToDecimal(element.InnerText);
-                        fields[fieldId][localeIdentifier.Locale] = decimalValue;
+                        fields[fieldId][entryIdentifier.Locale] = decimalValue;
                         break;
                     case "Symbol" or "Text" or "Date":
-                        fields[fieldId][localeIdentifier.Locale] = element.InnerText;
+                        fields[fieldId][entryIdentifier.Locale] = element.InnerText;
                         break;
                     case "Object" or "Location":
                         var jsonValue = element.Attributes["data-contentful-json-value"].Value;
                         var jsonObject = JObject.Parse(jsonValue);
-                        fields[fieldId][localeIdentifier.Locale] = jsonObject;
+                        fields[fieldId][entryIdentifier.Locale] = jsonObject;
                         break;
                     case "Boolean":
                         var boolValue = Convert.ToBoolean(element.Attributes["data-contentful-bool-value"].Value);
-                        fields[fieldId][localeIdentifier.Locale] = boolValue;
+                        fields[fieldId][entryIdentifier.Locale] = boolValue;
                         break;
                     case "RichText":
                         var htmlToRichTextConverter = new HtmlToRichTextConverter();
@@ -573,7 +563,7 @@ public class EntryActions : BaseInvocable
                         var serializerSettings = new JsonSerializerSettings();
                         serializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
                         serializerSettings.NullValueHandling = NullValueHandling.Ignore;
-                        fields[fieldId][localeIdentifier.Locale] =
+                        fields[fieldId][entryIdentifier.Locale] =
                             JObject.Parse(JsonConvert.SerializeObject(richText, serializerSettings));
                         break;
                     case "Link":
@@ -588,7 +578,7 @@ public class EntryActions : BaseInvocable
                                 id
                             }
                         };
-                        fields[fieldId][localeIdentifier.Locale] = JObject.Parse(JsonConvert.SerializeObject(linkData));
+                        fields[fieldId][entryIdentifier.Locale] = JObject.Parse(JsonConvert.SerializeObject(linkData));
                         break;
                     case "Array":
                         if (element.Attributes.Any(a => a.Name == "data-contentful-link-type"))
@@ -604,13 +594,13 @@ public class EntryActions : BaseInvocable
                                     id
                                 }
                             });
-                            fields[fieldId][localeIdentifier.Locale] =
+                            fields[fieldId][entryIdentifier.Locale] =
                                 JArray.Parse(JsonConvert.SerializeObject(arrayData));
                         }
                         else
                         {
                             var arrayData = JArray.Parse(element.InnerText);
-                            fields[fieldId][localeIdentifier.Locale] = arrayData;
+                            fields[fieldId][entryIdentifier.Locale] = arrayData;
                         }
 
                         break;

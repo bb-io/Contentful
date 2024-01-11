@@ -1,9 +1,9 @@
 using Apps.Contentful.DataSourceHandlers;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 
-namespace Apps.Contentful.Models.Requests;
+namespace Apps.Contentful.Models.Identifiers;
 
-public class EnvironmentRequest
+public class EnvironmentIdentifier
 {
     [DataSource(typeof(EnvironmentDataSourceHandler))]
     public string? Environment { get; set; }

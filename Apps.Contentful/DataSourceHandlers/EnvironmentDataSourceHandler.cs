@@ -1,3 +1,4 @@
+using Apps.Contentful.Api;
 using Apps.Contentful.Invocables;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Invocation;
@@ -13,7 +14,9 @@ public class EnvironmentDataSourceHandler : ContentfulInvocable, IAsyncDataSourc
     public async Task<Dictionary<string, string>> GetDataAsync(DataSourceContext context,
         CancellationToken cancellationToken)
     {
-        var environments = await Client.GetEnvironments(cancellationToken: cancellationToken);
+        var client = new ContentfulClient(Creds, null);
+        var environments = await client.GetEnvironments(cancellationToken: cancellationToken);
+
         return environments
             .Where(x => context.SearchString is null ||
                         x.SystemProperties.Id.Contains(context.SearchString, StringComparison.OrdinalIgnoreCase))

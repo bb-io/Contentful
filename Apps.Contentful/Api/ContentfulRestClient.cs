@@ -11,9 +11,9 @@ namespace Apps.Contentful.Api;
 
 public class ContentfulRestClient : BlackBirdRestClient
 {
-    public ContentfulRestClient(AuthenticationCredentialsProvider[] creds) : base(new()
+    public ContentfulRestClient(AuthenticationCredentialsProvider[] creds, string? environment) : base(new()
     {
-        BaseUrl = $"{Urls.Api}/spaces/{creds.Get("spaceId").Value}".ToUri()
+        BaseUrl = $"{Urls.Api}/spaces/{GetEnvironmentSegment(environment)}{creds.Get("spaceId").Value}".ToUri()
     })
     {
     }
@@ -23,4 +23,7 @@ public class ContentfulRestClient : BlackBirdRestClient
         var error = JsonConvert.DeserializeObject<ErrorResponse>(response.Content);
         return new(error.Message);
     }
+
+    private static string GetEnvironmentSegment(string? environment) =>
+        string.IsNullOrWhiteSpace(environment) ? string.Empty : $"environments/{environment}/";
 }

@@ -1,12 +1,12 @@
-﻿using Apps.Contentful.DataSourceHandlers;
+using Apps.Contentful.DataSourceHandlers;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 
 namespace Apps.Contentful.Models.Identifiers;
 
-public class EntryIdentifier : EnvironmentIdentifier
+public class EntryLocaleIdentifier : LocaleIdentifier
 {
     [Display("Entry")]
-    [DataSource(typeof(EntryDataSourceHandler))]
+    [DataSource(typeof(EntryLocaleDataSourceHandler))]
     public string EntryId { get; set; }
 }

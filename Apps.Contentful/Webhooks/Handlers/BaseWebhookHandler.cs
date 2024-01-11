@@ -19,7 +19,7 @@ public class BaseWebhookHandler : IWebhookEventHandler
     public async Task SubscribeAsync(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProvider, 
         Dictionary<string, string> values)
     {
-        var client = new ContentfulClient(authenticationCredentialsProvider);
+        var client = new ContentfulClient(authenticationCredentialsProvider, null);
         var topic = $"{_entityName}.{_actionName}";
         await client.CreateWebhook(new Webhook {
             Name = topic,
@@ -31,7 +31,7 @@ public class BaseWebhookHandler : IWebhookEventHandler
     public async Task UnsubscribeAsync(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProvider, 
         Dictionary<string, string> values)
     {
-        var client = new ContentfulClient(authenticationCredentialsProvider);
+        var client = new ContentfulClient(authenticationCredentialsProvider, null);
         var topic = $"{_entityName}.{_actionName}";
         var webhooks = client.GetWebhooksCollection().Result;
         var webhook = webhooks.First(w => w.Name == topic);
