@@ -49,7 +49,7 @@ public class BaseEntryDataSourceHandler : BaseInvocable, IAsyncDataSourceHandler
                     }
                 }
 
-                var entryDisplayValue = displayField == null ? entryId : displayField["en-US"].ToString();
+                var entryDisplayValue = displayField == null ? entryId : (displayField.First() as JProperty)!.Value.ToString();
                 entryDisplayValue = contentType.Name + ": " + entryDisplayValue;
                 entriesDictionary[entryId] = entryDisplayValue;
             }

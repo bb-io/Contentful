@@ -22,6 +22,6 @@ public class BaseAssetDataSourceHandler : BaseInvocable, IAsyncDataSourceHandler
         var assets =
             (await client.GetAssetsCollection($"?query={context.SearchString}", cancellationToken: cancellationToken))
             .Take(20);
-        return assets.ToDictionary(a => a.SystemProperties.Id, a => a.Files["en-US"].FileName);
+        return assets.ToDictionary(a => a.SystemProperties.Id, a => a.Title.First().Value);
     }
 }
