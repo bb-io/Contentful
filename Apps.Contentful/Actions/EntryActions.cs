@@ -81,7 +81,7 @@ public class EntryActions : BaseInvocable
         [ActionParameter] EntryLocaleIdentifier entryIdentifier,
         [ActionParameter] FieldIdentifier fieldIdentifier)
     {
-        var client = new ContentfulClient(Creds, entryIdentifier.Locale);
+        var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var entry = await client.GetEntry(entryIdentifier.EntryId);
         var field = ((JObject)entry.Fields)[fieldIdentifier.FieldId][entryIdentifier.Locale];
         var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
@@ -120,7 +120,7 @@ public class EntryActions : BaseInvocable
         [ActionParameter] FieldIdentifier fieldIdentifier,
         [ActionParameter] [Display("Text")] string text)
     {
-        var client = new ContentfulClient(Creds, entryIdentifier.Locale);
+        var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var entry = await client.GetEntry(entryIdentifier.EntryId);
         var fields = (JObject)entry.Fields;
         var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
@@ -263,7 +263,7 @@ public class EntryActions : BaseInvocable
         [ActionParameter] EntryLocaleIdentifier entryIdentifier,
         [ActionParameter] FieldIdentifier fieldIdentifier)
     {
-        var client = new ContentfulClient(Creds, entryIdentifier.Locale);
+        var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var entry = await client.GetEntry(entryIdentifier.EntryId);
         var fields = (JObject)entry.Fields;
         return new AssetIdentifier
