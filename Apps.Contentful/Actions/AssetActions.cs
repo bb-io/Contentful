@@ -3,7 +3,6 @@ using Apps.Contentful.Models.Identifiers;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Apps.Contentful.Models.Requests;
-using Apps.Contentful.Models.Requests.Tags;
 using Apps.Contentful.Models.Responses;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Invocation;
