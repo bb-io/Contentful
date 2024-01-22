@@ -35,11 +35,13 @@ public class AssetActions : BaseInvocable
     {
         var client = new ContentfulClient(Creds, assetIdentifier.Environment);
         var asset = await client.GetAsset(assetIdentifier.AssetId);
-        if(!asset.Files.TryGetValue(assetIdentifier.Locale, out var fileData))
+        if (!asset.Files.TryGetValue(assetIdentifier.Locale, out var fileData))
         {
             throw new("No asset with the provided locale found");
-        };
-        
+        }
+
+        ;
+
         var fileContent = await DownloadFileByUrl(fileData);
 
         return new()
@@ -201,7 +203,7 @@ public class AssetActions : BaseInvocable
         var request = new RestRequest($"https:{file.Url}");
         var response = await client.GetAsync(request);
 
-        return await _fileManagementClient.UploadAsync(new MemoryStream(response.RawBytes!), file.FileName,
-            file.ContentType);
+        return await _fileManagementClient.UploadAsync(new MemoryStream(response.RawBytes!), file.ContentType,
+            file.FileName);
     }
 }
