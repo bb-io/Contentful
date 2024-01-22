@@ -9,18 +9,18 @@ public class FieldDto
     {
         FieldId = field.Id;
         Type = field.Type;
+        LinkType = field.LinkType;
         IsLocalizable = field.Localized;
         IsRequired = field.Required;
     }
-    
-    [Display("Field")]
-    public string FieldId { get; set; }
-    
+
+    [Display("Field")] public string FieldId { get; set; }
+
     public string Type { get; set; }
-    
-    [Display("Is localizable")]
-    public bool IsLocalizable { get; set; }
-    
-    [Display("Is required")]
-    public bool IsRequired { get; set; }
+
+    [Display("Link type")] public string LinkType { get; set; }
+
+    [Display("Is localizable")] public bool IsLocalizable { get; set; }
+
+    [Display("Is required")] public bool IsRequired { get; set; }
 }
