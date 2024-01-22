@@ -13,7 +13,7 @@ public class ContentfulRestClient : BlackBirdRestClient
 {
     public ContentfulRestClient(AuthenticationCredentialsProvider[] creds, string? environment) : base(new()
     {
-        BaseUrl = $"{Urls.Api}/spaces/{GetEnvironmentSegment(environment)}{creds.Get("spaceId").Value}".ToUri()
+        BaseUrl = $"{Urls.Api}/spaces/{creds.Get("spaceId").Value}{GetEnvironmentSegment(environment)}".ToUri()
     })
     {
     }
@@ -25,5 +25,5 @@ public class ContentfulRestClient : BlackBirdRestClient
     }
 
     private static string GetEnvironmentSegment(string? environment) =>
-        string.IsNullOrWhiteSpace(environment) ? string.Empty : $"environments/{environment}/";
+        string.IsNullOrWhiteSpace(environment) ? string.Empty : $"/environments/{environment}/";
 }

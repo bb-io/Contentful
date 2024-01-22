@@ -23,7 +23,7 @@ public class BaseEntryDataSourceHandler : BaseInvocable, IAsyncDataSourceHandler
         var client = new ContentfulClient(InvocationContext.AuthenticationCredentialsProviders, Environment);
 
         var entries = (await client.GetEntriesCollection<Entry<dynamic>>($"?query={context.SearchString}",
-                cancellationToken: cancellationToken)).Take(20)
+                cancellationToken: cancellationToken))
             .GroupBy(e => e.SystemProperties.ContentType.SystemProperties.Id);
         var entriesDictionary = new Dictionary<string, string>();
         foreach (var entryGroup in entries)
@@ -52,6 +52,9 @@ public class BaseEntryDataSourceHandler : BaseInvocable, IAsyncDataSourceHandler
                 var entryDisplayValue = displayField == null ? entryId : (displayField.First() as JProperty)!.Value.ToString();
                 entryDisplayValue = contentType.Name + ": " + entryDisplayValue;
                 entriesDictionary[entryId] = entryDisplayValue;
+
+                if (entriesDictionary.Count >= 30)
+                    return entriesDictionary;
             }
         }
 
