@@ -18,7 +18,7 @@ public class FieldDto
 
     public string Type { get; set; }
 
-    [Display("Link type")] public string LinkType { get; set; }
+    [Display("Link type")] public string? LinkType { get; set; }
 
     [Display("Is localizable")] public bool IsLocalizable { get; set; }
 
