@@ -9,7 +9,7 @@ public class FieldDto
     {
         FieldId = field.Id;
         Type = field.Type;
-        LinkType = field.LinkType;
+        LinkType = field.Items?.LinkType ?? field.LinkType;
         IsLocalizable = field.Localized;
         IsRequired = field.Required;
     }
