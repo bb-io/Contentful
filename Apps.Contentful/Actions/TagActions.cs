@@ -2,6 +2,7 @@
 using Apps.Contentful.Constants;
 using Apps.Contentful.Invocables;
 using Apps.Contentful.Models.Entities;
+using Apps.Contentful.Models.Identifiers;
 using Apps.Contentful.Models.Requests.Base;
 using Apps.Contentful.Models.Requests.Tags;
 using Apps.Contentful.Models.Responses.Tags;
@@ -23,39 +24,47 @@ public class TagActions : ContentfulInvocable
     #region Actions
 
     [Action("List tags", Description = "List all content tags in a space")]
-    public async Task<ListTagsResponse> ListTags()
+    public async Task<ListTagsResponse> ListTags([ActionParameter] EnvironmentIdentifier environment)
     {
-        var response = await Client.GetContentTagsCollection();
+        var client = new ContentfulClient(Creds, environment.Environment);
+        var response = await client.GetContentTagsCollection();
+       
         var tags = response.Select(x => new TagEntity(x)).ToArray();
-
         return new(tags);
     }
 
     [Action("Create tag", Description = "Create a new content tag")]
-    public async Task<TagEntity> CreateTag([ActionParameter] CreateTagRequest input)
+    public async Task<TagEntity> CreateTag(
+        [ActionParameter] CreateTagRequest input,
+        [ActionParameter] EnvironmentIdentifier environment)
     {
-        var tag = await Client.CreateContentTag(input.Name, input.TagId, input.IsPublic);
+        var client = new ContentfulClient(Creds, environment.Environment);
+        var tag = await client.CreateContentTag(input.Name, input.TagId, input.IsPublic);
         return new(tag);
     }
 
     [Action("Get tag", Description = "Get details of a specific tag")]
     public async Task<TagEntity> GetTag([ActionParameter] TagRequest input)
     {
-        var tag = await Client.GetContentTag(input.TagId);
+        var client = new ContentfulClient(Creds, input.Environment);
+        
+        var tag = await client.GetContentTag(input.TagId);
         return new(tag);
     }
 
     [Action("Delete tag", Description = "Delete specific content tag")]
     public async Task DeleteTag([ActionParameter] TagRequest input)
     {
-        var tag = await Client.GetContentTag(input.TagId);
-        await Client.DeleteContentTag(input.TagId, tag.SystemProperties.Version);
+        var client = new ContentfulClient(Creds, input.Environment);
+        var tag = await client.GetContentTag(input.TagId);
+        
+        await client.DeleteContentTag(input.TagId, tag.SystemProperties.Version);
     }
 
     [Action("Add tag to entry", Description = "Add specific tag to an entry")]
-    public async Task AddEntryTag([ActionParameter] TagToEntryInput input)
+    public async Task AddEntryTag([ActionParameter] EntryTagIdentifier input)
     {
-        var entry = await new ContentfulClient(Creds).GetEntry(input.EntryId);
+        var entry = await new ContentfulClient(Creds, input.Environment).GetEntry(input.EntryId);
         
         var tags = entry.Metadata.Tags
             .Select(x => x.Sys.Id)
@@ -71,13 +80,13 @@ public class TagActions : ContentfulInvocable
             })
             .ToArray();
 
-        await ReplaceTags(input.EntryId, entry.SystemProperties.Version, tags);
+        await ReplaceTags(input.EntryId, input.Environment, entry.SystemProperties.Version, tags);
     }
 
     [Action("Remove tag from entry", Description = "Remove specific tag from an entry")]
-    public async Task RemoveEntryTag([ActionParameter] TagToEntryInput input)
+    public async Task RemoveEntryTag([ActionParameter] EntryTagIdentifier input)
     {
-        var entry = await new ContentfulClient(Creds).GetEntry(input.EntryId);
+        var entry = await new ContentfulClient(Creds, input.Environment).GetEntry(input.EntryId);
         
         var tags = entry.Metadata.Tags
             .Where(x => x.Sys.Id != input.TagId)
@@ -92,16 +101,16 @@ public class TagActions : ContentfulInvocable
             })
             .ToArray();
 
-        await ReplaceTags(input.EntryId, entry.SystemProperties.Version, tags);
+        await ReplaceTags(input.EntryId, input.Environment, entry.SystemProperties.Version, tags);
     }
 
     #endregion
 
     #region Utils
 
-    private Task ReplaceTags(string entryId, int? version, PropertiesRequest[] tags)
+    private Task ReplaceTags(string entryId, string? environment, int? version, PropertiesRequest[] tags)
     {
-        var client = new ContentfulRestClient(Creds);
+        var client = new ContentfulRestClient(Creds, environment);
 
         var endpoint = $"entries/{entryId}";
         var request = new ContentfulRestRequest(endpoint, Method.Patch, Creds)

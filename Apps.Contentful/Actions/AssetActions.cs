@@ -3,7 +3,6 @@ using Apps.Contentful.Models.Identifiers;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Apps.Contentful.Models.Requests;
-using Apps.Contentful.Models.Requests.Tags;
 using Apps.Contentful.Models.Responses;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Invocation;
@@ -32,18 +31,23 @@ public class AssetActions : BaseInvocable
 
     [Action("Get asset", Description = "Get specified asset.")]
     public async Task<GetAssetResponse> GetAssetById(
-        [ActionParameter] AssetIdentifier assetIdentifier,
-        [ActionParameter] LocaleIdentifier localeIdentifier)
+        [ActionParameter] AssetLocaleIdentifier assetIdentifier)
     {
-        var client = new ContentfulClient(Creds);
+        var client = new ContentfulClient(Creds, assetIdentifier.Environment);
         var asset = await client.GetAsset(assetIdentifier.AssetId);
-        var fileData = asset.Files?[localeIdentifier.Locale];
+        if (!asset.Files.TryGetValue(assetIdentifier.Locale, out var fileData))
+        {
+            throw new("No asset with the provided locale found");
+        }
+
+        ;
+
         var fileContent = await DownloadFileByUrl(fileData);
 
         return new()
         {
-            Title = asset.Title?[localeIdentifier.Locale],
-            Description = asset.Description?[localeIdentifier.Locale],
+            Title = asset.Title?[assetIdentifier.Locale],
+            Description = asset.Description?[assetIdentifier.Locale],
             File = fileContent,
             Tags = asset.Metadata.Tags.Select(x => x.Sys.Id)
         };
@@ -54,7 +58,7 @@ public class AssetActions : BaseInvocable
         [ActionParameter] LocaleIdentifier localeIdentifier,
         [ActionParameter] CreateAssetRequest input)
     {
-        var client = new ContentfulClient(Creds);
+        var client = new ContentfulClient(Creds, localeIdentifier.Environment);
 
         var file = await _fileManagementClient.DownloadAsync(input.File);
         var result = await client.UploadFileAndCreateAsset(new ManagementAsset
@@ -79,11 +83,10 @@ public class AssetActions : BaseInvocable
 
     [Action("Update asset file", Description = "Update asset file.")]
     public async Task UpdateAssetFile(
-        [ActionParameter] AssetIdentifier assetIdentifier,
-        [ActionParameter] LocaleIdentifier localeIdentifier,
+        [ActionParameter] AssetLocaleIdentifier assetIdentifier,
         [ActionParameter] UpdateAssetFileRequest input)
     {
-        var client = new ContentfulClient(Creds);
+        var client = new ContentfulClient(Creds, assetIdentifier.Environment);
         var oldAsset = await client.GetAsset(assetIdentifier.AssetId);
 
         var file = await _fileManagementClient.DownloadAsync(input.File);
@@ -93,7 +96,7 @@ public class AssetActions : BaseInvocable
         uploadReference.SystemProperties.Space = null;
         uploadReference.SystemProperties.LinkType = "Upload";
 
-        oldAsset.Files.Add(localeIdentifier.Locale,
+        oldAsset.Files.Add(assetIdentifier.Locale,
             new File
             {
                 FileName = input.Filename ?? input.File.Name, ContentType = "text/plain",
@@ -109,13 +112,13 @@ public class AssetActions : BaseInvocable
         }, version: oldAsset.SystemProperties.Version);
 
         await client.ProcessAsset(assetIdentifier.AssetId, (int)oldAsset.SystemProperties.Version,
-            localeIdentifier.Locale);
+            assetIdentifier.Locale);
     }
 
     [Action("Publish asset", Description = "Publish specified asset.")]
     public async Task PublishAsset([ActionParameter] AssetIdentifier assetIdentifier)
     {
-        var client = new ContentfulClient(Creds);
+        var client = new ContentfulClient(Creds, assetIdentifier.Environment);
         var asset = await client.GetAsset(assetIdentifier.AssetId);
         await client.PublishAsset(assetIdentifier.AssetId, (int)asset.SystemProperties.Version);
     }
@@ -123,19 +126,18 @@ public class AssetActions : BaseInvocable
     [Action("Unpublish asset", Description = "Unpublish specified asset.")]
     public async Task UnpublishAsset([ActionParameter] AssetIdentifier assetIdentifier)
     {
-        var client = new ContentfulClient(Creds);
+        var client = new ContentfulClient(Creds, assetIdentifier.Environment);
         var asset = await client.GetAsset(assetIdentifier.AssetId);
         await client.UnpublishAsset(assetIdentifier.AssetId, (int)asset.SystemProperties.Version);
     }
 
     [Action("Is asset locale present", Description = "Is asset locale present.")]
     public async Task<IsAssetLocalePresentResponse> IsAssetLocalePresent(
-        [ActionParameter] AssetIdentifier assetIdentifier,
-        [ActionParameter] LocaleIdentifier localeIdentifier)
+        [ActionParameter] AssetLocaleIdentifier assetIdentifier)
     {
-        var client = new ContentfulClient(Creds);
+        var client = new ContentfulClient(Creds, assetIdentifier.Environment);
         var asset = await client.GetAsset(assetIdentifier.AssetId);
-        if (asset.Files.TryGetValue(localeIdentifier.Locale, out _))
+        if (asset.Files.TryGetValue(assetIdentifier.Locale, out _))
             return new IsAssetLocalePresentResponse { IsAssetLocalePresent = 1 };
 
         return new IsAssetLocalePresentResponse { IsAssetLocalePresent = 0 };
@@ -144,7 +146,8 @@ public class AssetActions : BaseInvocable
     [Action("List missing locales for an asset", Description = "Retrieve a list of missing locales for an asset.")]
     public async Task<ListLocalesResponse> ListMissingLocalesForAsset([ActionParameter] AssetIdentifier assetIdentifier)
     {
-        var client = new ContentfulClient(InvocationContext.AuthenticationCredentialsProviders);
+        var client = new ContentfulClient(InvocationContext.AuthenticationCredentialsProviders,
+            assetIdentifier.Environment);
         var asset = await client.GetAsset(assetIdentifier.AssetId);
         var availableLocales = (await client.GetLocalesCollection()).Select(l => l.Code);
         IEnumerable<string> missingLocales;
@@ -162,17 +165,17 @@ public class AssetActions : BaseInvocable
 
     [Action("Add asset tag", Description = "Add a new tag to the specified asset")]
     public async Task AddAssetTag(
-        [ActionParameter] AssetIdentifier assetIdentifier,
-        [ActionParameter] TagRequest tag)
+        [ActionParameter] AssetTagIdentifier assetIdentifier)
     {
-        var client = new ContentfulClient(InvocationContext.AuthenticationCredentialsProviders);
+        var client = new ContentfulClient(InvocationContext.AuthenticationCredentialsProviders,
+            assetIdentifier.Environment);
         var asset = await client.GetAsset(assetIdentifier.AssetId);
         asset.Metadata.Tags.Add(new()
         {
             Sys = new()
             {
                 LinkType = "Tag",
-                Id = tag.TagId,
+                Id = assetIdentifier.TagId,
             }
         });
 
@@ -181,12 +184,12 @@ public class AssetActions : BaseInvocable
 
     [Action("Remove asset tag", Description = "Remove a specific tag from the asset")]
     public async Task RemoveAssetTag(
-        [ActionParameter] AssetIdentifier assetIdentifier,
-        [ActionParameter] TagRequest tag)
+        [ActionParameter] AssetTagIdentifier assetIdentifier)
     {
-        var client = new ContentfulClient(InvocationContext.AuthenticationCredentialsProviders);
+        var client = new ContentfulClient(InvocationContext.AuthenticationCredentialsProviders,
+            assetIdentifier.Environment);
         var asset = await client.GetAsset(assetIdentifier.AssetId);
-        asset.Metadata.Tags = asset.Metadata.Tags.Where(x => x.Sys.Id != tag.TagId).ToList();
+        asset.Metadata.Tags = asset.Metadata.Tags.Where(x => x.Sys.Id != assetIdentifier.TagId).ToList();
 
         await client.CreateOrUpdateAsset(asset, version: asset.SystemProperties.Version);
     }
@@ -200,7 +203,7 @@ public class AssetActions : BaseInvocable
         var request = new RestRequest($"https:{file.Url}");
         var response = await client.GetAsync(request);
 
-        return await _fileManagementClient.UploadAsync(new MemoryStream(response.RawBytes!), file.FileName,
-            file.ContentType);
+        return await _fileManagementClient.UploadAsync(new MemoryStream(response.RawBytes!), file.ContentType,
+            file.FileName);
     }
 }

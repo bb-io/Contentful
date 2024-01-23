@@ -1,12 +1,13 @@
-﻿using Apps.Contentful.DataSourceHandlers;
+using Apps.Contentful.DataSourceHandlers;
+using Apps.Contentful.Models.Requests.Tags;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 
 namespace Apps.Contentful.Models.Identifiers;
 
-public class EntryIdentifier : EnvironmentIdentifier
+public class EntryTagIdentifier : TagRequest
 {
     [Display("Entry")]
-    [DataSource(typeof(EntryDataSourceHandler))]
+    [DataSource(typeof(EntryTagDataSourceHandler))]
     public string EntryId { get; set; }
 }

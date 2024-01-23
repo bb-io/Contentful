@@ -4,7 +4,7 @@ using Blackbird.Applications.Sdk.Common.Dynamic;
 
 namespace Apps.Contentful.Models.Identifiers;
 
-public class ContentModelIdentifier
+public class ContentModelIdentifier : EnvironmentIdentifier
 {
     [Display("Content model")]
     [DataSource(typeof(ContentModelDataSourceHandler))]

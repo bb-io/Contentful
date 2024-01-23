@@ -1,22 +1,14 @@
-﻿using Apps.Contentful.Api;
+﻿using Apps.Contentful.DataSourceHandlers.Base;
+using Apps.Contentful.Models.Identifiers;
 using Blackbird.Applications.Sdk.Common;
-using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Invocation;
 
 namespace Apps.Contentful.DataSourceHandlers;
 
-public class AssetDataSourceHandler : BaseInvocable, IAsyncDataSourceHandler
+public class AssetDataSourceHandler : BaseAssetDataSourceHandler
 {
-    public AssetDataSourceHandler(InvocationContext invocationContext) : base(invocationContext)
+    public AssetDataSourceHandler(InvocationContext invocationContext, [ActionParameter] AssetIdentifier identifier) :
+        base(invocationContext, identifier.Environment)
     {
-    }
-
-    public async Task<Dictionary<string, string>> GetDataAsync(DataSourceContext context,
-        CancellationToken cancellationToken)
-    {
-        var client = new ContentfulClient(InvocationContext.AuthenticationCredentialsProviders);
-        var assets = (await client.GetAssetsCollection($"?query={context.SearchString}", cancellationToken: cancellationToken))
-            .Take(20);
-        return assets.ToDictionary(a => a.SystemProperties.Id, a => a.Files["en-US"].FileName);
     }
 }

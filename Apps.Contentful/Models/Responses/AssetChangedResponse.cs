@@ -1,4 +1,4 @@
-﻿using Apps.Contentful.Webhooks.Payload;
+﻿using Apps.Contentful.Webhooks.Models.Payload;
 using Blackbird.Applications.Sdk.Common;
 
 namespace Apps.Contentful.Models.Responses;

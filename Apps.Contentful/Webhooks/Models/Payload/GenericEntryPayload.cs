@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json.Linq;
 
-namespace Apps.Contentful.Webhooks.Payload;
+namespace Apps.Contentful.Webhooks.Models.Payload;
 
 public class GenericEntryPayload
 {
@@ -11,4 +11,6 @@ public class GenericEntryPayload
 public class SysObject
 {
     public string Id { get; set; }
+    
+    public EnvironmentPayload? Environment { get; set; }
 }
