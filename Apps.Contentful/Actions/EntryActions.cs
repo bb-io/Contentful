@@ -274,23 +274,24 @@ public class EntryActions : BaseInvocable
 
     [Action("Set entry's media field", Description = "Set entry's media field by field ID.")]
     public async Task SetMediaFieldContent(
-        [ActionParameter] EntryLocaleIdentifier entryIdentifier,
-        [ActionParameter] FieldIdentifier fieldIdentifier,
-        [ActionParameter] AssetIdentifier assetIdentifier)
+        [ActionParameter] AssetEntryLocaleIdentifier assetEntryIdentifier,
+        [ActionParameter] FieldIdentifier fieldIdentifier)
     {
-        var client = new ContentfulClient(Creds, entryIdentifier.Environment);
+        var client = new ContentfulClient(Creds, assetEntryIdentifier.Environment);
         var payload = new
         {
             sys = new
             {
                 type = "Link",
                 linkType = "Asset",
-                id = assetIdentifier.AssetId
+                id = assetEntryIdentifier.AssetId
             }
         };
-        var entry = await client.GetEntry(entryIdentifier.EntryId);
+        var entry = await client.GetEntry(assetEntryIdentifier.EntryId);
         var fields = (JObject)entry.Fields;
-        fields[fieldIdentifier.FieldId][entryIdentifier.Locale] = JObject.Parse(JsonConvert.SerializeObject(payload));
+
+        fields[fieldIdentifier.FieldId] ??= new JObject();
+        fields[fieldIdentifier.FieldId][assetEntryIdentifier.Locale] = JObject.Parse(JsonConvert.SerializeObject(payload));
         await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version);
     }
 
