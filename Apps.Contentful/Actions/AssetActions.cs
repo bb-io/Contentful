@@ -96,12 +96,11 @@ public class AssetActions : BaseInvocable
         uploadReference.SystemProperties.Space = null;
         uploadReference.SystemProperties.LinkType = "Upload";
 
-        oldAsset.Files.Add(assetIdentifier.Locale,
-            new File
-            {
-                FileName = input.Filename ?? input.File.Name, ContentType = "text/plain",
-                UploadReference = uploadReference
-            });
+        oldAsset.Files[assetIdentifier.Locale] = new()
+        {
+            FileName = input.Filename ?? input.File.Name, ContentType = "text/plain",
+            UploadReference = uploadReference
+        };
 
         await client.CreateOrUpdateAsset(new ManagementAsset
         {
