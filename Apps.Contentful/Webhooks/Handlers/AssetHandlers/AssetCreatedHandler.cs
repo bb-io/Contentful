@@ -1,8 +1,11 @@
-﻿namespace Apps.Contentful.Webhooks.Handlers.AssetHandlers;
+﻿using Apps.Contentful.Webhooks.Models.Inputs;
+using Blackbird.Applications.Sdk.Common.Webhooks;
+
+namespace Apps.Contentful.Webhooks.Handlers.AssetHandlers;
 
 public class AssetCreatedHandler : BaseWebhookHandler
 {
-    public AssetCreatedHandler() : base("Asset", "create")
+    public AssetCreatedHandler([WebhookParameter] WebhookInput input) : base("Asset", "create", input)
     {
     }
 }

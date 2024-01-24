@@ -1,8 +1,11 @@
-﻿namespace Apps.Contentful.Webhooks.Handlers.EntryHandlers;
+﻿using Apps.Contentful.Webhooks.Models.Inputs;
+using Blackbird.Applications.Sdk.Common.Webhooks;
+
+namespace Apps.Contentful.Webhooks.Handlers.EntryHandlers;
 
 public class EntryCreatedHandler : BaseWebhookHandler
 {
-    public EntryCreatedHandler() : base("Entry", "create")
+    public EntryCreatedHandler([WebhookParameter] WebhookInput input) : base("Entry", "create", input)
     {
     }
 }
