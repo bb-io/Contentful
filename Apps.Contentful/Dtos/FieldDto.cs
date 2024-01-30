@@ -1,10 +1,20 @@
-﻿using Blackbird.Applications.Sdk.Common;
+﻿using Apps.Contentful.Dtos.Raw;
+using Blackbird.Applications.Sdk.Common;
 using Contentful.Core.Models;
 
 namespace Apps.Contentful.Dtos;
 
 public class FieldDto
 {
+    public FieldDto(ContentTypeField field)
+    {
+        FieldId = field.Id;
+        Type = field.Type;
+        LinkType = field.Items?.LinkType ?? field.LinkType;
+        IsLocalizable = field.Localized;
+        IsRequired = field.Required;
+    }
+
     public FieldDto(Field field)
     {
         FieldId = field.Id;

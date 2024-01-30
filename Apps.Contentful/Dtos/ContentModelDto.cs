@@ -1,10 +1,18 @@
-﻿using Blackbird.Applications.Sdk.Common;
+﻿using Apps.Contentful.Dtos.Raw;
+using Blackbird.Applications.Sdk.Common;
 using Contentful.Core.Models;
 
 namespace Apps.Contentful.Dtos;
 
 public class ContentModelDto
 {
+    public ContentModelDto(ContentTypeItem contentType)
+    {
+        ContentModelId = contentType.SystemProperties.Id;
+        ContentModelName = contentType.Name;
+        Fields = contentType.Fields.Select(f => new FieldDto(f));
+    }
+
     public ContentModelDto(ContentType contentType)
     {
         ContentModelId = contentType.SystemProperties.Id;
