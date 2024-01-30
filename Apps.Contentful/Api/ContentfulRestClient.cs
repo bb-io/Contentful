@@ -34,7 +34,7 @@ public class ContentfulRestClient : BlackBirdRestClient
         var total = -1;
         while(result.Count != total)
         {
-            request.AddQueryParameter("skip", result.Count.ToString());
+            request.AddOrUpdateParameter("skip", result.Count.ToString());
             var res = await ExecuteWithErrorHandling<ItemWrapper<T>>(request);
             total = res.Total;
             result.AddRange(res.Items);
