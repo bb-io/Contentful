@@ -24,7 +24,7 @@ public class ContentfulClient : ContentfulManagementClient
         
         while(true)
         {
-            var items = await method($"?skip={result.Count}&limit={limit}");
+            var items = await method($"?skip={result.Count}");
             result.AddRange(items);            
             if (items.Count() < limit)
                 break;

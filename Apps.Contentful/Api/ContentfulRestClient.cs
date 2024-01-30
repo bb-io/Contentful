@@ -1,5 +1,6 @@
 ﻿using Apps.Contentful.Constants;
 using Apps.Contentful.Models.Responses;
+using Apps.Contentful.Models.Wrappers;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Utils.Extensions.Sdk;
 using Blackbird.Applications.Sdk.Utils.Extensions.String;
@@ -26,4 +27,20 @@ public class ContentfulRestClient : BlackBirdRestClient
 
     private static string GetEnvironmentSegment(string? environment) =>
         string.IsNullOrWhiteSpace(environment) ? string.Empty : $"/environments/{environment}/";
+
+    public async Task<IEnumerable<T>> Paginate<T>(ContentfulRestRequest request)
+    {
+        var result = new List<T>();
+        var total = -1;
+        while(result.Count != total)
+        {
+            request.AddQueryParameter("skip", result.Count.ToString());
+            var res = await ExecuteWithErrorHandling<ItemWrapper<T>>(request);
+            total = res.Total;
+            result.AddRange(res.Items);
+        }
+
+        return result;
+                
+    }
 }

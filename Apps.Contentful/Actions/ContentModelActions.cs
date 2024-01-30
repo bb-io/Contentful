@@ -6,7 +6,9 @@ using Apps.Contentful.Invocables;
 using Apps.Contentful.Models.Identifiers;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Invocation;
-
+using Contentful.Core.Models;
+using RestSharp;
+using ContentType = Contentful.Core.Models.ContentType;
 namespace Apps.Contentful.Actions;
 
 [ActionList]
@@ -20,9 +22,9 @@ public class ContentModelActions : ContentfulInvocable
     public async Task<ListAllContentModelsResponse> ListAllContentModels(
         [ActionParameter] EnvironmentIdentifier environment)
     {
-        var client =
-            new ContentfulClient(InvocationContext.AuthenticationCredentialsProviders, environment.Environment);
-        var contentTypes = await client.Paginate((query) => client.GetContentTypes(query, null, default));
+        var client = new ContentfulRestClient(Creds, environment.Environment);
+        var request = new ContentfulRestRequest("content_types", Method.Get, Creds);
+        var contentTypes = await client.Paginate<ContentType>(request);
 
         return new()
         {
