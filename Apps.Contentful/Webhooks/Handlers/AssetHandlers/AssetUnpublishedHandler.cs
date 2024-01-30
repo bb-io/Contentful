@@ -1,8 +1,11 @@
-﻿namespace Apps.Contentful.Webhooks.Handlers.AssetHandlers;
+﻿using Apps.Contentful.Webhooks.Models.Inputs;
+using Blackbird.Applications.Sdk.Common.Webhooks;
+
+namespace Apps.Contentful.Webhooks.Handlers.AssetHandlers;
 
 public class AssetUnpublishedHandler : BaseWebhookHandler
 {
-    public AssetUnpublishedHandler() : base("Asset", "unpublish")
+    public AssetUnpublishedHandler([WebhookParameter] WebhookInput input) : base("Asset", "unpublish", input)
     {
     }
 }

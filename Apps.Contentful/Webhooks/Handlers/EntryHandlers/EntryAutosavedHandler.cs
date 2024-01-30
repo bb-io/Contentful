@@ -1,8 +1,11 @@
-﻿namespace Apps.Contentful.Webhooks.Handlers.EntryHandlers;
+﻿using Apps.Contentful.Webhooks.Models.Inputs;
+using Blackbird.Applications.Sdk.Common.Webhooks;
+
+namespace Apps.Contentful.Webhooks.Handlers.EntryHandlers;
 
 public class EntryAutoSavedHandler : BaseWebhookHandler
 {
-    public EntryAutoSavedHandler() : base("Entry", "auto_save")
+    public EntryAutoSavedHandler([WebhookParameter] WebhookInput input) : base("Entry", "auto_save", input)
     {
     }
 }

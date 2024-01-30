@@ -1,8 +1,11 @@
-﻿namespace Apps.Contentful.Webhooks.Handlers.EntryHandlers;
+﻿using Apps.Contentful.Webhooks.Models.Inputs;
+using Blackbird.Applications.Sdk.Common.Webhooks;
+
+namespace Apps.Contentful.Webhooks.Handlers.EntryHandlers;
 
 public class EntryUnarchivedHandler : BaseWebhookHandler
 {
-    public EntryUnarchivedHandler() : base("Entry", "unarchive")
+    public EntryUnarchivedHandler([WebhookParameter] WebhookInput input) : base("Entry", "unarchive", input)
     {
     }
 }

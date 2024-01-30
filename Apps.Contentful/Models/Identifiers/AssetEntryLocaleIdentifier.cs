@@ -1,0 +1,16 @@
+using Apps.Contentful.DataSourceHandlers;
+using Blackbird.Applications.Sdk.Common;
+using Blackbird.Applications.Sdk.Common.Dynamic;
+
+namespace Apps.Contentful.Models.Identifiers;
+
+public class AssetEntryLocaleIdentifier : LocaleIdentifier
+{
+    [Display("Entry")]
+    [DataSource(typeof(EntryWithAssetDataSourceHandler))]
+    public string EntryId { get; set; }
+    
+    [Display("Asset")]
+    [DataSource(typeof(AssetWithEntryDataSourceHandler))]
+    public string AssetId { get; set; }
+}

@@ -20,7 +20,7 @@ public class ContentModelDataSourceHandler : BaseInvocable, IAsyncDataSourceHand
         CancellationToken cancellationToken)
     {
         var client = new ContentfulClient(InvocationContext.AuthenticationCredentialsProviders, Environment);
-        var contentModels = (await client.GetContentTypes(cancellationToken: cancellationToken))
+        var contentModels = (await client.Paginate((query) => client.GetContentTypes(query, null, cancellationToken)))
             .Where(m => context.SearchString == null ||
                         m.Name.Contains(context.SearchString, StringComparison.OrdinalIgnoreCase));
         return contentModels.ToDictionary(m => m.SystemProperties.Id, m => m.Name);
