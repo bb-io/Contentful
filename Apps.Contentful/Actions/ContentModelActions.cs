@@ -22,7 +22,7 @@ public class ContentModelActions : ContentfulInvocable
     {
         var client =
             new ContentfulClient(InvocationContext.AuthenticationCredentialsProviders, environment.Environment);
-        var contentTypes = await client.GetContentTypes();
+        var contentTypes = await client.Paginate((query) => client.GetContentTypes(query, null, default));
 
         return new()
         {

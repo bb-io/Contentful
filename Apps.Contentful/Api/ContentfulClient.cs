@@ -6,6 +6,8 @@ namespace Apps.Contentful.Api;
 
 public class ContentfulClient : ContentfulManagementClient
 {
+    private const int limit = 100;
+
     public ContentfulClient(IEnumerable<AuthenticationCredentialsProvider> creds, string? environment)
         : base(new HttpClient(), new ContentfulOptions
         {
@@ -14,5 +16,20 @@ public class ContentfulClient : ContentfulManagementClient
             Environment = environment
         })
     {
+    }
+
+    public async Task<IEnumerable<T>> Paginate<T>(Func<string, Task<IEnumerable<T>>> method)
+    {
+        var result = new List<T>();
+        
+        while(true)
+        {
+            var items = await method($"skip={result.Count}&limit={limit}");
+            result.AddRange(items);            
+            if (items.Count() < limit)
+                break;
+        }
+
+        return result;        
     }
 }
