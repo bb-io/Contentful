@@ -2,6 +2,7 @@
 using System.Text;
 using Apps.Contentful.Api;
 using Apps.Contentful.HtmlHelpers;
+using Apps.Contentful.Models;
 using Apps.Contentful.Models.Entities;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication;
@@ -13,6 +14,7 @@ using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using Blackbird.Applications.Sdk.Utils.Extensions.Files;
+using Blackbird.Applications.Sdk.Utils.Extensions.Sdk;
 using Contentful.Core.Models;
 using Newtonsoft.Json;
 using Contentful.Core.Extensions;
@@ -291,7 +293,8 @@ public class EntryActions : BaseInvocable
         var fields = (JObject)entry.Fields;
 
         fields[fieldIdentifier.FieldId] ??= new JObject();
-        fields[fieldIdentifier.FieldId][assetEntryIdentifier.Locale] = JObject.Parse(JsonConvert.SerializeObject(payload));
+        fields[fieldIdentifier.FieldId][assetEntryIdentifier.Locale] =
+            JObject.Parse(JsonConvert.SerializeObject(payload));
         await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version);
     }
 
@@ -410,95 +413,17 @@ public class EntryActions : BaseInvocable
         "Get all localizable fields of specified entry " +
         "as HTML file.")]
     public async Task<FileResponse> GetEntryLocalizableFieldsAsHtmlFile(
-        [ActionParameter] EntryLocaleIdentifier entryIdentifier)
+        [ActionParameter] EntryLocaleIdentifier entryIdentifier,
+        [ActionParameter] GetEntryAsHtmlRequest input)
     {
-        string WrapFieldInDiv(string fieldType, string fieldId, string fieldContent = "",
-            Dictionary<string, string>? additionalAttributes = null)
-        {
-            const string contentfulFieldTypeAttribute = "data-contentful-field-type";
-            const string contentfulFieldIdAttribute = "data-contentful-field-id";
-            var attributesList =
-                $"{contentfulFieldTypeAttribute}=\"{fieldType}\" {contentfulFieldIdAttribute}=\"{fieldId}\"";
-            if (additionalAttributes != null)
-                attributesList += " " + string.Join(" ", additionalAttributes.Select(a => $"{a.Key}='{a.Value}'"));
-            return $"<div {attributesList}>" + $"{fieldContent}</div>";
-        }
-
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
-        var entry = await client.GetEntry(entryIdentifier.EntryId);
-        var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
-        var contentType = await client.GetContentType(contentTypeId);
-        var fields = contentType.Fields.Where(f => f.Localized);
-        var entryFields = (JObject)entry.Fields;
-        var html = new StringBuilder();
+        var spaceId = Creds.Get("spaceId").Value;
 
-        foreach (var field in fields)
-        {
-            if (!entryFields.TryGetValue(field.Id, out var entryField))
-                continue;
+        var entriesContent = input.GetLinkedContent is true
+            ? await GetLinkedEntriesContent(entryIdentifier.EntryId, entryIdentifier.Locale, client, new())
+            : [await GetEntryContent(entryIdentifier.EntryId, client)];
 
-            switch (field.Type)
-            {
-                case "Integer" or "Number" or "Symbol" or "Text" or "Date"
-                    : // Number - decimal; Symbol - short text; Text - long text.
-                    var fieldContent = entryField[entryIdentifier.Locale].ToString();
-                    var div = WrapFieldInDiv(field.Type, field.Id, fieldContent);
-                    html.Append(div);
-                    break;
-                case "Object" or "Location":
-                    var jsonValue = entryField[entryIdentifier.Locale].ToString();
-                    var additionalAttributes = new Dictionary<string, string>
-                        { { "data-contentful-json-value", jsonValue } };
-                    div = WrapFieldInDiv(field.Type, field.Id, additionalAttributes: additionalAttributes);
-                    html.Append(div);
-                    break;
-                case "Boolean":
-                    var boolValue = (bool)entryField[entryIdentifier.Locale];
-                    additionalAttributes = new Dictionary<string, string>
-                        { { "data-contentful-bool-value", boolValue.ToString() } };
-                    div = WrapFieldInDiv(field.Type, field.Id, additionalAttributes: additionalAttributes);
-                    html.Append(div);
-                    break;
-                case "RichText":
-                    var content = (JArray)entryField[entryIdentifier.Locale]["content"];
-                    var spaceId = Creds.First(p => p.KeyName == "spaceId").Value;
-                    var richTextToHtmlConverter = new RichTextToHtmlConverter(content, spaceId);
-                    fieldContent = richTextToHtmlConverter.ToHtml();
-                    div = WrapFieldInDiv(field.Type, field.Id, fieldContent);
-                    html.Append(div);
-                    break;
-                case "Link": // media or reference
-                    var linkData = entryField[entryIdentifier.Locale]["sys"];
-                    additionalAttributes = new Dictionary<string, string>
-                    {
-                        { "data-contentful-link-type", linkData["linkType"].ToString() },
-                        { "data-contentful-link-id", linkData["id"].ToString() }
-                    };
-                    div = WrapFieldInDiv(field.Type, field.Id, additionalAttributes: additionalAttributes);
-                    html.Append(div);
-                    break;
-                case "Array": // array of links or symbols
-                    var itemType = field.Items.Type;
-                    var arrayItems = (JArray)entryField[entryIdentifier.Locale];
-                    if (itemType == "Link")
-                    {
-                        var itemIds = string.Join(",", arrayItems.Select(i => i["sys"]["id"]));
-                        additionalAttributes = new Dictionary<string, string>
-                        {
-                            { "data-contentful-link-type", field.Items.LinkType },
-                            { "data-contentful-link-ids", itemIds }
-                        };
-                        div = WrapFieldInDiv(field.Type, field.Id, additionalAttributes: additionalAttributes);
-                    }
-                    else // in this case itemType is "Symbol" 
-                        div = WrapFieldInDiv(field.Type, field.Id, arrayItems.ToString());
-
-                    html.Append(div);
-                    break;
-            }
-        }
-
-        var resultHtml = $"<html><body>{html}</body></html>";
+        var resultHtml = EntryToHtmlConverter.ToHtml(entriesContent, entryIdentifier.Locale, spaceId);
 
         var file = await _fileManagementClient.UploadAsync(new MemoryStream(Encoding.UTF8.GetBytes(resultHtml)),
             MediaTypeNames.Text.Html, $"{entryIdentifier.EntryId}_{entryIdentifier.Locale}.html");
@@ -512,104 +437,82 @@ public class EntryActions : BaseInvocable
         "Set all localizable fields of specified entry " +
         "from HTML file.")]
     public async Task SetEntryLocalizableFieldsFromHtmlFile(
-        [ActionParameter] EntryLocaleIdentifier entryIdentifier,
+        [ActionParameter] LocaleIdentifier localeIdentifier,
         [ActionParameter] FileRequest input)
     {
-        const string contentfulFieldTypeAttribute = "data-contentful-field-type";
-        const string contentfulFieldIdAttribute = "data-contentful-field-id";
-        var client = new ContentfulClient(Creds, entryIdentifier.Environment);
-        var entry = await client.GetEntry(entryIdentifier.EntryId);
-        var fields = (JObject)entry.Fields;
+        var client = new ContentfulClient(Creds, localeIdentifier.Environment);
 
         var file = await _fileManagementClient.DownloadAsync(input.File);
         var html = Encoding.UTF8.GetString(await file.GetByteData());
-        var htmlDocument = new HtmlDocument();
-        htmlDocument.LoadHtml(html);
-
-        var body = htmlDocument.DocumentNode.SelectSingleNode("//body");
-        if (body != null)
+        
+        var entriesToUpdate = EntryToJsonConverter.GetEntriesInfo(html);
+        var entryUpdateTasks = entriesToUpdate.Select(async x =>
         {
-            var elements = body.ChildNodes.Where(n => n.NodeType == HtmlNodeType.Element);
-
-            foreach (var element in elements)
-            {
-                var fieldId = element.Attributes[contentfulFieldIdAttribute].Value;
-                var fieldType = element.Attributes[contentfulFieldTypeAttribute].Value;
-
-                switch (fieldType)
-                {
-                    case "Integer":
-                        var intValue = Convert.ToInt32(element.InnerText);
-                        fields[fieldId][entryIdentifier.Locale] = intValue;
-                        break;
-                    case "Number":
-                        var decimalValue = Convert.ToDecimal(element.InnerText);
-                        fields[fieldId][entryIdentifier.Locale] = decimalValue;
-                        break;
-                    case "Symbol" or "Text" or "Date":
-                        fields[fieldId][entryIdentifier.Locale] = element.InnerText;
-                        break;
-                    case "Object" or "Location":
-                        var jsonValue = element.Attributes["data-contentful-json-value"].Value;
-                        var jsonObject = JObject.Parse(jsonValue);
-                        fields[fieldId][entryIdentifier.Locale] = jsonObject;
-                        break;
-                    case "Boolean":
-                        var boolValue = Convert.ToBoolean(element.Attributes["data-contentful-bool-value"].Value);
-                        fields[fieldId][entryIdentifier.Locale] = boolValue;
-                        break;
-                    case "RichText":
-                        var htmlToRichTextConverter = new HtmlToRichTextConverter();
-                        var richText = htmlToRichTextConverter.ToRichText(element.InnerHtml);
-                        var serializerSettings = new JsonSerializerSettings();
-                        serializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
-                        serializerSettings.NullValueHandling = NullValueHandling.Ignore;
-                        fields[fieldId][entryIdentifier.Locale] =
-                            JObject.Parse(JsonConvert.SerializeObject(richText, serializerSettings));
-                        break;
-                    case "Link":
-                        var linkType = element.Attributes["data-contentful-link-type"].Value;
-                        var id = element.Attributes["data-contentful-link-id"].Value;
-                        var linkData = new
-                        {
-                            sys = new
-                            {
-                                type = "Link",
-                                linkType,
-                                id
-                            }
-                        };
-                        fields[fieldId][entryIdentifier.Locale] = JObject.Parse(JsonConvert.SerializeObject(linkData));
-                        break;
-                    case "Array":
-                        if (element.Attributes.Any(a => a.Name == "data-contentful-link-type"))
-                        {
-                            linkType = element.Attributes["data-contentful-link-type"].Value;
-                            var itemIds = element.Attributes["data-contentful-link-ids"].Value.Split(",");
-                            var arrayData = itemIds.Select(id => new
-                            {
-                                sys = new
-                                {
-                                    type = "Link",
-                                    linkType,
-                                    id
-                                }
-                            });
-                            fields[fieldId][entryIdentifier.Locale] =
-                                JArray.Parse(JsonConvert.SerializeObject(arrayData));
-                        }
-                        else
-                        {
-                            var arrayData = JArray.Parse(element.InnerText);
-                            fields[fieldId][entryIdentifier.Locale] = arrayData;
-                        }
-
-                        break;
-                }
-            }
-
+            var entry = await client.GetEntry(x.EntryId);
+            EntryToJsonConverter.ToJson(entry, x.HtmlNode, localeIdentifier.Locale);
             await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version);
-        }
+        });
+
+        await Task.WhenAll(entryUpdateTasks);
+    }
+
+    #endregion
+
+    #region Utils
+
+    private async Task<List<EntryContentDto>> GetLinkedEntriesContent(string entryId, string locale,
+        ContentfulClient client,
+        List<EntryContentDto> resultList)
+    {
+        if (resultList.Any(x => x.Id == entryId))
+            return resultList;
+
+        var entryContent = await GetEntryContent(entryId, client);
+        var linkedIds = GetLinkedEntryIds(entryContent, locale).Distinct();
+
+        resultList.Add(entryContent);
+        foreach (var linkedEntryId in linkedIds)
+            await GetLinkedEntriesContent(linkedEntryId, locale, client, resultList);
+
+        return resultList;
+    }
+
+    private IEnumerable<string> GetLinkedEntryIds(EntryContentDto entryContent, string locale)
+    {
+        var linkFieldIds = entryContent.ContentTypeFields
+            .Where(f => f.LinkType == "Entry")
+            .Select(x => entryContent.EntryFields[x.Id]?[locale]?["sys"]?["id"]?.ToString()!)
+            .Where(x => !string.IsNullOrEmpty(x))
+            .ToList();
+
+        var linkArrayFieldIds = entryContent.ContentTypeFields
+            .Where(x => x.Items?.LinkType == "Entry")
+            .SelectMany(x =>
+                entryContent.EntryFields[x.Id]?[locale]?.Select(x => x["sys"]?["id"]?.ToString()!) ??
+                Enumerable.Empty<string>())
+            .Where(x => !string.IsNullOrEmpty(x))
+            .ToList();
+
+        var richTextFieldIds = entryContent.ContentTypeFields
+            .Where(x => x.Type is "RichText")
+            .SelectMany(x => (entryContent.EntryFields[x.Id]?[locale] as JObject)?.Descendants().Where(x =>
+                                 x is JProperty { Name: "linkType" } jProperty &&
+                                 jProperty.Value.ToString() == "Entry") ??
+                             Enumerable.Empty<JToken>())
+            .Select(x => x.Parent["id"].ToString())
+            .ToList();
+
+        return linkFieldIds.Concat(linkArrayFieldIds).Concat(richTextFieldIds).ToArray();
+    }
+
+    private async Task<EntryContentDto> GetEntryContent(string entryId, ContentfulClient client)
+    {
+        var entry = await client.GetEntry(entryId);
+
+        var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
+        var contentType = await client.GetContentType(contentTypeId);
+
+        return new(entryId, entry.Fields, contentType.Fields.Where(x => x.Localized).ToArray());
     }
 
     #endregion
