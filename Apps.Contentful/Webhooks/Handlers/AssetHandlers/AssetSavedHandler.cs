@@ -5,7 +5,7 @@ namespace Apps.Contentful.Webhooks.Handlers.AssetHandlers;
 
 public class AssetSavedHandler : BaseWebhookHandler
 {
-    public AssetSavedHandler([WebhookParameter] WebhookInput input) : base("Asset", "save", input)
+    public AssetSavedHandler([WebhookParameter(true)] WebhookInput input) : base("Asset", "save", input)
     {
     }
 }

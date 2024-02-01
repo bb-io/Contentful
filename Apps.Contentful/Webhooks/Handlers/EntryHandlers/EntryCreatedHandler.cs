@@ -5,7 +5,7 @@ namespace Apps.Contentful.Webhooks.Handlers.EntryHandlers;
 
 public class EntryCreatedHandler : BaseWebhookHandler
 {
-    public EntryCreatedHandler([WebhookParameter] WebhookInput input) : base("Entry", "create", input)
+    public EntryCreatedHandler([WebhookParameter(true)] WebhookInput input) : base("Entry", "create", input)
     {
     }
 }

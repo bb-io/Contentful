@@ -5,7 +5,7 @@ namespace Apps.Contentful.Webhooks.Handlers.EntryHandlers;
 
 public class EntrySavedHandler : BaseWebhookHandler
 {
-    public EntrySavedHandler([WebhookParameter] WebhookInput input) : base("Entry", "save", input)
+    public EntrySavedHandler([WebhookParameter(true)] WebhookInput input) : base("Entry", "save", input)
     {
     }
 }

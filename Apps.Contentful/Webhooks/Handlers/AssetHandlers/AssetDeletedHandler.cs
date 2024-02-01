@@ -5,7 +5,7 @@ namespace Apps.Contentful.Webhooks.Handlers.AssetHandlers;
 
 public class AssetDeletedHandler : BaseWebhookHandler
 {
-    public AssetDeletedHandler([WebhookParameter] WebhookInput input) : base("Asset", "delete", input)
+    public AssetDeletedHandler([WebhookParameter(true)] WebhookInput input) : base("Asset", "delete", input)
     {
     }
 }

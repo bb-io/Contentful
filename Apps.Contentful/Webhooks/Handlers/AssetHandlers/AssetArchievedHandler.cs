@@ -5,7 +5,7 @@ namespace Apps.Contentful.Webhooks.Handlers.AssetHandlers;
 
 public class AssetArchivedHandler : BaseWebhookHandler
 {
-    public AssetArchivedHandler([WebhookParameter] WebhookInput input) : base("Asset", "archive", input)
+    public AssetArchivedHandler([WebhookParameter(true)] WebhookInput input) : base("Asset", "archive", input)
     {
     }
 }

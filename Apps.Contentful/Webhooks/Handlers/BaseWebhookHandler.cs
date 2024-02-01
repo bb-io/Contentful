@@ -12,7 +12,7 @@ public class BaseWebhookHandler : IWebhookEventHandler
     private readonly string _actionName;
     private readonly WebhookInput _webhookInput;
 
-    protected BaseWebhookHandler(string entityName, string actionName, [WebhookParameter] WebhookInput input)
+    protected BaseWebhookHandler(string entityName, string actionName, [WebhookParameter(true)] WebhookInput input)
     {
         _entityName = entityName;
         _actionName = actionName;

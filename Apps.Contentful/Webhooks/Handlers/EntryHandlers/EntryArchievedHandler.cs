@@ -5,7 +5,7 @@ namespace Apps.Contentful.Webhooks.Handlers.EntryHandlers;
 
 public class EntryArchivedHandler : BaseWebhookHandler
 {
-    public EntryArchivedHandler([WebhookParameter] WebhookInput input) : base("Entry", "archive", input)
+    public EntryArchivedHandler([WebhookParameter(true)] WebhookInput input) : base("Entry", "archive", input)
     {
     }
 }

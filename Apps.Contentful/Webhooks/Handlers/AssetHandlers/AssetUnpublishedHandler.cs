@@ -5,7 +5,7 @@ namespace Apps.Contentful.Webhooks.Handlers.AssetHandlers;
 
 public class AssetUnpublishedHandler : BaseWebhookHandler
 {
-    public AssetUnpublishedHandler([WebhookParameter] WebhookInput input) : base("Asset", "unpublish", input)
+    public AssetUnpublishedHandler([WebhookParameter(true)] WebhookInput input) : base("Asset", "unpublish", input)
     {
     }
 }
