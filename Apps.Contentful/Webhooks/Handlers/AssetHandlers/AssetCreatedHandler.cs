@@ -5,7 +5,7 @@ namespace Apps.Contentful.Webhooks.Handlers.AssetHandlers;
 
 public class AssetCreatedHandler : BaseWebhookHandler
 {
-    public AssetCreatedHandler([WebhookParameter] WebhookInput input) : base("Asset", "create", input)
+    public AssetCreatedHandler([WebhookParameter(true)] WebhookInput input) : base("Asset", "create", input)
     {
     }
 }

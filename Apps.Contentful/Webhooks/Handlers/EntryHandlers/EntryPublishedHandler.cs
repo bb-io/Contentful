@@ -5,7 +5,7 @@ namespace Apps.Contentful.Webhooks.Handlers.EntryHandlers;
 
 public class EntryPublishedHandler : BaseWebhookHandler
 {
-    public EntryPublishedHandler([WebhookParameter] WebhookInput input) : base("Entry", "publish", input)
+    public EntryPublishedHandler([WebhookParameter(true)] WebhookInput input) : base("Entry", "publish", input)
     {
     }
 }
