@@ -40,8 +40,6 @@ public class AssetActions : BaseInvocable
             throw new("No asset with the provided locale found");
         }
 
-        ;
-
         var fileContent = await DownloadFileByUrl(fileData);
 
         return new()
@@ -112,6 +110,18 @@ public class AssetActions : BaseInvocable
 
         await client.ProcessAsset(assetIdentifier.AssetId, (int)oldAsset.SystemProperties.Version,
             assetIdentifier.Locale);
+    }
+
+    [Action("Delete asset", Description = "Delete specified asset.")]
+    public async Task DeleteAsset([ActionParameter] AssetIdentifier assetIdentifier)
+    {
+        var client = new ContentfulClient(Creds, assetIdentifier.Environment);
+        var asset = await client.GetAsset(assetIdentifier.AssetId);
+
+        if (asset.SystemProperties.PublishedAt != null)
+            await client.UnpublishAsset(assetIdentifier.AssetId, asset.SystemProperties.Version ?? default);
+        
+        await client.DeleteAsset(assetIdentifier.AssetId, asset.SystemProperties.Version ?? default);
     }
 
     [Action("Publish asset", Description = "Publish specified asset.")]
