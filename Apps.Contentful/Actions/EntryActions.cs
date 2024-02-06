@@ -261,16 +261,27 @@ public class EntryActions : BaseInvocable
     #region Media fields
 
     [Action("Get entry's media content", Description = "Get entry's media content by field ID.")]
-    public async Task<AssetIdentifier> GetMediaFieldContent(
+    public async Task<EntryMediaContentResponse> GetMediaFieldContent(
         [ActionParameter] EntryLocaleIdentifier entryIdentifier,
         [ActionParameter] FieldIdentifier fieldIdentifier)
     {
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var entry = await client.GetEntry(entryIdentifier.EntryId);
         var fields = (JObject)entry.Fields;
-        return new AssetIdentifier
+
+        var assetId = fields[fieldIdentifier.FieldId][entryIdentifier.Locale]["sys"]["id"].ToString();
+        var asset = await client.GetAsset(assetId);
+
+        if (!asset.Files.TryGetValue(entryIdentifier.Locale, out var fileData))
         {
-            AssetId = fields[fieldIdentifier.FieldId][entryIdentifier.Locale]["sys"]["id"].ToString()
+            throw new("No asset with the provided locale found");
+        }
+
+        return new()
+        {
+            AssetId = assetId,
+            File = new(new HttpRequestMessage(HttpMethod.Get, $"https:{fileData.Url}"), fileData.FileName,
+                fileData.ContentType)
         };
     }
 
@@ -444,7 +455,7 @@ public class EntryActions : BaseInvocable
 
         var file = await _fileManagementClient.DownloadAsync(input.File);
         var html = Encoding.UTF8.GetString(await file.GetByteData());
-        
+
         var entriesToUpdate = EntryToJsonConverter.GetEntriesInfo(html);
         var entryUpdateTasks = entriesToUpdate.Select(async x =>
         {
