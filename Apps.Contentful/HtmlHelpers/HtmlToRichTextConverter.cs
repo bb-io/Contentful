@@ -19,7 +19,7 @@ public class HtmlToRichTextConverter
     
     private void ParseHtmlToContentful(HtmlNode node, List<IContent> contentList)
     {
-        foreach (var childNode in node.ChildNodes.Where(x => x.NodeType is HtmlNodeType.Element))
+        foreach (var childNode in node.ChildNodes)
         {
             if (childNode.NodeType == HtmlNodeType.Element)
             {
