@@ -77,6 +77,9 @@ public class HtmlToRichTextConverter
             else if (childNode.NodeType == HtmlNodeType.Text)
             {
                 var text = childNode.InnerText;
+                if(string.IsNullOrWhiteSpace(text))
+                    continue;
+                
                 var marks = new List<string>();
                 GetMarksFromHtmlNode(childNode, marks);
 
