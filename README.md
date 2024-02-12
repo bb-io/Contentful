@@ -31,8 +31,8 @@ Before you can connect you need to make sure that:
 3. Name your connection for future reference e.g. 'My client'.
 4. Fill in the _Client ID_ obtained earlier.
 5. Fill in the _Space ID_ of the Contentful space you want to connect to. To find space ID follow [this instructions](https://www.contentful.com/help/find-space-id/).
-6. Click _Authorize connection_. 
-7. Follow the instructions that Contentful gives you, authorizing Blackbird.io to act on your behalf. 
+6. Click _Authorize connection_.
+7. Follow the instructions that Contentful gives you, authorizing Blackbird.io to act on your behalf.
 8. When you return to Blackbird, confirm that the connection has appeared and the status is _Connected_.
 
 ![connecting](image/README/connecting.png)
@@ -62,10 +62,15 @@ Follow [this guide](https://www.contentful.com/help/working-with-translations/) 
 - **Unpublish entry**.
 - **List missing locales for a field** returns a list of missing translations for the specified field.
 - **List missing locales for entry** returns a list of missing translations for the specified entry.
-- **Get entry's localizable fields as HTML file** returns all localizable fields of the specified entry as HTML file. 
+- **Get entry's localizable fields as HTML file** returns all localizable fields of the specified entry as HTML file.
 - **Set entry's localizable fields from HTML file**.
 
 **Get entry's localizable fields as HTML file** and **Set entry's localizable fields from HTML file** are intended to be used together in translation flow: you can retrieve an entry's localizable fields as HTML file, put it into TMS, then retrieve a translated HTML file and put it back into Contentful's entry. **Set entry's localizable fields from HTML file** expects the same HTML structure as the structure of the file retrieved with **Get entry's localizable fields as HTML file**.
+
+**Important note**: make sure your entry has fields with **localization enabled**. You have to explicitly set this property on each field (see images below).
+
+![1707747998688](image/README/1707747998688.png)
+![1707748006274](image/README/1707748006274.png)
 
 ### Assets
 
@@ -101,5 +106,5 @@ If you want to have a more convenient experience managing your Contentful with B
 ## Feedback
 
 Feedback to our implementation of Contentful is always very welcome. Reach out to us using the established channels or create an issue.
- 
+
 <!-- end docs -->
