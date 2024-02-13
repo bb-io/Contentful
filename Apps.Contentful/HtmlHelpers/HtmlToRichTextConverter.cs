@@ -1,4 +1,5 @@
-﻿using Contentful.Core.Models;
+﻿using System.Web;
+using Contentful.Core.Models;
 using HtmlAgilityPack;
 
 namespace Apps.Contentful.HtmlHelpers;
@@ -86,7 +87,7 @@ public class HtmlToRichTextConverter
                 var textNode = new Text
                 {
                     NodeType = "text",
-                    Value = text,
+                    Value = HttpUtility.HtmlDecode(text),
                     Data = new GenericStructureData(),
                     Marks = new List<Mark>(marks.Select(mark => new Mark { Type = mark }))
                 };

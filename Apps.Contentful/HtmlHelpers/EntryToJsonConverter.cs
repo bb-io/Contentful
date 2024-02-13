@@ -45,7 +45,7 @@ public static class EntryToJsonConverter
                 entryFields[fieldId][locale] = decimalValue;
                 break;
             case "Symbol" or "Text" or "Date":
-                entryFields[fieldId][locale] = htmlNode.InnerText;
+                entryFields[fieldId][locale] = HttpUtility.HtmlDecode(htmlNode.InnerText);
                 break;
             case "Object" or "Location":
                 var jsonValue = htmlNode.Attributes["data-contentful-json-value"].Value;
@@ -99,7 +99,7 @@ public static class EntryToJsonConverter
                 }
                 else
                 {
-                    var arrayData = JArray.Parse(htmlNode.InnerText);
+                    var arrayData = JArray.Parse(HttpUtility.HtmlDecode(htmlNode.InnerText));
                     entryFields[fieldId][locale] = arrayData;
                 }
 
