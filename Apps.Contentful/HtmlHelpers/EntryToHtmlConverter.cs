@@ -40,6 +40,9 @@ public static class EntryToHtmlConverter
         if (!entryFields.TryGetValue(field.Id, out var entryField))
             return;
 
+        if (entryField[locale] is null || entryField[locale]!.Type == JTokenType.Null)
+            return;
+        
         var node = field.Type switch
         {
             "Integer" or "Number" or "Symbol" or "Text" or "Date" => ConvertPrimitivesToHtml(bodyNode, doc, field,
