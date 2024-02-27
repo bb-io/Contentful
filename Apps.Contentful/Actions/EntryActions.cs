@@ -490,30 +490,37 @@ public class EntryActions : BaseInvocable
 
     private IEnumerable<string> GetLinkedEntryIds(EntryContentDto entryContent, string locale)
     {
-        var linkFieldIds = entryContent.ContentTypeFields
+        try
+        {
+            var linkFieldIds = entryContent.ContentTypeFields
             .Where(f => f.LinkType == "Entry")
             .Select(x => entryContent.EntryFields[x.Id]?[locale]?["sys"]?["id"]?.ToString()!)
             .Where(x => !string.IsNullOrEmpty(x))
             .ToList();
 
-        var linkArrayFieldIds = entryContent.ContentTypeFields
-            .Where(x => x.Items?.LinkType == "Entry")
-            .SelectMany(x =>
-                entryContent.EntryFields[x.Id]?[locale]?.Select(x => x["sys"]?["id"]?.ToString()!) ??
-                Enumerable.Empty<string>())
-            .Where(x => !string.IsNullOrEmpty(x))
-            .ToList();
+            var linkArrayFieldIds = entryContent.ContentTypeFields
+                .Where(x => x.Items?.LinkType == "Entry")
+                .SelectMany(x =>
+                    entryContent.EntryFields[x.Id]?[locale]?.Select(x => x["sys"]?["id"]?.ToString()!) ??
+                    Enumerable.Empty<string>())
+                .Where(x => !string.IsNullOrEmpty(x))
+                .ToList();
 
-        var richTextFieldIds = entryContent.ContentTypeFields
-            .Where(x => x.Type is "RichText")
-            .SelectMany(x => (entryContent.EntryFields[x.Id]?[locale] as JObject)?.Descendants().Where(x =>
-                                 x is JProperty { Name: "linkType" } jProperty &&
-                                 jProperty.Value.ToString() == "Entry") ??
-                             Enumerable.Empty<JToken>())
-            .Select(x => x.Parent["id"].ToString())
-            .ToList();
+            var richTextFieldIds = entryContent.ContentTypeFields
+                .Where(x => x.Type is "RichText")
+                .SelectMany(x => (entryContent.EntryFields[x.Id]?[locale] as JObject)?.Descendants().Where(x =>
+                                     x is JProperty { Name: "linkType" } jProperty &&
+                                     jProperty.Value.ToString() == "Entry") ??
+                                 Enumerable.Empty<JToken>())
+                .Select(x => x.Parent["id"].ToString())
+                .ToList();
 
-        return linkFieldIds.Concat(linkArrayFieldIds).Concat(richTextFieldIds).ToArray();
+            return linkFieldIds.Concat(linkArrayFieldIds).Concat(richTextFieldIds).ToArray();
+        }
+        catch(Exception ex)
+        {
+            throw new Exception($"Error parsing Contentful model for locale {locale} | {JsonConvert.SerializeObject(entryContent)}");
+        }        
     }
 
     private async Task<EntryContentDto> GetEntryContent(string entryId, ContentfulClient client)
