@@ -2,6 +2,7 @@ using Apps.Contentful.HtmlHelpers.Constants;
 using Apps.Contentful.Models;
 using Contentful.Core.Models;
 using HtmlAgilityPack;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace Apps.Contentful.HtmlHelpers;
@@ -14,12 +15,19 @@ public static class EntryToHtmlConverter
 
         entriesContent.ForEach(x =>
         {
-            var entryNode = doc.CreateElement(HtmlConstants.Div);
-            entryNode.SetAttributeValue(ConvertConstants.EntrIdAttribute, x.Id);
+            try
+            {
+                var entryNode = doc.CreateElement(HtmlConstants.Div);
+                entryNode.SetAttributeValue(ConvertConstants.EntrIdAttribute, x.Id);
 
-            bodyNode.AppendChild(entryNode);
-            x.ContentTypeFields.ToList()
-                .ForEach(y => MapFieldToHtml(y, x.EntryFields, locale, spaceId, doc, entryNode));
+                bodyNode.AppendChild(entryNode);
+                x.ContentTypeFields.ToList()
+                    .ForEach(y => MapFieldToHtml(y, x.EntryFields, locale, spaceId, doc, entryNode));
+            }
+            catch(Exception ex)
+            {
+                throw new Exception($"Error converting Contentful entry {x.Id} to HTML for locale {locale} (space {spaceId}) | {JsonConvert.SerializeObject(x.EntryFields)}");
+            }
         });
 
         return doc.DocumentNode.OuterHtml;
