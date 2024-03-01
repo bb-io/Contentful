@@ -457,14 +457,13 @@ public class EntryActions : BaseInvocable
         var html = Encoding.UTF8.GetString(await file.GetByteData());
 
         var entriesToUpdate = EntryToJsonConverter.GetEntriesInfo(html);
-        var entryUpdateTasks = entriesToUpdate.Select(async x =>
-        {
-            var entry = await client.GetEntry(x.EntryId);
-            EntryToJsonConverter.ToJson(entry, x.HtmlNode, localeIdentifier.Locale);
-            await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version);
-        });
 
-        await Task.WhenAll(entryUpdateTasks);
+        foreach(var entryToUpdate in entriesToUpdate)
+        {
+            var entry = await client.GetEntry(entryToUpdate.EntryId);
+            EntryToJsonConverter.ToJson(entry, entryToUpdate.HtmlNode, localeIdentifier.Locale);
+            await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version);
+        }
     }
 
     #endregion
