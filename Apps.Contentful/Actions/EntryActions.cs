@@ -461,8 +461,16 @@ public class EntryActions : BaseInvocable
         foreach(var entryToUpdate in entriesToUpdate)
         {
             var entry = await client.GetEntry(entryToUpdate.EntryId);
-            EntryToJsonConverter.ToJson(entry, entryToUpdate.HtmlNode, localeIdentifier.Locale);
-            await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version);
+
+            try
+            {
+                EntryToJsonConverter.ToJson(entry, entryToUpdate.HtmlNode, localeIdentifier.Locale);
+                await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version);
+            }
+            catch (Exception ex)
+            {
+                throw new($"Converting entry to HTML failed. Locale: {localeIdentifier.Locale}; Entry: {JsonConvert.SerializeObject(entry)}; HTML: {entryToUpdate.HtmlNode.OuterHtml};Exception: {ex}");
+            }
         }
     }
 
