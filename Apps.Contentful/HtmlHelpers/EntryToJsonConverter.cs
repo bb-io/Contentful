@@ -49,7 +49,7 @@ public static class EntryToJsonConverter
                 break;
             case "Object" or "Location":
                 var jsonValue = htmlNode.Attributes["data-contentful-json-value"].Value;
-                var jsonObject = JObject.Parse(HttpUtility.HtmlDecode(jsonValue));
+                var jsonObject = JToken.Parse(HttpUtility.HtmlDecode(jsonValue));
                 entryFields[fieldId][locale] = jsonObject;
                 break;
             case "Boolean":
