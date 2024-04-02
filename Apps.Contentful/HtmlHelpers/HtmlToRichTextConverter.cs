@@ -49,6 +49,15 @@ public class HtmlToRichTextConverter
                     case "p":
                         content = CreateParagraph(childNode);
                         break;
+                    case "span":
+                        content = new Text()
+                        {
+                            NodeType = "text",
+                            Marks = new(),
+                            Data = new(),
+                            Value = string.Empty
+                        };
+                        break;
                     case "ul":
                         content = CreateUnorderedList(childNode);
                         break;
@@ -169,6 +178,15 @@ public class HtmlToRichTextConverter
         };
 
         ParseHtmlToContentful(node, paragraph.Content);
+        if (!node.ChildNodes.Any())
+            paragraph.Content.Add(new Text()
+            {
+                NodeType = "text",
+                Marks = new(),
+                Data = new(),
+                Value = string.Empty
+            });
+
         return paragraph;
     }
 
