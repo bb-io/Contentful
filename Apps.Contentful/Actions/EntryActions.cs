@@ -319,7 +319,7 @@ public class EntryActions : BaseInvocable
     {
         var client = new ContentfulClient(Creds, contentModelIdentifier.Environment);
         var queryString = $"?content_type={contentModelIdentifier.ContentModelId}";
-        var entries = await client.GetEntriesCollection<Entry<object>>(queryString);
+        var entries = await client.Paginate<Entry<object>>(async (query) => await client.GetEntriesCollection<Entry<object>>(query), queryString);
         return new ListEntriesResponse
         {
             Entries = entries.Select(e => new EntryEntity(e)).ToArray()
