@@ -102,7 +102,13 @@ public class RichTextToHtmlConverter
             {
                 var value = item["value"].ToString();
                 GetMarksHtml(item["marks"], out var openingMarks, out var closingMarks);
-                htmlBuilder.Append($"{openingMarks}{value}{closingMarks}");
+
+                var textContent = $"{openingMarks}{value}{closingMarks}";
+
+                if (content.Count() == 1 && string.IsNullOrWhiteSpace(textContent))
+                    return string.Empty;
+                
+                htmlBuilder.Append(string.IsNullOrWhiteSpace(textContent) ? "<span></span>" : textContent);
             }
             else
                 htmlBuilder.Append(ConvertJsonObjectToHtml((JObject)item));

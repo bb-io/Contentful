@@ -367,3 +367,4 @@ FodyWeavers.xsd
 *.sln.iml
 
 /Apps.Contentful/ApplicationConstants.cs
+/ConsoleApp1

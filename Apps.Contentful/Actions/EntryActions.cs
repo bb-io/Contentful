@@ -1,6 +1,7 @@
 ﻿using System.Net.Mime;
 using System.Text;
 using Apps.Contentful.Api;
+using Apps.Contentful.Extensions;
 using Apps.Contentful.HtmlHelpers;
 using Apps.Contentful.Models;
 using Apps.Contentful.Models.Entities;
@@ -318,7 +319,7 @@ public class EntryActions : BaseInvocable
     {
         var client = new ContentfulClient(Creds, contentModelIdentifier.Environment);
         var queryString = $"?content_type={contentModelIdentifier.ContentModelId}";
-        var entries = await client.GetEntriesCollection<Entry<object>>(queryString);
+        var entries = await client.Paginate<Entry<object>>(async (query) => await client.GetEntriesCollection<Entry<object>>(query), queryString);
         return new ListEntriesResponse
         {
             Entries = entries.Select(e => new EntryEntity(e)).ToArray()
@@ -464,7 +465,12 @@ public class EntryActions : BaseInvocable
 
             try
             {
+                var oldEntryFields = (entry.Fields as JToken)!.DeepClone();
                 EntryToJsonConverter.ToJson(entry, entryToUpdate.HtmlNode, localeIdentifier.Locale);
+
+                if(JToken.DeepEquals(oldEntryFields.Escape(), (entry.Fields as JObject)!.Escape()))
+                    continue;
+                
                 await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version);
             }
             catch (Exception ex)

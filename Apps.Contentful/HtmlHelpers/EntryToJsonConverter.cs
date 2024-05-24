@@ -42,7 +42,15 @@ public static class EntryToJsonConverter
                 break;
             case "Number":
                 var decimalValue = Convert.ToDecimal(htmlNode.InnerText);
-                entryFields[fieldId][locale] = decimalValue;
+
+                if (decimalValue == Decimal.Floor(decimalValue))
+                {
+                    (entryFields[fieldId][locale] as JValue).Value = Decimal.ToInt64(decimalValue);
+                    break;
+                }
+               
+                (entryFields[fieldId][locale] as JValue).Value = decimalValue;
+
                 break;
             case "Symbol" or "Text" or "Date":
                 entryFields[fieldId][locale] = HttpUtility.HtmlDecode(htmlNode.InnerText);
