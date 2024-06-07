@@ -121,47 +121,36 @@ public class EntryActions : BaseInvocable
         };
     }
 
-    [Action("Set entry's text/rich text field",
-        Description =
-            "Set content of the field of the specified entry. Field can be short text, long text or rich text.")]
+    [Action("Set entry's text/rich text field", Description =
+        "Set content of the field of the specified entry. Field " +
+        "can be short text, long text or rich text.")]
     public async Task SetTextFieldContent(
-        [ActionParameter] EntryLocaleOptionalIdentifier entryIdentifier,
-        [ActionParameter] FieldOptionalIdentifier fieldIdentifier,
+        [ActionParameter] EntryLocaleIdentifier entryIdentifier,
+        [ActionParameter] FieldIdentifier fieldIdentifier,
         [ActionParameter] [Display("Text")] string text)
     {
-        var (extractedEntryId, extractedFieldId) = ExtractIdsFromHtml(text);
-
-        var entryId = entryIdentifier.EntryId ?? extractedEntryId ?? throw new Exception("Entry ID is required. Provide it in the input or in the HTML file.");
-        var fieldId = fieldIdentifier.FieldId ?? extractedFieldId ?? throw new Exception("Field ID is required. Provide it in the input or in the HTML file.");
-
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
-        var entry = await client.GetEntry(entryId);
+        var entry = await client.GetEntry(entryIdentifier.EntryId);
         var fields = (JObject)entry.Fields;
         var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
         var contentType = await client.GetContentType(contentTypeId);
-        var fieldType = contentType.Fields.First(f => f.Id == fieldId).Type;
+        var fieldType = contentType.Fields.First(f => f.Id == fieldIdentifier.FieldId).Type;
 
         if (fieldType == "RichText")
         {
             var html = $"<p>{text}</p>";
             var htmlToRichTextConverter = new HtmlToRichTextConverter();
             var richText = htmlToRichTextConverter.ToRichText(html);
-            var serializerSettings = new JsonSerializerSettings
-            {
-                ContractResolver = new CamelCasePropertyNamesContractResolver(),
-                NullValueHandling = NullValueHandling.Ignore
-            };
-            fields[fieldId][entryIdentifier.Locale] =
+            var serializerSettings = new JsonSerializerSettings();
+            serializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
+            serializerSettings.NullValueHandling = NullValueHandling.Ignore;
+            fields[fieldIdentifier.FieldId][entryIdentifier.Locale] =
                 JObject.Parse(JsonConvert.SerializeObject(richText, serializerSettings));
         }
         else if (fieldType == "Text" || fieldType == "Symbol")
-        {
-            fields[fieldId][entryIdentifier.Locale] = text;
-        }
+            fields[fieldIdentifier.FieldId][entryIdentifier.Locale] = text;
         else
-        {
             throw new Exception("The specified field must be of the short text, long text or rich text type.");
-        }
 
         await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version);
     }
@@ -174,28 +163,35 @@ public class EntryActions : BaseInvocable
         "put in the field. For rich text all HTML " +
         "structure is preserved.")]
     public async Task SetTextFieldContentFromHtml(
-        [ActionParameter] EntryLocaleIdentifier entryIdentifier,
-        [ActionParameter] FieldIdentifier fieldIdentifier,
+        [ActionParameter] EntryLocaleOptionalIdentifier entryIdentifier,
+        [ActionParameter] FieldOptionalIdentifier fieldIdentifier,
         [ActionParameter] FileRequest input)
     {
+        var file = await _fileManagementClient.DownloadAsync(input.File);
+        var html = Encoding.UTF8.GetString(await file.GetByteData());
+
+        var (extractedEntryId, extractedFieldId) = ExtractIdsFromHtml(html);
+
+        var entryId = entryIdentifier.EntryId ?? extractedEntryId ?? throw new Exception("Entry ID is required.");
+        var fieldId = fieldIdentifier.FieldId ?? extractedFieldId ?? throw new Exception("Field ID is required.");
+
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
-        var entry = await client.GetEntry(entryIdentifier.EntryId);
+        var entry = await client.GetEntry(entryId);
         var fields = (JObject)entry.Fields;
         var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
         var contentType = await client.GetContentType(contentTypeId);
-        var fieldType = contentType.Fields.First(f => f.Id == fieldIdentifier.FieldId).Type;
-
-        var file = await _fileManagementClient.DownloadAsync(input.File);
-        var html = Encoding.UTF8.GetString(await file.GetByteData());
+        var fieldType = contentType.Fields.First(f => f.Id == fieldId).Type;
 
         if (fieldType == "RichText")
         {
             var htmlToRichTextConverter = new HtmlToRichTextConverter();
             var richText = htmlToRichTextConverter.ToRichText(html);
-            var serializerSettings = new JsonSerializerSettings();
-            serializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
-            serializerSettings.NullValueHandling = NullValueHandling.Ignore;
-            fields[fieldIdentifier.FieldId][entryIdentifier.Locale] =
+            var serializerSettings = new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver(),
+                NullValueHandling = NullValueHandling.Ignore
+            };
+            fields[fieldId][entryIdentifier.Locale] =
                 JObject.Parse(JsonConvert.SerializeObject(richText, serializerSettings));
         }
         else if (fieldType == "Text" || fieldType == "Symbol")
@@ -204,10 +200,12 @@ public class EntryActions : BaseInvocable
             htmlDocument.LoadHtml(html);
             var text = string.Join("",
                 htmlDocument.DocumentNode.SelectNodes("//text()").Select(node => node.InnerText));
-            fields[fieldIdentifier.FieldId][entryIdentifier.Locale] = text;
+            fields[fieldId][entryIdentifier.Locale] = text;
         }
         else
+        {
             throw new Exception("The specified field must be of the short text, long text or rich text type.");
+        }
 
         await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version);
     }
