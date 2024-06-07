@@ -76,10 +76,9 @@ public class EntryActions : BaseInvocable
         return new GetTextContentResponse { TextContent = textContent };
     }
 
-    [Action("Get entry's text/rich text field as HTML file", Description = "Get the text content of the field of the " +
-                                                                           "specified entry as HTML file. Field can be " +
-                                                                           "short text, long text or rich text. In all " +
-                                                                           "cases HTML file is returned.")]
+    [Action("Get entry's text/rich text field as HTML file",
+        Description =
+            "Get the text content of the field of the specified entry as HTML file. Field can be short text, long text or rich text. In all cases HTML file is returned.")]
     public async Task<FileResponse> GetTextFieldContentAsHtmlFile(
         [ActionParameter] EntryLocaleIdentifier entryIdentifier,
         [ActionParameter] FieldIdentifier fieldIdentifier)
@@ -90,21 +89,28 @@ public class EntryActions : BaseInvocable
         var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
         var contentType = await client.GetContentType(contentTypeId);
         var fieldType = contentType.Fields.First(f => f.Id == fieldIdentifier.FieldId).Type;
-        string html;
+        string htmlContent;
 
         if (fieldType == "RichText")
         {
             var content = (JArray)field["content"];
             var spaceId = Creds.First(p => p.KeyName == "spaceId").Value;
             var richTextToHtmlConverter = new RichTextToHtmlConverter(content, spaceId);
-            html = richTextToHtmlConverter.ToHtml();
+            htmlContent = richTextToHtmlConverter.ToHtml();
         }
         else if (fieldType == "Text" || fieldType == "Symbol")
-            html = $"<p>{field}</p>";
+            htmlContent = $"<p>{field}</p>";
         else
             throw new Exception("The specified field must be of the short text, long text or rich text type.");
 
-        html = $"<html><body>{html}</body></html>";
+        string html = $@"
+        <html>
+        <head>
+            <meta name='blackbird-field-id' content='{fieldIdentifier.FieldId}'>
+            <meta name='blackbird-entry-id' content='{entryIdentifier.EntryId}'>
+        </head>
+        <body>{htmlContent}</body>
+        </html>";
 
         var file = await _fileManagementClient.UploadAsync(new MemoryStream(Encoding.UTF8.GetBytes(html)),
             MediaTypeNames.Text.Html,
@@ -115,36 +121,47 @@ public class EntryActions : BaseInvocable
         };
     }
 
-    [Action("Set entry's text/rich text field", Description =
-        "Set content of the field of the specified entry. Field " +
-        "can be short text, long text or rich text.")]
+    [Action("Set entry's text/rich text field",
+        Description =
+            "Set content of the field of the specified entry. Field can be short text, long text or rich text.")]
     public async Task SetTextFieldContent(
-        [ActionParameter] EntryLocaleIdentifier entryIdentifier,
-        [ActionParameter] FieldIdentifier fieldIdentifier,
+        [ActionParameter] EntryLocaleOptionalIdentifier entryIdentifier,
+        [ActionParameter] FieldOptionalIdentifier fieldIdentifier,
         [ActionParameter] [Display("Text")] string text)
     {
+        var (extractedEntryId, extractedFieldId) = ExtractIdsFromHtml(text);
+
+        var entryId = entryIdentifier.EntryId ?? extractedEntryId ?? throw new Exception("Entry ID is required. Provide it in the input or in the HTML file.");
+        var fieldId = fieldIdentifier.FieldId ?? extractedFieldId ?? throw new Exception("Field ID is required. Provide it in the input or in the HTML file.");
+
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
-        var entry = await client.GetEntry(entryIdentifier.EntryId);
+        var entry = await client.GetEntry(entryId);
         var fields = (JObject)entry.Fields;
         var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
         var contentType = await client.GetContentType(contentTypeId);
-        var fieldType = contentType.Fields.First(f => f.Id == fieldIdentifier.FieldId).Type;
+        var fieldType = contentType.Fields.First(f => f.Id == fieldId).Type;
 
         if (fieldType == "RichText")
         {
             var html = $"<p>{text}</p>";
             var htmlToRichTextConverter = new HtmlToRichTextConverter();
             var richText = htmlToRichTextConverter.ToRichText(html);
-            var serializerSettings = new JsonSerializerSettings();
-            serializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
-            serializerSettings.NullValueHandling = NullValueHandling.Ignore;
-            fields[fieldIdentifier.FieldId][entryIdentifier.Locale] =
+            var serializerSettings = new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver(),
+                NullValueHandling = NullValueHandling.Ignore
+            };
+            fields[fieldId][entryIdentifier.Locale] =
                 JObject.Parse(JsonConvert.SerializeObject(richText, serializerSettings));
         }
         else if (fieldType == "Text" || fieldType == "Symbol")
-            fields[fieldIdentifier.FieldId][entryIdentifier.Locale] = text;
+        {
+            fields[fieldId][entryIdentifier.Locale] = text;
+        }
         else
+        {
             throw new Exception("The specified field must be of the short text, long text or rich text type.");
+        }
 
         await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version);
     }
@@ -319,7 +336,9 @@ public class EntryActions : BaseInvocable
     {
         var client = new ContentfulClient(Creds, contentModelIdentifier.Environment);
         var queryString = $"?content_type={contentModelIdentifier.ContentModelId}";
-        var entries = await client.Paginate<Entry<object>>(async (query) => await client.GetEntriesCollection<Entry<object>>(query), queryString);
+        var entries =
+            await client.Paginate<Entry<object>>(
+                async (query) => await client.GetEntriesCollection<Entry<object>>(query), queryString);
         return new ListEntriesResponse
         {
             Entries = entries.Select(e => new EntryEntity(e)).ToArray()
@@ -459,7 +478,7 @@ public class EntryActions : BaseInvocable
 
         var entriesToUpdate = EntryToJsonConverter.GetEntriesInfo(html);
 
-        foreach(var entryToUpdate in entriesToUpdate)
+        foreach (var entryToUpdate in entriesToUpdate)
         {
             var entry = await client.GetEntry(entryToUpdate.EntryId);
 
@@ -468,14 +487,15 @@ public class EntryActions : BaseInvocable
                 var oldEntryFields = (entry.Fields as JToken)!.DeepClone();
                 EntryToJsonConverter.ToJson(entry, entryToUpdate.HtmlNode, localeIdentifier.Locale);
 
-                if(JToken.DeepEquals(oldEntryFields.Escape(), (entry.Fields as JObject)!.Escape()))
+                if (JToken.DeepEquals(oldEntryFields.Escape(), (entry.Fields as JObject)!.Escape()))
                     continue;
-                
+
                 await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version);
             }
             catch (Exception ex)
             {
-                throw new($"Converting entry to HTML failed. Locale: {localeIdentifier.Locale}; Entry: {JsonConvert.SerializeObject(entry)}; HTML: {entryToUpdate.HtmlNode.OuterHtml};Exception: {ex}");
+                throw new(
+                    $"Converting entry to HTML failed. Locale: {localeIdentifier.Locale}; Entry: {JsonConvert.SerializeObject(entry)}; HTML: {entryToUpdate.HtmlNode.OuterHtml};Exception: {ex}");
             }
         }
     }
@@ -506,10 +526,10 @@ public class EntryActions : BaseInvocable
         try
         {
             var linkFieldIds = entryContent.ContentTypeFields
-            .Where(f => f.LinkType == "Entry")
-            .Select(x => entryContent.EntryFields[x.Id]?[locale]?["sys"]?["id"]?.ToString()!)
-            .Where(x => !string.IsNullOrEmpty(x))
-            .ToList();
+                .Where(f => f.LinkType == "Entry")
+                .Select(x => entryContent.EntryFields[x.Id]?[locale]?["sys"]?["id"]?.ToString()!)
+                .Where(x => !string.IsNullOrEmpty(x))
+                .ToList();
 
             var linkArrayFieldIds = entryContent.ContentTypeFields
                 .Where(x => x.Items?.LinkType == "Entry")
@@ -530,10 +550,11 @@ public class EntryActions : BaseInvocable
 
             return linkFieldIds.Concat(linkArrayFieldIds).Concat(richTextFieldIds).ToArray();
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
-            throw new Exception($"Error parsing Contentful model for locale {locale} | {JsonConvert.SerializeObject(entryContent)}");
-        }        
+            throw new Exception(
+                $"Error parsing Contentful model for locale {locale} | {JsonConvert.SerializeObject(entryContent)}");
+        }
     }
 
     private async Task<EntryContentDto> GetEntryContent(string entryId, ContentfulClient client)
@@ -544,6 +565,19 @@ public class EntryActions : BaseInvocable
         var contentType = await client.GetContentType(contentTypeId);
 
         return new(entryId, entry.Fields, contentType.Fields.Where(x => x.Localized).ToArray());
+    }
+
+    private (string? entryId, string? fieldId) ExtractIdsFromHtml(string html)
+    {
+        var doc = new HtmlDocument();
+        doc.LoadHtml(html);
+
+        var entryId = doc.DocumentNode.SelectSingleNode("//meta[@name='blackbird-entry-id']")
+            ?.GetAttributeValue("content", null);
+        var fieldId = doc.DocumentNode.SelectSingleNode("//meta[@name='blackbird-field-id']")
+            ?.GetAttributeValue("content", null);
+
+        return (entryId, fieldId);
     }
 
     #endregion

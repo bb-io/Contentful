@@ -97,6 +97,10 @@ Follow [this guide](https://www.contentful.com/help/working-with-translations/) 
 
 In this example, whenever an entry is published we retrieve the localizable fields as an HTML file and fetch the missing translations. Then we create a new Phrase project with the missing locales as the target languages and create a new Phrase job for the file.
 
+## HTML features
+
+We add metadata to the HTML file to include `Entry ID` and `Field ID`. This metadata is used to update the entry content from the HTML file. These tags are used to identify the content in the `Contentful`, eliminating the need to store IDs elsewhere.
+
 ## Missing features
 
 Most content related actions exist. However, in the future we can add actions for more field types. Let us know if you're interested!
