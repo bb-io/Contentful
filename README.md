@@ -102,8 +102,9 @@ Follow [this guide](https://www.contentful.com/help/working-with-translations/) 
 ## Events
 
 - **On entry published** and **On asset published** are the most useful events. They are triggered when any entry/asset is published and could be the perfect trigger for sending the entry/asset for translation based on the missing translations (see example).
-Other events:
+
 ### Other events:
+
 - **On entry created**
 - **On entry saved**
 - **On entry auto saved**
