@@ -56,6 +56,7 @@ Follow [this guide](https://www.contentful.com/help/working-with-translations/) 
 - **Get entry's media content** returns the identifier of the asset attached to the entry's media field.
 - **Set entry's media field** sets the entry's media field with the specified asset.
 - **List entries** returns a list of entries' identifiers that have the specified content model.
+- **Get entry** Get details of a specific entry
 - **Add new entry** creates a new entry with the specified content model.
 - **Delete entry**.
 - **Publish entry**.
@@ -77,19 +78,46 @@ Follow [this guide](https://www.contentful.com/help/working-with-translations/) 
 - **Get asset** returns title, description and a file attached to the asset.
 - **Create and upload asset**.
 - **Update asset file**.
+- **Delete asset** Delete specified asset.
 - **Publish asset**.
 - **Unpublish asset**.
 - **Is asset locale present** checks if specified file translation is present for the asset.
 - **List missing locales for an asset** returns a list of all missing translations for the asset.
+- **Add asset tag** Add a new tag to the specified asset
+- **Remove asset tag** Remove a specific tag from the asset
 
 ### Content models
 
 - **List all content models** returns all content models available in space.
+- **Get content model** Get details of a specific content model.
+
+### Tag
+- **List tags** List all content tags in a space
+- **Create tag** Create a new content tag
+- **Get tag** Get details of a specific tag
+- **Delete tag** Delete specific content tag
+- **Add tag to entry** Add specific tag to an entry
+- **Remove tag from entry** Remove specific tag from an entry
 
 ## Events
 
 - **On entry published** and **On asset published** are the most useful events. They are triggered when any entry/asset is published and could be the perfect trigger for sending the entry/asset for translation based on the missing translations (see example).
-- **Other** events for entries and assets.
+Other events:
+### Other events:
+- **On entry created**
+- **On entry saved**
+- **On entry auto saved**
+- **On entry unpublished**
+- **On entry archived**
+- **On entry unarchived**
+- **On entry deleted**
+- **On asset created**
+- **On asset saved**
+- **On asset auto saved**
+- **On asset unpublished**
+- **On asset archived**
+- **On asset unarchived**
+- **On asset deleted**
 
 ## Example
 
