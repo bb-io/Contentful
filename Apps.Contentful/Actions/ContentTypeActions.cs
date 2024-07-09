@@ -10,13 +10,14 @@ using Contentful.Core.Models;
 
 namespace Apps.Contentful.Actions;
 
+[ActionList]
 public class ContentTypeActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient)
     : BaseInvocable(invocationContext)
 {
     private IEnumerable<AuthenticationCredentialsProvider> Creds =>
         InvocationContext.AuthenticationCredentialsProviders;
     
-    [Action("Search content types", Description = "List all content types that match the search criteria")]
+    [Action("List content types", Description = "List all content types available in space")]
     public async Task<SearchContentTypesResponse> SearchContentTypesAsync([ActionParameter] ContentTypeRequest request)
     {
         var client = new ContentfulClient(Creds, request.Environment);

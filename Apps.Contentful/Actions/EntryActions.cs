@@ -335,7 +335,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
     #region Entries
 
-    [Action("Search entries", Description = "List all entries with specified content model.")]
+    [Action("List entries", Description = "List all entries with specified content model.")]
     public async Task<ListEntriesResponse> ListEntries([ActionParameter] ContentModelIdentifier contentModelIdentifier)
     {
         var client = new ContentfulClient(Creds, contentModelIdentifier.Environment);

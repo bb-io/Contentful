@@ -99,6 +99,9 @@ Follow [this guide](https://www.contentful.com/help/working-with-translations/) 
 - **Add tag to entry** Add specific tag to an entry
 - **Remove tag from entry** Remove specific tag from an entry
 
+### Content types
+- **List all content types** returns all content types available in space.
+
 ## Events
 
 - **On entry published** and **On asset published** are the most useful events. They are triggered when any entry/asset is published and could be the perfect trigger for sending the entry/asset for translation based on the missing translations (see example).
