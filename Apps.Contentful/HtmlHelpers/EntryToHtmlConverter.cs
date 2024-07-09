@@ -18,7 +18,7 @@ public static class EntryToHtmlConverter
             try
             {
                 var entryNode = doc.CreateElement(HtmlConstants.Div);
-                entryNode.SetAttributeValue(ConvertConstants.EntrIdAttribute, x.Id);
+                entryNode.SetAttributeValue(ConvertConstants.EntryIdAttribute, x.Id);
 
                 bodyNode.AppendChild(entryNode);
                 x.ContentTypeFields.ToList()

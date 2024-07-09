@@ -11,4 +11,6 @@ public class GetAssetResponse
     public IEnumerable<string> Tags { get; set; }
 
     public FileReference? File { get; set; }
+
+    public string? Locale { get; set; }
 }
