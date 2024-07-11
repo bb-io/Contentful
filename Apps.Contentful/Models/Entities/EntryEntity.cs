@@ -19,6 +19,8 @@ public class EntryEntity
     
     public int Version { get; set; }
 
+    public string Locale { get; set; }
+
     public EntryEntity(Entry<object> entry)
     {
         Id = entry.SystemProperties.Id;
@@ -26,5 +28,6 @@ public class EntryEntity
         ContentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
         CreatedAt = entry.SystemProperties.CreatedAt;
         Version = entry.SystemProperties.Version ?? default;
+        Locale = entry.SystemProperties.Locale;
     }
 }

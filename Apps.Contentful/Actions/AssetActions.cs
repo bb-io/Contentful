@@ -16,18 +16,11 @@ using File = Contentful.Core.Models.File;
 namespace Apps.Contentful.Actions;
 
 [ActionList]
-public class AssetActions : BaseInvocable
+public class AssetActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient)
+    : BaseInvocable(invocationContext)
 {
     private IEnumerable<AuthenticationCredentialsProvider> Creds =>
         InvocationContext.AuthenticationCredentialsProviders;
-
-    private readonly IFileManagementClient _fileManagementClient;
-
-    public AssetActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient) : base(
-        invocationContext)
-    {
-        _fileManagementClient = fileManagementClient;
-    }
 
     [Action("Get asset", Description = "Get specified asset.")]
     public async Task<GetAssetResponse> GetAssetById(
@@ -47,7 +40,8 @@ public class AssetActions : BaseInvocable
             Title = asset.Title?[assetIdentifier.Locale],
             Description = asset.Description?[assetIdentifier.Locale],
             File = fileContent,
-            Tags = asset.Metadata.Tags.Select(x => x.Sys.Id)
+            Tags = asset.Metadata.Tags.Select(x => x.Sys.Id),
+            Locale = assetIdentifier.Locale
         };
     }
 
@@ -58,7 +52,7 @@ public class AssetActions : BaseInvocable
     {
         var client = new ContentfulClient(Creds, localeIdentifier.Environment);
 
-        var file = await _fileManagementClient.DownloadAsync(input.File);
+        var file = await fileManagementClient.DownloadAsync(input.File);
         var result = await client.UploadFileAndCreateAsset(new ManagementAsset
         {
             SystemProperties = new SystemProperties { Id = Guid.NewGuid().ToString() },
@@ -87,7 +81,7 @@ public class AssetActions : BaseInvocable
         var client = new ContentfulClient(Creds, assetIdentifier.Environment);
         var oldAsset = await client.GetAsset(assetIdentifier.AssetId);
 
-        var file = await _fileManagementClient.DownloadAsync(input.File);
+        var file = await fileManagementClient.DownloadAsync(input.File);
         var uploadReference = await client.UploadFile(await file.GetByteData());
         uploadReference.SystemProperties.CreatedAt = null;
         uploadReference.SystemProperties.CreatedBy = null;
@@ -212,7 +206,7 @@ public class AssetActions : BaseInvocable
         var request = new RestRequest($"https:{file.Url}");
         var response = await client.GetAsync(request);
 
-        return await _fileManagementClient.UploadAsync(new MemoryStream(response.RawBytes!), file.ContentType,
+        return await fileManagementClient.UploadAsync(new MemoryStream(response.RawBytes!), file.ContentType,
             file.FileName);
     }
 }

@@ -1,34 +1,45 @@
 ﻿using System.Net;
+using Apps.Contentful.Actions;
+using Apps.Contentful.Api;
+using Apps.Contentful.Models.Entities;
+using Apps.Contentful.Models.Identifiers;
 using Apps.Contentful.Models.Responses;
 using Apps.Contentful.Webhooks.Handlers.AssetHandlers;
 using Apps.Contentful.Webhooks.Handlers.EntryHandlers;
 using Apps.Contentful.Webhooks.Models.Payload;
+using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Common.Webhooks;
+using Contentful.Core.Models.Management;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using WebhookRequest = Blackbird.Applications.Sdk.Common.Webhooks.WebhookRequest;
 
 namespace Apps.Contentful.Webhooks;
 
 [WebhookList]
-public class WebhookList
+public class WebhookList(InvocationContext invocationContext)
 {
     #region EntryWebhooks
 
     [Webhook("On entry created", typeof(EntryCreatedHandler), Description = "On entry created")]
-    public Task<WebhookResponse<EntityWebhookResponse>> EntryCreated(WebhookRequest webhookRequest)
-        => HandleWebhookResponse(webhookRequest);
+    public Task<WebhookResponse<EntryEntity>> EntryCreated(WebhookRequest webhookRequest,
+        [WebhookParameter] LocaleOptionalIdentifier localeOptionalIdentifier)
+        => HandleEntryWebhookResponse(webhookRequest, localeOptionalIdentifier);
 
     [Webhook("On entry saved", typeof(EntrySavedHandler), Description = "On entry saved")]
-    public Task<WebhookResponse<FieldsChangedResponse>> EntrySaved(WebhookRequest webhookRequest)
-        => HandleFieldsChangedResponse(webhookRequest);
+    public Task<WebhookResponse<FieldsChangedResponse>> EntrySaved(WebhookRequest webhookRequest,
+        [WebhookParameter] LocaleOptionalIdentifier localeOptionalIdentifier)
+        => HandleFieldsChangedResponse(webhookRequest, localeOptionalIdentifier);
 
     [Webhook("On entry auto saved", typeof(EntryAutoSavedHandler), Description = "On entry auto saved")]
-    public Task<WebhookResponse<FieldsChangedResponse>> EntryAutoSaved(WebhookRequest webhookRequest)
-        => HandleFieldsChangedResponse(webhookRequest);
+    public Task<WebhookResponse<FieldsChangedResponse>> EntryAutoSaved(WebhookRequest webhookRequest,
+        [WebhookParameter] LocaleOptionalIdentifier localeOptionalIdentifier)
+        => HandleFieldsChangedResponse(webhookRequest, localeOptionalIdentifier);
 
     [Webhook("On entry published", typeof(EntryPublishedHandler), Description = "On entry published")]
-    public Task<WebhookResponse<EntityWebhookResponse>> EntryPublished(WebhookRequest webhookRequest)
-        => HandleWebhookResponse(webhookRequest);
+    public Task<WebhookResponse<EntryEntity>> EntryPublished(WebhookRequest webhookRequest,
+        [WebhookParameter] LocaleOptionalIdentifier localeOptionalIdentifier)
+        => HandleEntryWebhookResponse(webhookRequest, localeOptionalIdentifier);
 
     [Webhook("On entry unpublished", typeof(EntryUnpublishedHandler), Description = "On entry unpublished")]
     public Task<WebhookResponse<EntityWebhookResponse>> EntryUnpublished(WebhookRequest webhookRequest)
@@ -55,12 +66,14 @@ public class WebhookList
         => HandleWebhookResponse(webhookRequest);
 
     [Webhook("On asset saved", typeof(AssetSavedHandler), Description = "On asset saved")]
-    public Task<WebhookResponse<AssetChangedResponse>> AssetSaved(WebhookRequest webhookRequest)
-        => HandleAssetChangedResponse(webhookRequest);
+    public Task<WebhookResponse<AssetChangedResponse>> AssetSaved(WebhookRequest webhookRequest,
+        [WebhookParameter] LocaleOptionalIdentifier localeOptionalIdentifier)
+        => HandleAssetChangedResponse(webhookRequest, localeOptionalIdentifier);
 
     [Webhook("On asset auto saved", typeof(AssetAutoSavedHandler), Description = "On asset auto saved")]
-    public Task<WebhookResponse<AssetChangedResponse>> AssetAutoSaved(WebhookRequest webhookRequest)
-        => HandleAssetChangedResponse(webhookRequest);
+    public Task<WebhookResponse<AssetChangedResponse>> AssetAutoSaved(WebhookRequest webhookRequest,
+        [WebhookParameter] LocaleOptionalIdentifier localeOptionalIdentifier)
+        => HandleAssetChangedResponse(webhookRequest, localeOptionalIdentifier);
 
     [Webhook("On asset published", typeof(AssetPublishedHandler), Description = "On asset published")]
     public Task<WebhookResponse<EntityWebhookResponse>> AssetPublished(WebhookRequest webhookRequest)
@@ -88,7 +101,7 @@ public class WebhookList
 
     private static Task<WebhookResponse<EntityWebhookResponse>> HandleWebhookResponse(WebhookRequest webhookRequest)
     {
-        var payload = JsonConvert.DeserializeObject<GenericEntryPayload>(webhookRequest.Body.ToString());
+        var payload = JsonConvert.DeserializeObject<GenericEntryPayload>(webhookRequest.Body.ToString()!);
 
         if (payload is null)
             throw new InvalidCastException(nameof(webhookRequest.Body));
@@ -99,11 +112,49 @@ public class WebhookList
             Result = new() { Id = payload.Sys.Id }
         });
     }
-
-    private static Task<WebhookResponse<FieldsChangedResponse>> HandleFieldsChangedResponse(
-        WebhookRequest webhookRequest)
+    
+    private async Task<WebhookResponse<EntryEntity>> HandleEntryWebhookResponse(
+        WebhookRequest webhookRequest,
+        LocaleOptionalIdentifier localeOptionalIdentifier)
     {
-        var payload = JsonConvert.DeserializeObject<GenericEntryPayload>(webhookRequest.Body.ToString());
+        var payload = JsonConvert.DeserializeObject<GenericEntryPayload>(webhookRequest.Body.ToString()!);
+
+        if (payload is null)
+            throw new InvalidCastException(nameof(webhookRequest.Body));
+        
+        var entryActions = new EntryActions(invocationContext, null!);
+        var entry = await entryActions.GetEntry(new EntryIdentifier { EntryId = payload.Sys.Id });
+
+        if (!string.IsNullOrEmpty(localeOptionalIdentifier.Locale))
+        {
+            if (entry.Locale == localeOptionalIdentifier.Locale)
+            {
+                return new()
+                {
+                    HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
+                    Result = entry
+                };
+            }
+
+            return new WebhookResponse<EntryEntity>()
+            {
+                Result = null,
+                ReceivedWebhookRequestType = WebhookRequestType.Preflight
+            };
+        }
+        
+        return new()
+        {
+            HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
+            Result = entry
+        };
+    }
+    
+    private static Task<WebhookResponse<FieldsChangedResponse>> HandleFieldsChangedResponse(
+        WebhookRequest webhookRequest,
+        LocaleOptionalIdentifier localeOptionalIdentifier)
+    {
+        var payload = JsonConvert.DeserializeObject<GenericEntryPayload>(webhookRequest.Body.ToString()!);
 
         if (payload is null)
             throw new InvalidCastException(nameof(webhookRequest.Body));
@@ -118,6 +169,10 @@ public class WebhookList
         {
             foreach (var propertyLocale in (JObject)propertyField.Value)
             {
+                if (!string.IsNullOrEmpty(localeOptionalIdentifier.Locale)) 
+                    if (propertyLocale.Key != localeOptionalIdentifier.Locale)
+                        continue;
+                
                 changes.Fields.Add(new FieldObject
                 {
                     FieldId = propertyField.Name,
@@ -135,9 +190,10 @@ public class WebhookList
     }
 
     private static Task<WebhookResponse<AssetChangedResponse>> HandleAssetChangedResponse(
-        WebhookRequest webhookRequest)
+        WebhookRequest webhookRequest,
+        LocaleOptionalIdentifier localeOptionalIdentifier)
     {
-        var payload = JsonConvert.DeserializeObject<AssetPayload>(webhookRequest.Body.ToString());
+        var payload = JsonConvert.DeserializeObject<AssetPayload>(webhookRequest.Body.ToString()!);
 
         if (payload is null)
             throw new InvalidCastException(nameof(webhookRequest.Body));
@@ -150,6 +206,14 @@ public class WebhookList
 
         foreach (var propertyLocale in payload.Fields.File.Properties())
         {
+            if (!string.IsNullOrEmpty(localeOptionalIdentifier.Locale))
+            {
+                if (propertyLocale.Name != localeOptionalIdentifier.Locale)
+                {
+                    continue;
+                }
+            }
+            
             var change = propertyLocale.Value.ToObject<AssetFileInfo>();
             change.Locale = propertyLocale.Name;
             changes.FilesInfo.Add(change);

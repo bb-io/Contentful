@@ -17,8 +17,8 @@ public static class EntryToJsonConverter
         htmlDocument.LoadHtml(html);
 
         return htmlDocument.DocumentNode.Descendants()
-            .Where(x => x.Attributes[ConvertConstants.EntrIdAttribute] is not null)
-            .Select(x => new EntryHtmlContentDto(x.Attributes[ConvertConstants.EntrIdAttribute].Value, x))
+            .Where(x => x.Attributes[ConvertConstants.EntryIdAttribute] is not null)
+            .Select(x => new EntryHtmlContentDto(x.Attributes[ConvertConstants.EntryIdAttribute].Value, x))
             .ToList();
     }
     public static void ToJson(Entry<object> entry, HtmlNode html, string locale)
