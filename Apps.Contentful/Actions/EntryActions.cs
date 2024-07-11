@@ -168,8 +168,8 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         {
             EntryId = entryId ?? string.Empty,
             FieldId = fieldId ?? string.Empty,
+            Locale = locale ?? string.Empty,
             LinkedEntryIds = linkedIds.ToList(),
-            Locale = locale ?? string.Empty
         };
     }
 
@@ -188,7 +188,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         var file = await fileManagementClient.DownloadAsync(input.File);
         var html = Encoding.UTF8.GetString(await file.GetByteData());
 
-        var (extractedEntryId, extractedFieldId) = ExtractIdsFromHtml(html);
+        var (extractedEntryId, extractedFieldId, locale) = ExtractIdsFromHtml(html);
 
         var entryId = entryIdentifier.EntryId ?? extractedEntryId ?? throw new Exception("Entry ID is required.");
         var fieldId = fieldIdentifier.FieldId ?? extractedFieldId ?? throw new Exception("Field ID is required.");
