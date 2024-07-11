@@ -25,18 +25,11 @@ using Newtonsoft.Json.Serialization;
 namespace Apps.Contentful.Actions;
 
 [ActionList]
-public class EntryActions : BaseInvocable
+public class EntryActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient)
+    : BaseInvocable(invocationContext)
 {
     private IEnumerable<AuthenticationCredentialsProvider> Creds =>
         InvocationContext.AuthenticationCredentialsProviders;
-
-    private readonly IFileManagementClient _fileManagementClient;
-
-    public EntryActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient) : base(
-        invocationContext)
-    {
-        _fileManagementClient = fileManagementClient;
-    }
 
     #region Text/Rich text fields
 
@@ -112,7 +105,7 @@ public class EntryActions : BaseInvocable
         <body>{htmlContent}</body>
         </html>";
 
-        var file = await _fileManagementClient.UploadAsync(new MemoryStream(Encoding.UTF8.GetBytes(html)),
+        var file = await fileManagementClient.UploadAsync(new MemoryStream(Encoding.UTF8.GetBytes(html)),
             MediaTypeNames.Text.Html,
             $"{entryIdentifier.EntryId}_{fieldIdentifier.FieldId}_{entryIdentifier.Locale}.html");
         return new()
@@ -154,6 +147,19 @@ public class EntryActions : BaseInvocable
 
         await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version);
     }
+    
+    [Action("Get IDs from HTML file", Description = "Extract entry and field IDs from HTML file.")]
+    public async Task<GetIdsFromHtmlResponse> GetIdsFromHtmlFile([ActionParameter] FileRequest input)
+    {
+        var file = await fileManagementClient.DownloadAsync(input.File);
+        var html = Encoding.UTF8.GetString(await file.GetByteData());
+        var (entryId, fieldId) = ExtractIdsFromHtml(html);
+        return new GetIdsFromHtmlResponse
+        {
+            EntryId = entryId ?? string.Empty,
+            FieldId = fieldId ?? string.Empty
+        };
+    }
 
     [Action("Set entry's text/rich text field from HTML file", Description =
         "Set content of the field of the specified " +
@@ -167,7 +173,7 @@ public class EntryActions : BaseInvocable
         [ActionParameter] FieldOptionalIdentifier fieldIdentifier,
         [ActionParameter] FileRequest input)
     {
-        var file = await _fileManagementClient.DownloadAsync(input.File);
+        var file = await fileManagementClient.DownloadAsync(input.File);
         var html = Encoding.UTF8.GetString(await file.GetByteData());
 
         var (extractedEntryId, extractedFieldId) = ExtractIdsFromHtml(html);
@@ -337,10 +343,9 @@ public class EntryActions : BaseInvocable
         var entries =
             await client.Paginate<Entry<object>>(
                 async (query) => await client.GetEntriesCollection<Entry<object>>(query), queryString);
-        return new ListEntriesResponse
-        {
-            Entries = entries.Select(e => new EntryEntity(e)).ToArray()
-        };
+        
+        var entriesResponse = entries.Select(e => new EntryEntity(e)).ToArray();
+        return new ListEntriesResponse(entriesResponse, entriesResponse.Length);
     }
 
     [Action("Get entry", Description = "Get details of a specific entry")]
@@ -454,7 +459,7 @@ public class EntryActions : BaseInvocable
 
         var resultHtml = EntryToHtmlConverter.ToHtml(entriesContent, entryIdentifier.Locale, spaceId);
 
-        var file = await _fileManagementClient.UploadAsync(new MemoryStream(Encoding.UTF8.GetBytes(resultHtml)),
+        var file = await fileManagementClient.UploadAsync(new MemoryStream(Encoding.UTF8.GetBytes(resultHtml)),
             MediaTypeNames.Text.Html, $"{entryIdentifier.EntryId}_{entryIdentifier.Locale}.html");
         return new()
         {
@@ -471,7 +476,7 @@ public class EntryActions : BaseInvocable
     {
         var client = new ContentfulClient(Creds, localeIdentifier.Environment);
 
-        var file = await _fileManagementClient.DownloadAsync(input.File);
+        var file = await fileManagementClient.DownloadAsync(input.File);
         var html = Encoding.UTF8.GetString(await file.GetByteData());
 
         var entriesToUpdate = EntryToJsonConverter.GetEntriesInfo(html);
