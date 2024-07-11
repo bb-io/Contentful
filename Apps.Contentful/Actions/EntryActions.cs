@@ -21,6 +21,7 @@ using Newtonsoft.Json;
 using Contentful.Core.Extensions;
 using HtmlAgilityPack;
 using Newtonsoft.Json.Serialization;
+using Contentful.Core.Models.Management;
 
 namespace Apps.Contentful.Actions;
 
@@ -149,15 +150,21 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     }
     
     [Action("Get IDs from HTML file", Description = "Extract entry and field IDs from HTML file.")]
-    public async Task<GetIdsFromHtmlResponse> GetIdsFromHtmlFile([ActionParameter] FileRequest input)
+    public async Task<GetIdsFromHtmlResponse> GetIdsFromHtmlFile([ActionParameter] GetIdsFromFileRequest input)
     {
         var file = await fileManagementClient.DownloadAsync(input.File);
         var html = Encoding.UTF8.GetString(await file.GetByteData());
         var (entryId, fieldId) = ExtractIdsFromHtml(html);
+
+        var client = new ContentfulClient(Creds, input.Environment);
+        var entryContent = await GetEntryContent(entryId!, client);
+        var linkedIds = GetLinkedEntryIds(entryContent, input.Locale).Distinct();
+
         return new GetIdsFromHtmlResponse
         {
             EntryId = entryId ?? string.Empty,
-            FieldId = fieldId ?? string.Empty
+            FieldId = fieldId ?? string.Empty,
+            LinkedEntryIds = linkedIds.ToList()
         };
     }
 

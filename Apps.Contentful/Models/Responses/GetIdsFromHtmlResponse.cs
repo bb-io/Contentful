@@ -9,4 +9,7 @@ public class GetIdsFromHtmlResponse
     
     [Display("Field ID")]
     public string FieldId { get; set; } = string.Empty;
+
+    [Display("Linked entry IDs")]
+    public List<string> LinkedEntryIds { get; set; } = new();
 }
