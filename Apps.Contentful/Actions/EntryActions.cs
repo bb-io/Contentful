@@ -102,6 +102,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         <head>
             <meta name='blackbird-field-id' content='{fieldIdentifier.FieldId}'>
             <meta name='blackbird-entry-id' content='{entryIdentifier.EntryId}'>
+            <meta name='blackbird-locale' content='{entryIdentifier.Locale}'>
         </head>
         <body>{htmlContent}</body>
         </html>";
@@ -154,17 +155,21 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     {
         var file = await fileManagementClient.DownloadAsync(input.File);
         var html = Encoding.UTF8.GetString(await file.GetByteData());
-        var (entryId, fieldId) = ExtractIdsFromHtml(html);
+        var (entryId, fieldId, locale) = ExtractIdsFromHtml(html);
+
+        if(string.IsNullOrEmpty(entryId))
+            throw new Exception("Entry ID not found in the HTML file.");
 
         var client = new ContentfulClient(Creds, input.Environment);
-        var entryContent = await GetEntryContent(entryId!, client);
+        var entryContent = await GetEntryContent(entryId, client);
         var linkedIds = GetLinkedEntryIds(entryContent, input.Locale).Distinct();
 
         return new GetIdsFromHtmlResponse
         {
             EntryId = entryId ?? string.Empty,
             FieldId = fieldId ?? string.Empty,
-            LinkedEntryIds = linkedIds.ToList()
+            LinkedEntryIds = linkedIds.ToList(),
+            Locale = locale ?? string.Empty
         };
     }
 
@@ -577,7 +582,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         return new(entryId, entry.Fields, contentType.Fields.Where(x => x.Localized).ToArray());
     }
 
-    private (string? entryId, string? fieldId) ExtractIdsFromHtml(string html)
+    private(string? entryId, string? fieldId, string? locale) ExtractIdsFromHtml(string html)
     {
         var doc = new HtmlDocument();
         doc.LoadHtml(html);
@@ -586,8 +591,10 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             ?.GetAttributeValue("content", null);
         var fieldId = doc.DocumentNode.SelectSingleNode("//meta[@name='blackbird-field-id']")
             ?.GetAttributeValue("content", null);
+        var locale = doc.DocumentNode.SelectSingleNode("//meta[@name='blackbird-locale']")
+            ?.GetAttributeValue("content", null);
 
-        return (entryId, fieldId);
+        return (entryId, fieldId, locale);
     }
 
     #endregion

@@ -11,7 +11,8 @@ public static class EntryToHtmlConverter
 {
     public static string ToHtml(List<EntryContentDto> entriesContent, string locale, string spaceId)
     {
-        var (doc, bodyNode) = PrepareEmptyHtmlDocument();
+        var entryId = entriesContent.Select(x => x.Id).FirstOrDefault() ?? string.Empty;
+        var (doc, bodyNode) = PrepareEmptyHtmlDocument(entryId, locale);
 
         entriesContent.ForEach(x =>
         {
@@ -164,12 +165,24 @@ public static class EntryToHtmlConverter
         return node;
     }
 
-    private static (HtmlDocument document, HtmlNode bodyNode) PrepareEmptyHtmlDocument()
+    private static (HtmlDocument document, HtmlNode bodyNode) PrepareEmptyHtmlDocument(string entryId, string locale)
     {
         var htmlDoc = new HtmlDocument();
         var htmlNode = htmlDoc.CreateElement(HtmlConstants.Html);
         htmlDoc.DocumentNode.AppendChild(htmlNode);
-        htmlNode.AppendChild(htmlDoc.CreateElement(HtmlConstants.Head));
+
+        var headNode = htmlDoc.CreateElement(HtmlConstants.Head);
+        htmlNode.AppendChild(headNode);
+
+        var entryMetaNode = htmlDoc.CreateElement("meta");
+        entryMetaNode.SetAttributeValue("name", "blackbird-entry-id");
+        entryMetaNode.SetAttributeValue("content", entryId);
+        headNode.AppendChild(entryMetaNode);
+
+        var localeMetaNode = htmlDoc.CreateElement("meta");
+        localeMetaNode.SetAttributeValue("name", "blackbird-locale");
+        localeMetaNode.SetAttributeValue("content", locale);
+        headNode.AppendChild(localeMetaNode);
 
         var bodyNode = htmlDoc.CreateElement(HtmlConstants.Body);
         htmlNode.AppendChild(bodyNode);
