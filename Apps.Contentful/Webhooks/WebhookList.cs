@@ -1,6 +1,6 @@
 ﻿using System.Net;
 using Apps.Contentful.Actions;
-using Apps.Contentful.Api;
+using Apps.Contentful.Invocables;
 using Apps.Contentful.Models.Entities;
 using Apps.Contentful.Models.Identifiers;
 using Apps.Contentful.Models.Responses;
@@ -9,7 +9,6 @@ using Apps.Contentful.Webhooks.Handlers.EntryHandlers;
 using Apps.Contentful.Webhooks.Models.Payload;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Common.Webhooks;
-using Contentful.Core.Models.Management;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using WebhookRequest = Blackbird.Applications.Sdk.Common.Webhooks.WebhookRequest;
@@ -17,7 +16,7 @@ using WebhookRequest = Blackbird.Applications.Sdk.Common.Webhooks.WebhookRequest
 namespace Apps.Contentful.Webhooks;
 
 [WebhookList]
-public class WebhookList(InvocationContext invocationContext)
+public class WebhookList(InvocationContext invocationContext) : ContentfulInvocable(invocationContext)
 {
     #region EntryWebhooks
 
