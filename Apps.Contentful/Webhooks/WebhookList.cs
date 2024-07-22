@@ -21,9 +21,8 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
     #region EntryWebhooks
 
     [Webhook("On entry created", typeof(EntryCreatedHandler), Description = "On entry created")]
-    public Task<WebhookResponse<EntryEntity>> EntryCreated(WebhookRequest webhookRequest,
-        [WebhookParameter] LocaleOptionalIdentifier localeOptionalIdentifier)
-        => HandleEntryWebhookResponse(webhookRequest, localeOptionalIdentifier);
+    public Task<WebhookResponse<EntryEntity>> EntryCreated(WebhookRequest webhookRequest)
+        => HandleEntryWebhookResponse(webhookRequest);
 
     [Webhook("On entry saved", typeof(EntrySavedHandler), Description = "On entry saved")]
     public Task<WebhookResponse<FieldsChangedResponse>> EntrySaved(WebhookRequest webhookRequest,
@@ -36,9 +35,8 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
         => HandleFieldsChangedResponse(webhookRequest, localeOptionalIdentifier);
 
     [Webhook("On entry published", typeof(EntryPublishedHandler), Description = "On entry published")]
-    public Task<WebhookResponse<EntryEntity>> EntryPublished(WebhookRequest webhookRequest,
-        [WebhookParameter] LocaleOptionalIdentifier localeOptionalIdentifier)
-        => HandleEntryWebhookResponse(webhookRequest, localeOptionalIdentifier);
+    public Task<WebhookResponse<EntryEntity>> EntryPublished(WebhookRequest webhookRequest)
+        => HandleEntryWebhookResponse(webhookRequest);
 
     [Webhook("On entry unpublished", typeof(EntryUnpublishedHandler), Description = "On entry unpublished")]
     public Task<WebhookResponse<EntityWebhookResponse>> EntryUnpublished(WebhookRequest webhookRequest)
@@ -112,9 +110,7 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
         });
     }
     
-    private async Task<WebhookResponse<EntryEntity>> HandleEntryWebhookResponse(
-        WebhookRequest webhookRequest,
-        LocaleOptionalIdentifier localeOptionalIdentifier)
+    private async Task<WebhookResponse<EntryEntity>> HandleEntryWebhookResponse(WebhookRequest webhookRequest)
     {
         var payload = JsonConvert.DeserializeObject<GenericEntryPayload>(webhookRequest.Body.ToString()!);
 
@@ -124,24 +120,6 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
         var entryActions = new EntryActions(invocationContext, null!);
         var entry = await entryActions.GetEntry(new EntryIdentifier { EntryId = payload.Sys.Id });
 
-        if (!string.IsNullOrEmpty(localeOptionalIdentifier.Locale))
-        {
-            if (entry.Locale == localeOptionalIdentifier.Locale)
-            {
-                return new()
-                {
-                    HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
-                    Result = entry
-                };
-            }
-
-            return new WebhookResponse<EntryEntity>()
-            {
-                Result = null,
-                ReceivedWebhookRequestType = WebhookRequestType.Preflight
-            };
-        }
-        
         return new()
         {
             HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
