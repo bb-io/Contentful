@@ -21,7 +21,6 @@ using Newtonsoft.Json;
 using Contentful.Core.Extensions;
 using HtmlAgilityPack;
 using Newtonsoft.Json.Serialization;
-using Contentful.Core.Models.Management;
 
 namespace Apps.Contentful.Actions;
 
@@ -44,7 +43,14 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     {
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var entry = await client.GetEntry(entryIdentifier.EntryId);
-        var field = ((JObject)entry.Fields)[fieldIdentifier.FieldId][entryIdentifier.Locale];
+        var field = ((JObject)entry.Fields)[fieldIdentifier.FieldId]?[entryIdentifier.Locale];
+
+        if (field is null)
+            return new()
+            {
+                TextContent = null
+            };
+        
         var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
         var contentType = await client.GetContentType(contentTypeId);
         var fieldType = contentType.Fields.First(f => f.Id == fieldIdentifier.FieldId).Type;

@@ -5,5 +5,5 @@ namespace Apps.Contentful.Models.Responses;
 public class GetTextContentResponse
 {
     [Display("Text content")]
-    public string TextContent { get; set; }
+    public string? TextContent { get; set; }
 }
