@@ -26,14 +26,15 @@ Before you can connect you need to make sure that:
 
 ## Connecting
 
-1. Navigate to apps and search for Contentful. If you cannot find Contentful then click _Add App_ in the top right corner, select Contentful and add the app to your Blackbird environment.
+1. Navigate to apps and search for Contentful.
 2. Click _Add Connection_.
 3. Name your connection for future reference e.g. 'My client'.
 4. Fill in the _Client ID_ obtained earlier.
 5. Fill in the _Space ID_ of the Contentful space you want to connect to. To find space ID follow [this instructions](https://www.contentful.com/help/find-space-id/).
-6. Click _Authorize connection_.
-7. Follow the instructions that Contentful gives you, authorizing Blackbird.io to act on your behalf.
-8. When you return to Blackbird, confirm that the connection has appeared and the status is _Connected_.
+6. Base URL: By default, set the base URL to https://api.contentful.com. If you are operating in the EU, you should change this to https://api.eu.contentful.com.
+7. Click Authorize connection.
+8. Follow the instructions that Contentful provides, authorizing Blackbird.io to act on your behalf.
+9. When you return to Blackbird, confirm that the connection has appeared and the status is Connected.
 
 ![connecting](image/README/connecting.png)
 
