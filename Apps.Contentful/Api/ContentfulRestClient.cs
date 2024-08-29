@@ -10,15 +10,14 @@ using RestSharp;
 
 namespace Apps.Contentful.Api;
 
-public class ContentfulRestClient : BlackBirdRestClient
-{
-    public ContentfulRestClient(AuthenticationCredentialsProvider[] creds, string? environment) : base(new()
+public class ContentfulRestClient(AuthenticationCredentialsProvider[] creds, string? environment)
+    : BlackBirdRestClient(new()
     {
-        BaseUrl = $"{Urls.Api}/spaces/{creds.Get("spaceId").Value}{GetEnvironmentSegment(environment)}".ToUri()
+        BaseUrl =
+            $"{creds.Get(CredNames.BaseUrl).Value}/spaces/{creds.Get(CredNames.SpaceId).Value}{GetEnvironmentSegment(environment)}"
+                .ToUri()
     })
-    {
-    }
-
+{
     protected override Exception ConfigureErrorException(RestResponse response)
     {
         var error = JsonConvert.DeserializeObject<ErrorResponse>(response.Content);

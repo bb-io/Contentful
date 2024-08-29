@@ -1,4 +1,5 @@
-﻿using Blackbird.Applications.Sdk.Common;
+﻿using Apps.Contentful.Constants;
+using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication.OAuth2;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Microsoft.AspNetCore.WebUtilities;
@@ -16,7 +17,7 @@ public class OAuth2AuthorizeService : BaseInvocable, IOAuth2AuthorizeService
         const string oauthUrl = "https://be.contentful.com/oauth/authorize";
         var parameters = new Dictionary<string, string>
         {
-            { "client_id", values["client_id"] },
+            { CredNames.ClientId, values["client_id"] },
             { "redirect_uri", InvocationContext.UriInfo.ImplicitGrantRedirectUri.ToString() },
             { "response_type", "token" },
             { "scope", ApplicationConstants.Scope },

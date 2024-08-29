@@ -1,4 +1,6 @@
-﻿using Blackbird.Applications.Sdk.Common.Authentication;
+﻿using Apps.Contentful.Constants;
+using Apps.Contentful.Utils;
+using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Connections;
 
 namespace Apps.Contentful.Connections;
@@ -14,7 +16,18 @@ public class ConnectionDefinition : IConnectionDefinition
             ConnectionUsage = ConnectionUsage.Actions,
             ConnectionProperties = new List<ConnectionProperty>
             {
-                new("client_id") { DisplayName = "Client ID" }
+                new(CredNames.ClientId) { DisplayName = "Client ID" }
+            }
+        },
+        new()
+        {
+            Name = "Base URL",
+            AuthenticationType = ConnectionAuthenticationType.Undefined,
+            ConnectionUsage = ConnectionUsage.Actions & ConnectionUsage.Webhooks,
+            ConnectionProperties = new List<ConnectionProperty>
+            {
+                new(CredNames.BaseUrl) { DisplayName = "Base URL", Description = "The base URL of the Contentful API. " +
+                    "Example: https://api.contentful.com or https://api.eu.contentful.com" }
             }
         },
         new()
@@ -24,7 +37,7 @@ public class ConnectionDefinition : IConnectionDefinition
             ConnectionUsage = ConnectionUsage.Actions & ConnectionUsage.Webhooks,
             ConnectionProperties = new List<ConnectionProperty>
             {
-                new("spaceId") { DisplayName = "Space ID" }
+                new(CredNames.SpaceId) { DisplayName = "Space ID" }
             }
         }
     };
@@ -43,6 +56,12 @@ public class ConnectionDefinition : IConnectionDefinition
             AuthenticationCredentialsRequestLocation.Header,
             spaceId.Key,
             spaceId.Value
+        );
+        var baseUrl = values.First(v => v.Key == CredNames.BaseUrl);
+        yield return new AuthenticationCredentialsProvider(
+            AuthenticationCredentialsRequestLocation.None,
+            baseUrl.Key,
+            UrlHelper.FormatUrl(baseUrl.Value)
         );
     }
 }
