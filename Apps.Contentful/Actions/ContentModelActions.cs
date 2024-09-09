@@ -11,12 +11,8 @@ using Apps.Contentful.Dtos.Raw;
 namespace Apps.Contentful.Actions;
 
 [ActionList]
-public class ContentModelActions : ContentfulInvocable
+public class ContentModelActions(InvocationContext invocationContext) : ContentfulInvocable(invocationContext)
 {
-    public ContentModelActions(InvocationContext invocationContext) : base(invocationContext)
-    {
-    }
-
     [Action("List all content models", Description = "List all content models in space.")]
     public async Task<ListAllContentModelsResponse> ListAllContentModels(
         [ActionParameter] EnvironmentIdentifier environment)

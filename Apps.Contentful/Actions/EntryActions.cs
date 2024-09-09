@@ -1,6 +1,7 @@
 ﻿using System.Net.Mime;
 using System.Text;
 using Apps.Contentful.Api;
+using Apps.Contentful.Dtos.Raw;
 using Apps.Contentful.Extensions;
 using Apps.Contentful.HtmlHelpers;
 using Apps.Contentful.Models;
@@ -21,6 +22,7 @@ using Newtonsoft.Json;
 using Contentful.Core.Extensions;
 using HtmlAgilityPack;
 using Newtonsoft.Json.Serialization;
+using RestSharp;
 
 namespace Apps.Contentful.Actions;
 
@@ -50,7 +52,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             {
                 TextContent = null
             };
-        
+
         var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
         var contentType = await client.GetContentType(contentTypeId);
         var fieldType = contentType.Fields.First(f => f.Id == fieldIdentifier.FieldId).Type;
@@ -155,7 +157,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
         await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version);
     }
-    
+
     [Action("Get IDs from HTML file", Description = "Extract entry and field IDs from HTML file.")]
     public async Task<GetIdsFromHtmlResponse> GetIdsFromHtmlFile([ActionParameter] GetIdsFromFileRequest input)
     {
@@ -163,7 +165,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         var html = Encoding.UTF8.GetString(await file.GetByteData());
         var (entryId, fieldId, locale) = ExtractIdsFromHtml(html);
 
-        if(string.IsNullOrEmpty(entryId))
+        if (string.IsNullOrEmpty(entryId))
             throw new Exception("Entry ID not found in the HTML file.");
 
         var client = new ContentfulClient(Creds, input.Environment);
@@ -353,19 +355,26 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
     #region Entries
 
-    [Action("List entries", Description = "List all entries with specified content model.")]
-    public async Task<ListEntriesResponse> ListEntries([ActionParameter] ContentModelIdentifier contentModelIdentifier)
+    [Action("List entries", Description = "List all entries. Optionally filter by content model and tags.")]
+    public async Task<ListEntriesResponse> ListEntries([ActionParameter] ListEntriesRequest request)
     {
-        var client = new ContentfulClient(Creds, contentModelIdentifier.Environment);
-        var queryString = $"?content_type={contentModelIdentifier.ContentModelId}";
+        var client = new ContentfulClient(Creds, request.Environment);
+        var queryString = request.ContentModelId == null 
+            ? string.Empty 
+            : $"?content_type={request.ContentModelId}";
         var entries =
             await client.Paginate<Entry<object>>(
                 async (query) => await client.GetEntriesCollection<Entry<object>>(query), queryString);
         
+        if (request.Tags is not null && request.Tags.Any())
+        {
+            entries = entries.Where(e => e.Metadata.Tags.Any(t => request.Tags.Contains(t.Sys.Id)));
+        }
+        
         var entriesResponse = entries.Select(e => new EntryEntity(e)).ToArray();
         return new ListEntriesResponse(entriesResponse, entriesResponse.Length);
     }
-
+    
     [Action("Get entry", Description = "Get details of a specific entry")]
     public async Task<EntryEntity> GetEntry([ActionParameter] EntryIdentifier input)
     {
@@ -434,8 +443,10 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         return new ListLocalesResponse { Locales = missingLocales };
     }
 
-    [Action("List missing locales for entry", Description = "Retrieve a list of missing locales for specified entry.")]
-    public async Task<ListLocalesResponse> ListMissingLocalesForEntry([ActionParameter] EntryIdentifier entryIdentifier)
+    [Action("List missing locales for entry",
+        Description = "Retrieve a list of missing locales for specified entry.")]
+    public async Task<ListLocalesResponse> ListMissingLocalesForEntry(
+        [ActionParameter] EntryIdentifier entryIdentifier)
     {
         var client = new ContentfulClient(InvocationContext.AuthenticationCredentialsProviders,
             entryIdentifier.Environment);
@@ -588,7 +599,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         return new(entryId, entry.Fields, contentType.Fields.Where(x => x.Localized).ToArray());
     }
 
-    private(string? entryId, string? fieldId, string? locale) ExtractIdsFromHtml(string html)
+    private (string? entryId, string? fieldId, string? locale) ExtractIdsFromHtml(string html)
     {
         var doc = new HtmlDocument();
         doc.LoadHtml(html);
