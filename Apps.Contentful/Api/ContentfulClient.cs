@@ -18,13 +18,14 @@ public class ContentfulClient : ContentfulManagementClient
     {
     }
 
-    public async Task<IEnumerable<T>> Paginate<T>(Func<string, Task<IEnumerable<T>>> method, string initialQueryString)
+    public async Task<IEnumerable<T>> Paginate<T>(Func<string, Task<IEnumerable<T>>> method, string? initialQueryString)
     {
         var result = new List<T>();
         
         while(true)
         {
-            var items = await method(initialQueryString + $"&skip={result.Count}&limit={limit}");
+            var query = string.IsNullOrEmpty(initialQueryString) ? "?" : initialQueryString;
+            var items = await method(query + $"&skip={result.Count}&limit={limit}");
             result.AddRange(items);
             if (items.Count() < limit)
                 break;

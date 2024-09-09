@@ -294,7 +294,7 @@ public class HtmlToRichTextConverter
                         var tableCell = new TableCell
                         {
                             NodeType = "table-cell",
-                            Data = new GenericStructureData(),
+                            Data = new TableCellData(),
                             Content = new List<IContent>()
                         };
 
@@ -307,7 +307,7 @@ public class HtmlToRichTextConverter
                         var tableCell = new TableCell
                         {
                             NodeType = "table-header-cell",
-                            Data = new GenericStructureData(),
+                            Data = new TableCellData(),
                             Content = new List<IContent>()
                         };
 
