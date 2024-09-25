@@ -9,10 +9,10 @@ namespace Apps.Contentful.Models.Requests;
 public class UpdateEntryTaskRequest : EntryTaskIdentifier
 {
     [Display("Body", Description = "The body of the task")]
-    public string? Body { get; set; } = string.Empty;
-    
+    public string? Body { get; set; }
+
     [StaticDataSource(typeof(EntryTaskStatusDataSource))]
-    public string? Status { get; set; } = string.Empty;
+    public string? Status { get; set; }
 
     [Display("Assigned to", Description = "The user assigned to this task"), DataSource(typeof(UserDataSourceHandler))]
     public string? AssignedTo { get; set; }

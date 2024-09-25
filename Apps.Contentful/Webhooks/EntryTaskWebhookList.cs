@@ -36,6 +36,15 @@ public class EntryTaskWebhookList(InvocationContext invocationContext) : Content
                 ReceivedWebhookRequestType = WebhookRequestType.Preflight
             });
         }
+        
+        if (request.Body != null && entity.Body != request.Body)
+        {
+            return Task.FromResult(new WebhookResponse<EntryTaskEntity>
+            {
+                Result = null,
+                ReceivedWebhookRequestType = WebhookRequestType.Preflight
+            });
+        }
 
         return Task.FromResult(new WebhookResponse<EntryTaskEntity>
         {

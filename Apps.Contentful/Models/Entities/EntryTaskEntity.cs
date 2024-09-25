@@ -39,6 +39,8 @@ public class EntryTaskEntity(TaskDto dto)
 
     [Display("Updated at")]
     public DateTime UpdatedAt { get; set; } = dto.Sys.UpdatedAt ?? DateTime.MinValue;
+
+    public string Version { get; set; } = dto.Sys.Version.ToString();
 }
 
 public class ObjectEntity

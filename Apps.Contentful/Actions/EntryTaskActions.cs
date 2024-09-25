@@ -61,7 +61,8 @@ public class EntryTaskActions(InvocationContext invocationContext) : ContentfulI
                         id = entryTask.AssignedTo ?? task.AssignedTo
                     }
                 }
-            });
+            })
+            .AddHeader("X-Contentful-Version", task.Version);
         
         var updatedEntryTask = await client.ExecuteWithErrorHandling<TaskDto>(request);
         return new(updatedEntryTask);
