@@ -12,6 +12,7 @@ public class EntryTaskEntity(TaskDto dto)
 
     public string Status { get; set; } = dto.Status;
 
+    [Display("Due date")]
     public DateTime DueDate { get; set; } = dto.DueDate ?? DateTime.MinValue;
 
     [Display("Assigned to")]

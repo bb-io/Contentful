@@ -109,6 +109,8 @@ Follow [this guide](https://www.contentful.com/help/working-with-translations/) 
 - **Get entry task** returns details of a specific task.
 - **Update entry task** updates an entry task with new details.
 
+Note, to use the **Entry tasks** actions, you need to install the `Tasks` app (Developed by Contentful) in your Contentful space.
+
 ## Events
 
 - **On entry published** and **On asset published** are the most useful events. They are triggered when any entry/asset is published and could be the perfect trigger for sending the entry/asset for translation based on the missing translations (see example).
