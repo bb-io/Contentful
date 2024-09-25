@@ -5,12 +5,9 @@ using Blackbird.Applications.Sdk.Common.Invocation;
 
 namespace Apps.Contentful.DataSourceHandlers;
 
-public class EnvironmentDataSourceHandler : ContentfulInvocable, IAsyncDataSourceHandler
+public class EnvironmentDataSourceHandler(InvocationContext invocationContext)
+    : ContentfulInvocable(invocationContext), IAsyncDataSourceHandler
 {
-    public EnvironmentDataSourceHandler(InvocationContext invocationContext) : base(invocationContext)
-    {
-    }
-
     public async Task<Dictionary<string, string>> GetDataAsync(DataSourceContext context,
         CancellationToken cancellationToken)
     {
