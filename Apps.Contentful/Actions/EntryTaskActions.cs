@@ -41,7 +41,7 @@ public class EntryTaskActions(InvocationContext invocationContext) : ContentfulI
         return new(entryTask);
     }
     
-    [Action("Update entry task", Description = "Update an entry task")]
+    [Action("Update entry task", Description = "Update an entry task with new details")]
     public async Task<EntryTaskEntity> UpdateEntryTask([ActionParameter] UpdateEntryTaskRequest entryTask)
     {
         var task = await GetEntryTask(entryTask);
