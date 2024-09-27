@@ -13,7 +13,7 @@ namespace Apps.Contentful.Actions;
 [ActionList]
 public class ContentModelActions(InvocationContext invocationContext) : ContentfulInvocable(invocationContext)
 {
-    [Action("List all content models", Description = "List all content models in space.")]
+    [Action("Search all content models", Description = "Search for all content models in space.")]
     public async Task<ListAllContentModelsResponse> ListAllContentModels(
         [ActionParameter] EnvironmentIdentifier environment)
     {

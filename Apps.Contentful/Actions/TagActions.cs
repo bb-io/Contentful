@@ -23,7 +23,7 @@ public class TagActions : ContentfulInvocable
 
     #region Actions
 
-    [Action("List tags", Description = "List all content tags in a space")]
+    [Action("Search tags", Description = "Search for all content tags in a space")]
     public async Task<ListTagsResponse> ListTags([ActionParameter] EnvironmentIdentifier environment)
     {
         var client = new ContentfulClient(Creds, environment.Environment);

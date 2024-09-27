@@ -6,7 +6,7 @@ namespace Apps.Contentful.Models.Identifiers;
 
 public class AssetIdentifier : EnvironmentIdentifier
 {
-    [Display("Asset")]
+    [Display("Asset ID")]
     [DataSource(typeof(AssetDataSourceHandler))]
     public string AssetId { get; set; }
 }

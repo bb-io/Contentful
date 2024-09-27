@@ -6,7 +6,7 @@ namespace Apps.Contentful.Models.Identifiers;
 
 public class EntryLocaleOptionalIdentifier : LocaleIdentifier
 {
-    [Display("Entry")]
+    [Display("Entry ID")]
     [DataSource(typeof(EntryDataSourceHandler))]
     public string? EntryId { get; set; }
 }

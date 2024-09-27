@@ -4,7 +4,7 @@ namespace Apps.Contentful.Models.Responses;
 
 public class FieldsChangedResponse
 {
-    [Display("Entry")]
+    [Display("Entry ID")]
     public string EntryId { get; set; }
 
     public List<FieldObject> Fields { get; set; }

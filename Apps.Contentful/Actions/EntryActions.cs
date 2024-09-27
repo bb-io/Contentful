@@ -355,7 +355,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
     #region Entries
 
-    [Action("List entries", Description = "List all entries. Optionally filter by content model and tags.")]
+    [Action("Search entries", Description = "Search for all entries. Optionally filter by content model and tags.")]
     public async Task<ListEntriesResponse> ListEntries([ActionParameter] ListEntriesRequest request)
     {
         var client = new ContentfulClient(Creds, request.Environment);
@@ -419,7 +419,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         await client.UnpublishEntry(entryIdentifier.EntryId, version: (int)entry.SystemProperties.Version);
     }
 
-    [Action("List missing locales for a field", Description = "Retrieve a list of missing locales for a field.")]
+    [Action("Search missing locales for a field", Description = "Search for a list of missing locales for a field.")]
     public async Task<ListLocalesResponse> ListMissingLocalesForField(
         [ActionParameter] EntryIdentifier entryIdentifier,
         [ActionParameter] FieldIdentifier fieldIdentifier)
@@ -443,8 +443,8 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         return new ListLocalesResponse { Locales = missingLocales };
     }
 
-    [Action("List missing locales for entry",
-        Description = "Retrieve a list of missing locales for specified entry.")]
+    [Action("Search missing locales for entry",
+        Description = "Search for a list of missing locales for specified entry.")]
     public async Task<ListLocalesResponse> ListMissingLocalesForEntry(
         [ActionParameter] EntryIdentifier entryIdentifier)
     {
