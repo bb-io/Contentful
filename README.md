@@ -120,11 +120,13 @@ In the action you are able to select exactly which type of linked entry you want
 - **Get entry task** returns details of a specific task.
 - **Update entry task** updates an entry task with new details.
 
-Note, to use the **Entry tasks** actions, you need to install the `Tasks` app (Developed by Contentful) in your Contentful space.
+Note, to use the **Entry tasks** actions, you need to install the `Workflows` app (Developed by Contentful) in your Contentful space.
 
 ## Events
 
 - **On entry published** and **On asset published** are the most useful events. They are triggered when any entry/asset is published and could be the perfect trigger for sending the entry/asset for translation based on the missing translations (see example).
+
+- **On entry task created** and **On entry task saved** are useful if you prefer to work using the 'Workflows' extension of Blackbird. You can use the extension to assign an entry to a workflow, creating a task. these events can even filter based on assigned User ID and task description. See the example below.
 
 ### Other events:
 
@@ -142,14 +144,21 @@ Note, to use the **Entry tasks** actions, you need to install the `Tasks` app (D
 - **On asset archived**
 - **On asset unarchived**
 - **On asset deleted**
-- **On entry task created**
-- **On entry task saved**
 
-## Example
+
+## Examples
 
 ![example](image/README/example.png)
 
 In this example, whenever an entry is published we retrieve the localizable fields as an HTML file and fetch the missing translations. Then we create a new Phrase project with the missing locales as the target languages and create a new Phrase job for the file.
+
+![example2](image/README/1727786768856.png)
+
+In this example, whenever an entry is published we retrieve all localizable fields as an HTML file. We then send the fiel to DeepL for translation and immediatly update the translated content. Additionally, we are taking a glossary from XTM and use that in our DeepL translation.
+
+![example3](image/README/1727786944492.png)
+
+In this example we are using the 'Workflows' feature in Contentful. When a new task is created (we can addtionally filter on task body and assigned user) we will pull the entry related to this task as an HTML file, translate it with DeepL and update the translation in Contentful. Additionally, we update the status of the task to mark it as resolved.
 
 ## HTML features
 
