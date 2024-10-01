@@ -21,8 +21,8 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
     #region EntryWebhooks
 
     [Webhook("On entry created", typeof(EntryCreatedHandler), Description = "On entry created")]
-    public Task<WebhookResponse<EntryEntity>> EntryCreated(WebhookRequest webhookRequest)
-        => HandleEntryWebhookResponse(webhookRequest);
+    public Task<WebhookResponse<EntryEntity>> EntryCreated(WebhookRequest webhookRequest, [WebhookParameter] OptionalTagListIdentifier tags)
+        => HandleEntryWebhookResponse(webhookRequest, tags.TagIds);
 
     [Webhook("On entry saved", typeof(EntrySavedHandler), Description = "On entry saved")]
     public Task<WebhookResponse<FieldsChangedResponse>> EntrySaved(WebhookRequest webhookRequest,
@@ -35,8 +35,8 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
         => HandleFieldsChangedResponse(webhookRequest, localeOptionalIdentifier);
 
     [Webhook("On entry published", typeof(EntryPublishedHandler), Description = "On entry published")]
-    public Task<WebhookResponse<EntryEntity>> EntryPublished(WebhookRequest webhookRequest)
-        => HandleEntryWebhookResponse(webhookRequest);
+    public Task<WebhookResponse<EntryEntity>> EntryPublished(WebhookRequest webhookRequest, [WebhookParameter] OptionalTagListIdentifier tags)
+        => HandleEntryWebhookResponse(webhookRequest, tags.TagIds);
 
     [Webhook("On entry unpublished", typeof(EntryUnpublishedHandler), Description = "On entry unpublished")]
     public Task<WebhookResponse<EntityWebhookResponse>> EntryUnpublished(WebhookRequest webhookRequest)
@@ -110,7 +110,7 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
         });
     }
     
-    private async Task<WebhookResponse<EntryEntity>> HandleEntryWebhookResponse(WebhookRequest webhookRequest)
+    private async Task<WebhookResponse<EntryEntity>> HandleEntryWebhookResponse(WebhookRequest webhookRequest, IEnumerable<string>? tags)
     {
         var payload = JsonConvert.DeserializeObject<GenericEntryPayload>(webhookRequest.Body.ToString()!);
 
@@ -119,6 +119,15 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
         
         var entryActions = new EntryActions(invocationContext, null!);
         var entry = await entryActions.GetEntry(new EntryIdentifier { EntryId = payload.Sys.Id });
+
+        if (tags != null && !tags.All(x => entry.TagIds.Contains(x)))
+        {
+            return new() {
+                HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
+                Result = null,
+                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
+            };
+        }
 
         return new()
         {
