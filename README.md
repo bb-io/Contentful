@@ -57,7 +57,7 @@ Follow [this guide](https://www.contentful.com/help/working-with-translations/) 
 - **Set entry's boolean field** sets the entry's boolean field value.
 - **Get entry's media content** returns the identifier of the asset attached to the entry's media field.
 - **Set entry's media field** sets the entry's media field with the specified asset.
-- **List entries** returns a list of entries. Optionally filter by content model and tags.
+- **Search entries** returns a list of entries. Optionally filter by content model, environment and tags.
 - **Get entry** Get details of a specific entry
 - **Add new entry** creates a new entry with the specified content model.
 - **Delete entry**.
