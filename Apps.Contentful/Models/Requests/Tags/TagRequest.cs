@@ -7,7 +7,7 @@ namespace Apps.Contentful.Models.Requests.Tags;
 
 public class TagRequest : EnvironmentIdentifier
 {
-    [Display("Tag")]
+    [Display("Tag ID")]
     [DataSource(typeof(TagDataHandler))]
     public string TagId { get; set; }
 }

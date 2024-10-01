@@ -7,7 +7,7 @@ namespace Apps.Contentful.Models.Identifiers;
 
 public class EntryTagIdentifier : TagRequest
 {
-    [Display("Entry")]
+    [Display("Entry ID")]
     [DataSource(typeof(EntryTagDataSourceHandler))]
     public string EntryId { get; set; }
 }

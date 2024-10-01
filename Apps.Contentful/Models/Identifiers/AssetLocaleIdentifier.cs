@@ -6,7 +6,7 @@ namespace Apps.Contentful.Models.Identifiers;
 
 public class AssetLocaleIdentifier : LocaleIdentifier
 {
-    [Display("Asset")]
+    [Display("Asset ID")]
     [DataSource(typeof(AssetLocaleDataSourceHandler))]
     public string AssetId { get; set; }
 }

@@ -17,7 +17,7 @@ public class ContentTypeActions(InvocationContext invocationContext, IFileManage
     private IEnumerable<AuthenticationCredentialsProvider> Creds =>
         InvocationContext.AuthenticationCredentialsProviders;
     
-    [Action("List content types", Description = "List all content types available in space")]
+    [Action("Search content types", Description = "Search for all content types available in space")]
     public async Task<SearchContentTypesResponse> SearchContentTypesAsync([ActionParameter] ContentTypeRequest request)
     {
         var client = new ContentfulClient(Creds, request.Environment);

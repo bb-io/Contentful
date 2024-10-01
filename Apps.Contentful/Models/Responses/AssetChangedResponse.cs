@@ -5,7 +5,7 @@ namespace Apps.Contentful.Models.Responses;
 
 public class AssetChangedResponse
 {
-    [Display("Asset")]
+    [Display("Asset ID")]
     public string AssetId { get; set; }
 
     [Display("Files info")]

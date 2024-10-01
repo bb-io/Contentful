@@ -146,7 +146,7 @@ public class AssetActions(InvocationContext invocationContext, IFileManagementCl
         return new IsAssetLocalePresentResponse { IsAssetLocalePresent = 0 };
     }
 
-    [Action("List missing locales for an asset", Description = "Retrieve a list of missing locales for an asset.")]
+    [Action("Search missing locales for an asset", Description = "Search for a list of missing locales for an asset.")]
     public async Task<ListLocalesResponse> ListMissingLocalesForAsset([ActionParameter] AssetIdentifier assetIdentifier)
     {
         var client = new ContentfulClient(InvocationContext.AuthenticationCredentialsProviders,

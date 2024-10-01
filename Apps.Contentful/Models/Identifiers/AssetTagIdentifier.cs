@@ -7,7 +7,7 @@ namespace Apps.Contentful.Models.Identifiers;
 
 public class AssetTagIdentifier : TagRequest
 {
-    [Display("Asset")]
+    [Display("Asset ID")]
     [DataSource(typeof(AssetTagDataSourceHandler))]
     public string AssetId { get; set; }
 }
