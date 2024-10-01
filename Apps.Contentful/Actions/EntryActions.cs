@@ -170,7 +170,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
         var client = new ContentfulClient(Creds, input.Environment);
         var entryContent = await GetEntryContent(entryId, client);
-        var linkedIds = GetLinkedEntryIds(entryContent, input.Locale).Distinct();
+        var linkedIds = GetLinkedEntryIds(entryContent, input.Locale, true, true, true, true).Distinct();
 
         return new GetIdsFromHtmlResponse
         {
@@ -419,6 +419,21 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         await client.UnpublishEntry(entryIdentifier.EntryId, version: (int)entry.SystemProperties.Version);
     }
 
+    [Action("Get locales", Description = "Get the default locale and all other locales in convenient codes form.")]
+    public async Task<GetLocalesResponse> GetLocales([ActionParameter] EnvironmentIdentifier environment)
+    {
+        var client = new ContentfulClient(Creds, environment.Environment);
+        var locales = await client.GetLocalesCollection();
+        var defaultLocale = locales.FirstOrDefault(x => x.Default)?.Code;
+        var otherLocales = locales.Where(x => !x.Default).Select(x => x.Code).ToList();
+
+        return new GetLocalesResponse
+        {
+            DefaultLocale = defaultLocale,
+            OtherLocales = otherLocales
+        };
+    }
+
     [Action("Search missing locales for a field", Description = "Search for a list of missing locales for a field.")]
     public async Task<ListLocalesResponse> ListMissingLocalesForField(
         [ActionParameter] EntryIdentifier entryIdentifier,
@@ -482,9 +497,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var spaceId = Creds.Get("spaceId").Value;
 
-        var entriesContent = input.GetLinkedContent is true
-            ? await GetLinkedEntriesContent(entryIdentifier.EntryId, entryIdentifier.Locale, client, new())
-            : [await GetEntryContent(entryIdentifier.EntryId, client)];
+        var entriesContent = await GetLinkedEntriesContent(entryIdentifier.EntryId, entryIdentifier.Locale, client, new(), input.GetReferenceContent ?? false, input.GetHyperlinkContent ?? false, input.GetEmbeddedInlineContent ?? false, input.GetEmbeddedBlockContent ?? false);
 
         var resultHtml = EntryToHtmlConverter.ToHtml(entriesContent, entryIdentifier.Locale, spaceId);
 
@@ -538,49 +551,86 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
     private async Task<List<EntryContentDto>> GetLinkedEntriesContent(string entryId, string locale,
         ContentfulClient client,
-        List<EntryContentDto> resultList)
+        List<EntryContentDto> resultList, bool references, bool hyperlinks, bool inline, bool blocks)
     {
         if (resultList.Any(x => x.Id == entryId))
             return resultList;
 
         var entryContent = await GetEntryContent(entryId, client);
-        var linkedIds = GetLinkedEntryIds(entryContent, locale).Distinct();
+        var linkedIds = GetLinkedEntryIds(entryContent, locale, references, hyperlinks, inline, blocks).Distinct().ToList();
 
         resultList.Add(entryContent);
         foreach (var linkedEntryId in linkedIds)
-            await GetLinkedEntriesContent(linkedEntryId, locale, client, resultList);
+            await GetLinkedEntriesContent(linkedEntryId, locale, client, resultList, references, hyperlinks, inline, blocks);
 
         return resultList;
     }
 
-    private IEnumerable<string> GetLinkedEntryIds(EntryContentDto entryContent, string locale)
+    private IEnumerable<string> GetLinkedEntryIds(EntryContentDto entryContent, string locale, bool references, bool hyperlinks, bool inline, bool blocks)
     {
         try
         {
-            var linkFieldIds = entryContent.ContentTypeFields
-                .Where(f => f.LinkType == "Entry")
-                .Select(x => entryContent.EntryFields[x.Id]?[locale]?["sys"]?["id"]?.ToString()!)
-                .Where(x => !string.IsNullOrEmpty(x))
-                .ToList();
+            var result = new List<string>();
 
-            var linkArrayFieldIds = entryContent.ContentTypeFields
-                .Where(x => x.Items?.LinkType == "Entry")
-                .SelectMany(x =>
-                    entryContent.EntryFields[x.Id]?[locale]?.Select(x => x["sys"]?["id"]?.ToString()!) ??
-                    Enumerable.Empty<string>())
-                .Where(x => !string.IsNullOrEmpty(x))
-                .ToList();
+            if (references)
+            {
+                var linkFieldIds = entryContent.ContentTypeFields
+                    .Where(f => f.LinkType == "Entry")
+                    .Select(x => entryContent.EntryFields[x.Id]?[locale]?["sys"]?["id"]?.ToString()!)
+                    .Where(x => !string.IsNullOrEmpty(x))
+                    .ToList();
 
-            var richTextFieldIds = entryContent.ContentTypeFields
-                .Where(x => x.Type is "RichText")
-                .SelectMany(x => (entryContent.EntryFields[x.Id]?[locale] as JObject)?.Descendants().Where(x =>
-                                     x is JProperty { Name: "linkType" } jProperty &&
-                                     jProperty.Value.ToString() == "Entry") ??
-                                 Enumerable.Empty<JToken>())
-                .Select(x => x.Parent["id"].ToString())
-                .ToList();
+                var linkArrayFieldIds = entryContent.ContentTypeFields
+                    .Where(x => x.Items?.LinkType == "Entry")
+                    .SelectMany(x =>
+                        entryContent.EntryFields[x.Id]?[locale]?.Select(x => x["sys"]?["id"]?.ToString()!) ??
+                        Enumerable.Empty<string>())
+                    .Where(x => !string.IsNullOrEmpty(x))
+                    .ToList();
 
-            return linkFieldIds.Concat(linkArrayFieldIds).Concat(richTextFieldIds).ToArray();
+                result = result.Concat(linkFieldIds).Concat(linkArrayFieldIds).ToList();
+            }
+
+            if (hyperlinks)
+            {
+                var richTextFieldEntryHyperlinkIds = entryContent.ContentTypeFields
+                    .Where(x => x.Type is "RichText")
+                    .SelectMany(x => (entryContent.EntryFields[x.Id]?[locale] as JObject)?.Descendants().Where(y =>
+                                         y is JProperty { Name: "nodeType" } jProperty &&
+                                         jProperty.Value.ToString() == "entry-hyperlink") ??
+                                     Enumerable.Empty<JToken>()).Where(x => x.Parent?["data"]?["target"]?["sys"]?["linkType"]?.Value<string>() == "Entry")
+                                     .Select(x => x.Parent?["data"]?["target"]?["sys"]?["id"]?.Value<string>()).ToList();
+
+                result = result.Concat(richTextFieldEntryHyperlinkIds).ToList();
+            }
+
+            if (inline)
+            {
+                var richTextFieldInlineEntryIds = entryContent.ContentTypeFields
+                    .Where(x => x.Type is "RichText")
+                    .SelectMany(x => (entryContent.EntryFields[x.Id]?[locale] as JObject)?.Descendants().Where(y =>
+                                         y is JProperty { Name: "nodeType" } jProperty &&
+                                         jProperty.Value.ToString() == "embedded-entry-inline") ??
+                                     Enumerable.Empty<JToken>()).Where(x => x.Parent?["data"]?["target"]?["sys"]?["linkType"]?.Value<string>() == "Entry")
+                                     .Select(x => x.Parent?["data"]?["target"]?["sys"]?["id"]?.Value<string>()).ToList();
+
+                result = result.Concat(richTextFieldInlineEntryIds).ToList();
+            }
+
+            if (blocks)
+            {
+                var richTextFieldBlockEntryIds = entryContent.ContentTypeFields
+                    .Where(x => x.Type is "RichText")
+                    .SelectMany(x => (entryContent.EntryFields[x.Id]?[locale] as JObject)?.Descendants().Where(y =>
+                                         y is JProperty { Name: "nodeType" } jProperty &&
+                                         jProperty.Value.ToString() == "embedded-entry-block") ??
+                                     Enumerable.Empty<JToken>()).Where(x => x.Parent?["data"]?["target"]?["sys"]?["linkType"]?.Value<string>() == "Entry")
+                                     .Select(x => x.Parent?["data"]?["target"]?["sys"]?["id"]?.Value<string>()).ToList();
+
+                result = result.Concat(richTextFieldBlockEntryIds).ToList();
+            }
+
+            return result.ToArray();
         }
         catch (Exception ex)
         {

@@ -46,6 +46,7 @@ Follow [this guide](https://www.contentful.com/help/working-with-translations/) 
 
 ### Entries
 
+- **Get locales** returns the default locales and a list of other locales, all in code form to easily use in conjunction with the convert operator.
 - **Get entry's text/rich text field** returns the content of short text, long text or rich text field of the entry as a string.
 - **Get entry's text/rich text field as HTML file** returns the content of short text, long text or rich text field of the entry as an HTML file.
 - **Set entry's text/rich text field** sets the content of short text, long text or rich text field of the entry from a string.
@@ -64,15 +65,25 @@ Follow [this guide](https://www.contentful.com/help/working-with-translations/) 
 - **Unpublish entry**.
 - **List missing locales for a field** returns a list of missing translations for the specified field.
 - **List missing locales for entry** returns a list of missing translations for the specified entry.
-- **Get entry's localizable fields as HTML file** returns all localizable fields of the specified entry as HTML file.
+- **Get entry's localizable fields as HTML file** returns all localizable fields of the specified entry as HTML file (see more information below).
 - **Set entry's localizable fields from HTML file**.
 
-**Get entry's localizable fields as HTML file** and **Set entry's localizable fields from HTML file** are intended to be used together in translation flow: you can retrieve an entry's localizable fields as HTML file, put it into TMS, then retrieve a translated HTML file and put it back into Contentful's entry. **Set entry's localizable fields from HTML file** expects the same HTML structure as the structure of the file retrieved with **Get entry's localizable fields as HTML file**.
+**Get entry's localizable fields as HTML file** and **Set entry's localizable fields from HTML file** are intended to be used together in a typical translation flow: you can retrieve an entry's localizable fields as HTML file, put it into TMS, then retrieve a translated HTML file and put it back into Contentful's entry. **Set entry's localizable fields from HTML file** expects the same HTML structure as the structure of the file retrieved with **Get entry's localizable fields as HTML file**.
 
 **Important note**: make sure your entry has fields with **localization enabled**. You have to explicitly set this property on each field (see images below).
 
 ![1707747998688](image/README/1707747998688.png)
 ![1707748006274](image/README/1707748006274.png)
+
+The **Get entry's localizable fields as HTML file** action also lets you define if you want to recursively embed content (for translation) from linked entries.
+
+There are 4 types of linked entries:
+- Reference field types from the content model
+- Hyperlinks that link to an entry in 'Rich text' fields
+- Inline embedded entries in 'Rich text' fields
+- Block embedded entries in 'Rich text' fields
+
+In the action you are able to select exactly which type of linked entry you want to include in the exported HTML file. If you f.e. select 'Hyperlinks' and 'Inline embedded entries', we will recursively search through all 'Rich text' fields and fetch all the content of these embedded entries. For these embedded entries, we do the same thing and also get all hyperlinks and embedded inline entries, and so on.
 
 ### Assets
 
