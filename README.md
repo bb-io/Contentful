@@ -85,6 +85,10 @@ There are 4 types of linked entries:
 
 In the action you are able to select exactly which type of linked entry you want to include in the exported HTML file. If you f.e. select 'Hyperlinks' and 'Inline embedded entries', we will recursively search through all 'Rich text' fields and fetch all the content of these embedded entries. For these embedded entries, we do the same thing and also get all hyperlinks and embedded inline entries, and so on.
 
+> Note: you can also specify if you want to ignore the localization aspect of reference fields. If this optional input is true, and the 'Include referenced entries' is true, then all referenced entries will be included regardless of localization setting.
+
+Finally, you can specify a list of Field IDs which will always be ignored and not added to the produced HTML file.
+
 ### Assets
 
 - **Get asset** returns title, description and a file attached to the asset.
@@ -124,7 +128,7 @@ Note, to use the **Entry tasks** actions, you need to install the `Workflows` ap
 
 ## Events
 
-- **On entry published** and **On asset published** are the most useful events. They are triggered when any entry/asset is published and could be the perfect trigger for sending the entry/asset for translation based on the missing translations (see example).
+- **On entry published** and **On asset published** are the most useful events. They are triggered when any entry/asset is published and could be the perfect trigger for sending the entry/asset for translation based on the missing translations (see example). You can optionally also filter these events by tags. If you do so, the event will only be triggered if all of the tags you input are present on the entry.
 
 - **On entry task created** and **On entry task saved** are useful if you prefer to work using the 'Workflows' extension of Blackbird. You can use the extension to assign an entry to a workflow, creating a task. these events can even filter based on assigned User ID and task description. See the example below.
 

@@ -7,6 +7,9 @@ public class GetEntryAsHtmlRequest
     [Display("Include referenced entries", Description = "Recursively include content of entries from one or many 'Reference' field types")]
     public bool? GetReferenceContent { get; set; }
 
+    [Display("Ignore localization field for referenced entries", Description = "Include referenecd entries even if the reference field is not marked for localization - only works if 'Include referenced entries' is true")]
+    public bool? GetNonLocalizationReferenceContent { get; set; }
+
     [Display("Include hyperlink entries", Description = "Recursively include content of entries that are referenced as hyperlinks in 'Rich text' fields")]
     public bool? GetHyperlinkContent { get; set; }
 
@@ -15,4 +18,7 @@ public class GetEntryAsHtmlRequest
 
     [Display("Include embedded block entries", Description = "Recursively include content of entries that are referenced as embedded block entries in 'Rich text' fields")]
     public bool? GetEmbeddedBlockContent { get; set; }
+
+    [Display("Ignored field IDs", Description = "All field IDs in this collection will be omitted from the exported content")]
+    public IEnumerable<string>? IgnoredFieldIds { get; set; }
 }
