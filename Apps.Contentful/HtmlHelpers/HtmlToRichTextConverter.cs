@@ -400,7 +400,7 @@ public class HtmlToRichTextConverter
         var parent = node.ParentNode;
         switch (parent.Name)
         {
-            case "b":
+            case "strong":
                 marks.Add("bold");
                 GetMarksFromHtmlNode(parent, marks);
                 break;

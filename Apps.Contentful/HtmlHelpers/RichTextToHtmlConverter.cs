@@ -128,8 +128,8 @@ public class RichTextToHtmlConverter
             switch (markType)
             {
                 case "bold":
-                    openingMarksBuilder.Append("<b>");
-                    closingMarksBuilder.Insert(0, "</b>");
+                    openingMarksBuilder.Append("<strong>");
+                    closingMarksBuilder.Insert(0, "</strong>");
                     break;
                 case "italic":
                     openingMarksBuilder.Append("<i>");

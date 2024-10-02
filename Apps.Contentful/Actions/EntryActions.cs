@@ -169,8 +169,8 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             throw new Exception("Entry ID not found in the HTML file.");
 
         var client = new ContentfulClient(Creds, input.Environment);
-        var entryContent = await GetEntryContent(entryId, client);
-        var linkedIds = GetLinkedEntryIds(entryContent, input.Locale, true, true, true, true, new List<string>()).Distinct();
+        var entryContent = await GetEntryContent(entryId, client, new List<string>());
+        var linkedIds = GetLinkedEntryIds(entryContent, input.Locale, true, true, true, true).Distinct();
 
         return new GetIdsFromHtmlResponse
         {
@@ -566,8 +566,8 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         if (resultList.Any(x => x.Id == entryId))
             return resultList;
 
-        var entryContent = await GetEntryContent(entryId, client, ignoreReferenceLocalization);
-        var linkedIds = GetLinkedEntryIds(entryContent, locale, references, hyperlinks, inline, blocks, ignoredFieldIds).Distinct().ToList();
+        var entryContent = await GetEntryContent(entryId, client, ignoredFieldIds, ignoreReferenceLocalization);
+        var linkedIds = GetLinkedEntryIds(entryContent, locale, references, hyperlinks, inline, blocks).Distinct().ToList();
 
         resultList.Add(entryContent);
         foreach (var linkedEntryId in linkedIds)
@@ -576,12 +576,12 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         return resultList;
     }
 
-    private IEnumerable<string> GetLinkedEntryIds(EntryContentDto entryContent, string locale, bool references, bool hyperlinks, bool inline, bool blocks, IEnumerable<string> ignoredFieldIds)
+    private IEnumerable<string> GetLinkedEntryIds(EntryContentDto entryContent, string locale, bool references, bool hyperlinks, bool inline, bool blocks)
     {
         try
         {
             var result = new List<string>();
-            var contentTypeFields = entryContent.ContentTypeFields.Where(x => !ignoredFieldIds.Contains(x.Id));
+            var contentTypeFields = entryContent.ContentTypeFields;
 
             if (references)
             {
@@ -638,10 +638,10 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                                      Enumerable.Empty<JToken>()).Where(x => x.Parent?["data"]?["target"]?["sys"]?["linkType"]?.Value<string>() == "Entry")
                                      .Select(x => x.Parent?["data"]?["target"]?["sys"]?["id"]?.Value<string>()).ToList();
 
-                result = result.ToList();
+                result = result.Concat(richTextFieldBlockEntryIds).ToList();
             }
 
-            return result.Where(x => !ignoredFieldIds.Contains(x)).ToArray();
+            return result.ToArray();
         }
         catch (Exception ex)
         {
@@ -650,7 +650,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         }
     }
 
-    private async Task<EntryContentDto> GetEntryContent(string entryId, ContentfulClient client, bool ignoreLocalizationForLinks = false)
+    private async Task<EntryContentDto> GetEntryContent(string entryId, ContentfulClient client, IEnumerable<string> ignoredFieldIds, bool ignoreLocalizationForLinks = false)
     {
         var entry = await client.GetEntry(entryId);
 
@@ -659,10 +659,10 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
         if (ignoreLocalizationForLinks)
         {
-            return new(entryId, entry.Fields, contentType.Fields.Where(x => x.Localized || x.Type == "Link" || (x.Type == "Array" && x.Items?.Type == "Link")).ToArray());
+            return new(entryId, entry.Fields, contentType.Fields.Where(x => x.Localized || x.Type == "Link" || (x.Type == "Array" && x.Items?.Type == "Link")).Where(x => !ignoredFieldIds.Contains(x.Id)).ToArray());
         }
 
-        return new(entryId, entry.Fields, contentType.Fields.Where(x => x.Localized).ToArray());
+        return new(entryId, entry.Fields, contentType.Fields.Where(x => x.Localized).Where(x => !ignoredFieldIds.Contains(x.Id)).ToArray());
     }
 
     private (string? entryId, string? fieldId, string? locale) ExtractIdsFromHtml(string html)
