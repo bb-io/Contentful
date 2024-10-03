@@ -6,7 +6,7 @@
         <Nullable>enable</Nullable>
         <Product>Contentful</Product>
         <Description>The headless content management system</Description>
-        <Version>1.4.10</Version>
+        <Version>1.4.11</Version>
         <AssemblyName>Apps.Contentful</AssemblyName>
     </PropertyGroup>
 
