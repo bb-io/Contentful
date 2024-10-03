@@ -1,9 +1,12 @@
 ﻿using Apps.Contentful.Api;
+using Apps.Contentful.Dtos.Raw;
 using Apps.Contentful.Invocables;
 using Apps.Contentful.Models.Requests.Tags;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Invocation;
+using Contentful.Core.Models.Management;
+using RestSharp;
 
 namespace Apps.Contentful.DataSourceHandlers;
 
@@ -18,8 +21,9 @@ public class TagDataHandler : ContentfulInvocable, IAsyncDataSourceHandler
     public async Task<Dictionary<string, string>> GetDataAsync(DataSourceContext context,
         CancellationToken cancellationToken)
     {
-        var client = new ContentfulClient(Creds, Environment);
-        var response = await client.GetContentTagsCollection(cancellationToken: cancellationToken);
+        var client = new ContentfulRestClient(InvocationContext.AuthenticationCredentialsProviders.ToArray(), Environment);
+        var request = new ContentfulRestRequest("tags", Method.Get, InvocationContext.AuthenticationCredentialsProviders.ToArray());
+        var response = await client.Paginate<ContentTag>(request);
 
         return response
             .Where(x => context.SearchString is null ||
