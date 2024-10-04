@@ -85,7 +85,7 @@ public static class EntryToHtmlConverter
             return default;
 
         if (itemType != "Link")
-            return WrapFieldInDiv(doc, field.Type, field.Id, arrayItems.ToString());
+            return WrapFieldInList(doc, field.Type, field.Id, arrayItems);
 
         var itemIds = string.Join(",", arrayItems.Select(i => i["sys"]["id"]));
         var additionalAttributes = new Dictionary<string, string>
@@ -162,6 +162,29 @@ public static class EntryToHtmlConverter
             additionalAttributes.ToList().ForEach(x => node.SetAttributeValue(x.Key, x.Value));
 
         node.InnerHtml = fieldContent;
+        return node;
+    }   
+    
+    private static HtmlNode WrapFieldInList(HtmlDocument doc, string fieldType, string fieldId, JArray fieldContent,
+        Dictionary<string, string>? additionalAttributes = null)
+    {
+        var node = doc.CreateElement(HtmlConstants.Div);
+        node.SetAttributeValue(ConvertConstants.FieldTypeAttribute, fieldType);
+        node.SetAttributeValue(ConvertConstants.FieldIdAttribute, fieldId);
+        if (additionalAttributes != null)
+            additionalAttributes.ToList().ForEach(x => node.SetAttributeValue(x.Key, x.Value));
+
+        var ulNode = doc.CreateElement(HtmlConstants.Ul);
+
+        foreach (var item in fieldContent)
+        {
+            var liNode = doc.CreateElement(HtmlConstants.Li);
+            liNode.InnerHtml = item.ToString();
+            
+            ulNode.AppendChild(liNode);
+        }
+
+        node.AppendChild(ulNode);
         return node;
     }
 
