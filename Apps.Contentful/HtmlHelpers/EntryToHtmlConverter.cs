@@ -46,7 +46,7 @@ public static class EntryToHtmlConverter
         
         var node = field.Type switch
         {
-            "Integer" or "Number" or "Symbol" or "Text" or "Date" => ConvertPrimitivesToHtml(bodyNode, doc, field,
+            "Integer" or "Number" or "Symbol" or "Text" => ConvertPrimitivesToHtml(bodyNode, doc, field,
                 entryField, locale),
             "Object" or "Location" => ConvertObjectToHtml(doc, field, entryField, locale),
             "Boolean" => ConvertBooleanToHtml(doc, field, entryField, locale),
