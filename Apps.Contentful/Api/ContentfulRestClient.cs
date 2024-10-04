@@ -1,6 +1,5 @@
 ﻿using Apps.Contentful.Constants;
 using Apps.Contentful.Models.Exceptions;
-using Apps.Contentful.Models.Responses;
 using Apps.Contentful.Models.Wrappers;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Utils.Extensions.Sdk;

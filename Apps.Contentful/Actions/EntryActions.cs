@@ -1,7 +1,6 @@
 ﻿using System.Net.Mime;
 using System.Text;
 using Apps.Contentful.Api;
-using Apps.Contentful.Dtos.Raw;
 using Apps.Contentful.Extensions;
 using Apps.Contentful.HtmlHelpers;
 using Apps.Contentful.Models;
@@ -22,7 +21,6 @@ using Newtonsoft.Json;
 using Contentful.Core.Extensions;
 using HtmlAgilityPack;
 using Newtonsoft.Json.Serialization;
-using RestSharp;
 
 namespace Apps.Contentful.Actions;
 

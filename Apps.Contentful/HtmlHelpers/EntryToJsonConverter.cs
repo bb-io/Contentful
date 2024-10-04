@@ -107,8 +107,12 @@ public static class EntryToJsonConverter
                 }
                 else
                 {
-                    var arrayData = JArray.Parse(HttpUtility.HtmlDecode(htmlNode.InnerText));
-                    entryFields[fieldId][locale] = arrayData;
+                    var arrayContent = htmlNode
+                        .Descendants()
+                        .Where(x => x.Name == HtmlConstants.Li)
+                        .Select(x => HttpUtility.HtmlDecode(x.InnerText));
+
+                    entryFields[fieldId][locale] = JArray.FromObject(arrayContent);
                 }
 
                 break;
