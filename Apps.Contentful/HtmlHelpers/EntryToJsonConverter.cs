@@ -52,7 +52,7 @@ public static class EntryToJsonConverter
                 (entryFields[fieldId][locale] as JValue).Value = decimalValue;
 
                 break;
-            case "Symbol" or "Text" or "Date":
+            case "Symbol" or "Text":
                 entryFields[fieldId][locale] = HttpUtility.HtmlDecode(htmlNode.InnerText);
                 break;
             case "Object" or "Location":
