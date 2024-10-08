@@ -16,7 +16,7 @@ namespace Apps.Contentful.Actions;
 [ActionList]
 public class EntryTaskActions(InvocationContext invocationContext) : ContentfulInvocable(invocationContext)
 {
-    [Action("Get entry tasks", Description = "Get all entry tasks for a specific entry")]
+    [Action("Search entry tasks", Description = "Search for entry tasks by specific criteria")]
     public async Task<GetEntryTasksResponse> GetEntryTasks([ActionParameter] EntryIdentifier identifier)
     {
         var client = new ContentfulRestClient(Creds, identifier.Environment);

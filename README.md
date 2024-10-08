@@ -120,7 +120,7 @@ Finally, you can specify a list of Field IDs which will always be ignored and no
 
 ### Entry tasks
 
-- **Get entry tasks** returns a list of tasks for the specified entry.
+- **Search entry tasks** returns a list of tasks based on the specified filters.
 - **Get entry task** returns details of a specific task.
 - **Update entry task** updates an entry task with new details.
 
@@ -148,7 +148,6 @@ Note, to use the **Entry tasks** actions, you need to install the `Workflows` ap
 - **On asset archived**
 - **On asset unarchived**
 - **On asset deleted**
-
 
 ## Examples
 
