@@ -533,7 +533,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
         foreach (var entryToUpdate in entriesToUpdate)
         {
-            var entry = await client.GetEntry(entryToUpdate.EntryId);
+            var entry = await client.ExecuteWithErrorHandling(() => client.GetEntry(entryToUpdate.EntryId));
 
             try
             {
@@ -543,7 +543,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                 if (JToken.DeepEquals(oldEntryFields.Escape(), (entry.Fields as JObject)!.Escape()))
                     continue;
 
-                await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version);
+                await client.ExecuteWithErrorHandling(() => client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version));
             }
             catch (Exception ex)
             {
@@ -564,7 +564,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         if (resultList.Any(x => x.Id == entryId))
             return resultList;
 
-        var entryContent = await GetEntryContent(entryId, client, ignoredFieldIds, ignoreReferenceLocalization);
+        var entryContent = await client.ExecuteWithErrorHandling(() => GetEntryContent(entryId, client, ignoredFieldIds, ignoreReferenceLocalization));
         var linkedIds = GetLinkedEntryIds(entryContent, locale, references, hyperlinks, inline, blocks).Distinct().ToList();
 
         resultList.Add(entryContent);
