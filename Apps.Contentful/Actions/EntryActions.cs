@@ -21,6 +21,7 @@ using Newtonsoft.Json;
 using Contentful.Core.Extensions;
 using HtmlAgilityPack;
 using Newtonsoft.Json.Serialization;
+using System.Web;
 
 namespace Apps.Contentful.Actions;
 
@@ -357,12 +358,16 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     public async Task<ListEntriesResponse> ListEntries([ActionParameter] ListEntriesRequest request)
     {
         var client = new ContentfulClient(Creds, request.Environment);
-        var queryString = request.ContentModelId == null 
-            ? string.Empty 
-            : $"?content_type={request.ContentModelId}";
+        
+        var queryString = HttpUtility.ParseQueryString(string.Empty);
+
+        if (request.ContentModelId != null) queryString.Add("content_type", request.ContentModelId);
+        if (request.UpdatedFrom.HasValue) queryString.Add("sys.updatedAt[gte]", request.UpdatedFrom.Value.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'"));
+        if (request.UpdatedTo.HasValue) queryString.Add("sys.updatedAt[lte]", request.UpdatedTo.Value.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'"));
+
         var entries =
             await client.Paginate<Entry<object>>(
-                async (query) => await client.GetEntriesCollection<Entry<object>>(query), queryString);
+                async (query) => await client.GetEntriesCollection<Entry<object>>(query), "?" + queryString.ToString());
         
         if (request.Tags is not null && request.Tags.Any())
         {

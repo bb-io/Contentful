@@ -9,4 +9,10 @@ public class ListEntriesRequest : ContentModelOptionalIdentifier
 {
     [Display("Tags"), DataSource(typeof(TagDataHandler))]
     public IEnumerable<string>? Tags { get; set; }
+
+    [Display("Updated from")]
+    public DateTime? UpdatedFrom { get; set; }
+
+    [Display("Updated to")]
+    public DateTime? UpdatedTo { get; set; }
 }
