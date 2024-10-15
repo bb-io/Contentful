@@ -16,7 +16,10 @@ public class EntryEntity
     
     [Display("Created at")]
     public DateTime? CreatedAt { get; set; }
-    
+
+    [Display("Updated at")]
+    public DateTime? UpdatedAt { get; set; }
+
     public int Version { get; set; }
 
     public EntryEntity(Entry<object> entry)
@@ -25,6 +28,7 @@ public class EntryEntity
         TagIds = entry.Metadata.Tags.Select(x => x.Sys.Id);
         ContentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
         CreatedAt = entry.SystemProperties.CreatedAt;
+        UpdatedAt = entry.SystemProperties.UpdatedAt;
         Version = entry.SystemProperties.Version ?? default;
     }
 }
