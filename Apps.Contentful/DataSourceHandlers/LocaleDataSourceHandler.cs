@@ -23,6 +23,6 @@ public class LocaleDataSourceHandler : BaseInvocable, IAsyncDataSourceHandler
         var locales = (await client.GetLocalesCollection(cancellationToken: cancellationToken))
             .Where(l => context.SearchString == null ||
                         l.Code.Contains(context.SearchString, StringComparison.OrdinalIgnoreCase));
-        return locales.ToDictionary(l => l.Code, l => l.Code);
+        return locales.ToDictionary(l => l.Code, l => l.Name);
     }
 }
