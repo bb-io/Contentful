@@ -6,7 +6,7 @@
         <Nullable>enable</Nullable>
         <Product>Contentful</Product>
         <Description>The headless content management system</Description>
-        <Version>1.5.6</Version>
+        <Version>1.5.7</Version>
         <AssemblyName>Apps.Contentful</AssemblyName>
     </PropertyGroup>
 
@@ -17,7 +17,6 @@
         <PackageReference Include="contentful.csharp" Version="8.2.0" />
         <PackageReference Include="HtmlAgilityPack" Version="1.11.52" />
         <PackageReference Include="Polly" Version="8.2.0" />
-        <PackageReference Include="RestSharp" Version="112.1.0" />
     </ItemGroup>
 	<ItemGroup>
 		<EmbeddedResource CopyToOutputDirectory="Always" Include="image\icon.png"></EmbeddedResource>
