@@ -48,16 +48,16 @@ Follow [this guide](https://www.contentful.com/help/working-with-translations/) 
 
 - **Get locales** returns the default locales and a list of other locales, all in code form to easily use in conjunction with the convert operator.
 - **Get entry's text/rich text field** returns the content of short text, long text or rich text field of the entry as a string.
-- **Get entry's text/rich text field as HTML file** returns the content of short text, long text or rich text field of the entry as an HTML file.
+- **Get text/rich text field as HTML file** returns the content of short text, long text or rich text field of the entry as an HTML file.
 - **Set entry's text/rich text field** sets the content of short text, long text or rich text field of the entry from a string.
-- **Set entry's text/rich text field from HTML file** sets the content of short text, long text or rich text field of the entry from an HTML file. For short/long text only the text extracted from the file is put in the field. For rich text all HTML structure is preserved.
+- **Set text/rich text field from HTML file** sets the content of short text, long text or rich text field of the entry from an HTML file. For short/long text only the text extracted from the file is put in the field. For rich text all HTML structure is preserved.
 - **Get entry's number field** returns the entry's number field value.
 - **Set entry's number field** sets the entry's number field value.
 - **Get entry's boolean field** returns the entry's boolean field value.
 - **Set entry's boolean field** sets the entry's boolean field value.
 - **Get entry's media content** returns the identifier of the asset attached to the entry's media field.
 - **Set entry's media field** sets the entry's media field with the specified asset.
-- **Search entries** returns a list of entries. Optionally filter by content model, environment and tags.
+- **Search entries** returns a list of entries. Optionally filter by content model, environment, tags and the last updated date.
 - **Get entry** Get details of a specific entry
 - **Add new entry** creates a new entry with the specified content model.
 - **Delete entry**.
@@ -65,17 +65,17 @@ Follow [this guide](https://www.contentful.com/help/working-with-translations/) 
 - **Unpublish entry**.
 - **List missing locales for a field** returns a list of missing translations for the specified field.
 - **List missing locales for entry** returns a list of missing translations for the specified entry.
-- **Get entry's localizable fields as HTML file** returns all localizable fields of the specified entry as HTML file (see more information below).
-- **Set entry's localizable fields from HTML file**.
+- **Get entry as HTML file** returns all localizable fields of the specified entry as HTML file (see more information below).
+- **Update entry from HTML file** updates all localizable fields of specified entry .
 
-**Get entry's localizable fields as HTML file** and **Set entry's localizable fields from HTML file** are intended to be used together in a typical translation flow: you can retrieve an entry's localizable fields as HTML file, put it into TMS, then retrieve a translated HTML file and put it back into Contentful's entry. **Set entry's localizable fields from HTML file** expects the same HTML structure as the structure of the file retrieved with **Get entry's localizable fields as HTML file**.
+**Get entry as HTML file** and **Update entry from HTML file** are intended to be used together in a typical translation flow: you can retrieve an entry's localizable fields as HTML file, put it into TMS, then retrieve a translated HTML file and put it back into Contentful's entry. **Update entry from HTML file** expects the same HTML structure as the structure of the file retrieved with **Get entry as HTML file**.
 
 **Important note**: make sure your entry has fields with **localization enabled**. You have to explicitly set this property on each field (see images below).
 
 ![1707747998688](image/README/1707747998688.png)
 ![1707748006274](image/README/1707748006274.png)
 
-The **Get entry's localizable fields as HTML file** action also lets you define if you want to recursively embed content (for translation) from linked entries.
+The **Get entry as HTML file** action also lets you define if you want to recursively embed content (for translation) from linked entries.
 
 There are 4 types of linked entries:
 - Reference field types from the content model
@@ -88,6 +88,8 @@ In the action you are able to select exactly which type of linked entry you want
 > Note: you can also specify if you want to ignore the localization aspect of reference fields. If this optional input is true, and the 'Include referenced entries' is true, then all referenced entries will be included regardless of localization setting.
 
 Finally, you can specify a list of Field IDs which will always be ignored and not added to the produced HTML file.
+
+> For more information about CMS localization. Check out [this guide](https://docs.blackbird.io/guides/cms-contentful/).
 
 ### Assets
 

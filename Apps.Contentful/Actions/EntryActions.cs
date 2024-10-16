@@ -77,7 +77,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         return new GetTextContentResponse { TextContent = textContent };
     }
 
-    [Action("Get entry's text/rich text field as HTML file",
+    [Action("Get text/rich text field as HTML file",
         Description =
             "Get the text content of the field of the specified entry as HTML file. Field can be short text, long text or rich text. In all cases HTML file is returned.")]
     public async Task<FileResponse> GetTextFieldContentAsHtmlFile(
@@ -180,7 +180,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         };
     }
 
-    [Action("Set entry's text/rich text field from HTML file", Description =
+    [Action("Set text/rich text field from HTML file", Description =
         "Set content of the field of the specified " +
         "entry from HTML file. Field can be short " +
         "text, long text or rich text. For short/long " +
@@ -490,9 +490,9 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         return new ListLocalesResponse { Locales = missingLocales };
     }
 
-    [Action("Get entry's localizable fields as HTML file", Description =
+    [Action("Get entry as HTML file", Description =
         "Get all localizable fields of specified entry " +
-        "as HTML file.")]
+        "as an HTML file.")]
     public async Task<FileResponse> GetEntryLocalizableFieldsAsHtmlFile(
         [ActionParameter] EntryLocaleIdentifier entryIdentifier,
         [ActionParameter] GetEntryAsHtmlRequest input)
@@ -522,9 +522,9 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         };
     }
 
-    [Action("Set entry's localizable fields from HTML file", Description =
-        "Set all localizable fields of specified entry " +
-        "from HTML file.")]
+    [Action("Update entry from HTML file", Description =
+        "Update all localizable fields of specified entry " +
+        "from an HTML file.")]
     public async Task SetEntryLocalizableFieldsFromHtmlFile(
         [ActionParameter] LocaleIdentifier localeIdentifier,
         [ActionParameter] FileRequest input)
