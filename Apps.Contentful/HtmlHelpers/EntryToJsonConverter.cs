@@ -45,11 +45,11 @@ public static class EntryToJsonConverter
 
                 if (decimalValue == Decimal.Floor(decimalValue))
                 {
-                    (entryFields[fieldId][locale] as JValue).Value = Decimal.ToInt64(decimalValue);
+                    entryFields[fieldId][locale] = Decimal.ToInt64(decimalValue);
                     break;
                 }
                
-                (entryFields[fieldId][locale] as JValue).Value = decimalValue;
+                entryFields[fieldId][locale] = decimalValue;
 
                 break;
             case "Symbol" or "Text":
