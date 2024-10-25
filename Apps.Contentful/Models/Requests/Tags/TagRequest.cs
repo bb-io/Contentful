@@ -1,4 +1,5 @@
 ﻿using Apps.Contentful.DataSourceHandlers;
+using Apps.Contentful.DataSourceHandlers.Tags;
 using Apps.Contentful.Models.Identifiers;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Dynamic;

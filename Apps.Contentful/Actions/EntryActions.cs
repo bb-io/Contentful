@@ -372,6 +372,11 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         if (request.Tags is not null && request.Tags.Any())
         {
             entries = entries.Where(e => e.Metadata.Tags.Any(t => request.Tags.Contains(t.Sys.Id)));
+        }      
+        
+        if (request.ExcludeTags is not null && request.ExcludeTags.Any())
+        {
+            entries = entries.Where(e => e.Metadata.Tags.All(t => !request.ExcludeTags.Contains(t.Sys.Id)));
         }
         
         var entriesResponse = entries.Select(e => new EntryEntity(e)).ToArray();

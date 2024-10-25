@@ -7,7 +7,7 @@ using Blackbird.Applications.Sdk.Common.Invocation;
 using Contentful.Core.Models.Management;
 using RestSharp;
 
-namespace Apps.Contentful.DataSourceHandlers;
+namespace Apps.Contentful.DataSourceHandlers.Tags;
 
 public class TagDataHandler : ContentfulInvocable, IAsyncDataSourceHandler
 {
