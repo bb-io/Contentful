@@ -59,8 +59,7 @@ public class WorkflowActions(InvocationContext invocationContext) : ContentfulIn
         var client = new ContentfulRestClient(Creds, workflowRequest.Environment);
         
         var workflowResponse = await GetWorkflowAsync(workflowRequest);
-        
-        var request = new ContentfulRestRequest($"/workflows/{workflowRequest.WorkflowId}/completed", Method.Put, Creds)
+        var request = new ContentfulRestRequest($"/workflows/{workflowRequest.WorkflowId}/complete", Method.Put, Creds)
             .AddHeader("X-Contentful-Version", workflowResponse.Version.ToString());
         await client.ExecuteWithErrorHandling(request);
     }
