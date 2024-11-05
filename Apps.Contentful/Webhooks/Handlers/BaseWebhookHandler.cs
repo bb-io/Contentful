@@ -41,7 +41,7 @@ public class BaseWebhookHandler : IWebhookEventHandler
             };
 
         var client = new ContentfulClient(authenticationCredentialsProvider, null);
-        var name = _topics == null ? $"{_entityName}.{_actionName}" : _topics.First();
+        var name = _topics == null ? $"{_entityName}.{_actionName}" : string.Join(",", _topics);
         await client.CreateWebhook(new Webhook
         {
             Name = name,
@@ -55,7 +55,7 @@ public class BaseWebhookHandler : IWebhookEventHandler
         Dictionary<string, string> values)
     {
         var client = new ContentfulClient(authenticationCredentialsProvider, null);
-        var topic = _topics == null ? $"{_entityName}.{_actionName}" : _topics.First();
+        var topic = _topics == null ? $"{_entityName}.{_actionName}" : string.Join(",", _topics);
         var webhooks = client.GetWebhooksCollection().Result;
         var webhook = webhooks.First(w => w.Name == topic);
         await client.DeleteWebhook(webhook.SystemProperties.Id);
