@@ -10,8 +10,10 @@ public class WorkflowDefinitionResponse
     [Display("Workflow definition ID")]
     public string WorkflowDefinitionId { get; set; } = string.Empty;
 
+    [Display("Workflow definition name")]
     public string Name { get; set; } = string.Empty;
 
+    [Display("Workflow definition description")]
     public string Description { get; set; } = string.Empty;
 
     [Display("Entry ID")]
