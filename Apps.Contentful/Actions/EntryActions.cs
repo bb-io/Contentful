@@ -168,7 +168,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             throw new Exception("Entry ID not found in the HTML file.");
 
         var client = new ContentfulClient(Creds, input.Environment);
-        var entryContent = await GetEntryContent(entryId, client, new List<string>());
+        var entryContent = await GetEntryContent(entryId, client, new List<string>(), ignoreLocalizationFields: input.IgnoreLocalizationField ?? false);
         var linkedIds = GetLinkedEntryIds(entryContent, input.Locale, true, true, true, true).Distinct();
 
         return new GetIdsFromHtmlResponse
@@ -658,7 +658,11 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         }
     }
 
-    private async Task<EntryContentDto> GetEntryContent(string entryId, ContentfulClient client, IEnumerable<string> ignoredFieldIds, bool ignoreLocalizationForLinks = false)
+    private async Task<EntryContentDto> GetEntryContent(string entryId, 
+        ContentfulClient client, 
+        IEnumerable<string> ignoredFieldIds, 
+        bool ignoreLocalizationForLinks = false,
+        bool ignoreLocalizationFields = false)
     {
         var entry = await client.GetEntry(entryId);
 
@@ -669,8 +673,13 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         {
             return new(entryId, entry.Fields, contentType.Fields.Where(x => x.Localized || x.Type == "Link" || (x.Type == "Array" && x.Items?.Type == "Link")).Where(x => !ignoredFieldIds.Contains(x.Id)).ToArray());
         }
-
-        return new(entryId, entry.Fields, contentType.Fields.Where(x => x.Localized).Where(x => !ignoredFieldIds.Contains(x.Id)).ToArray());
+        
+        if (!ignoreLocalizationFields)
+        {
+            return new(entryId, entry.Fields, contentType.Fields.Where(x => x.Localized).Where(x => !ignoredFieldIds.Contains(x.Id)).ToArray());
+        }
+        
+        return new(entryId, entry.Fields, contentType.Fields.Where(x => !ignoredFieldIds.Contains(x.Id)).ToArray());
     }
 
     private (string? entryId, string? fieldId, string? locale) ExtractIdsFromHtml(string html)
