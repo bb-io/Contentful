@@ -31,9 +31,9 @@ public class BaseWebhookHandler : IWebhookEventHandler
     {
         var filters = _webhookInput.Environment is null
             ? null
-            : new List<IConstraint>()
+            : new List<IConstraint>
             {
-                new EqualsConstraint()
+                new EqualsConstraint
                 {
                     Property = "sys.environment.sys.id",
                     ValueToEqual = _webhookInput.Environment
