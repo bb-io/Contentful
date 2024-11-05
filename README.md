@@ -128,11 +128,19 @@ Finally, you can specify a list of Field IDs which will always be ignored and no
 
 Note, to use the **Entry tasks** actions, you need to install the `Workflows` app (Developed by Contentful) in your Contentful space.
 
+### Workflows
+
+- **Get workflow** returns details of a specific workflow based on the workflow ID.
+- **Update workflow step** move a workflow to a specific step.
+- **Complete workflow** completes a workflow.
+- **Cancel workflow** cancels a workflow.
+
 ## Events
 
 - **On entry published** and **On asset published** are the most useful events. They are triggered when any entry/asset is published and could be the perfect trigger for sending the entry/asset for translation based on the missing translations (see example). You can optionally also filter these events by tags. If you do so, the event will only be triggered if all of the tags you input are present on the entry.
-
 - **On entry task created** and **On entry task saved** are useful if you prefer to work using the 'Workflows' extension of Blackbird. You can use the extension to assign an entry to a workflow, creating a task. these events can even filter based on assigned User ID and task description. See the example below.
+- **On workflow updated** triggers when a workflow updated or created. Also triggers when a workflow changes its step.
+- **On workflow completed** triggers when a workflow is completed.
 
 ### Other events:
 
@@ -164,6 +172,10 @@ In this example, whenever an entry is published we retrieve all localizable fiel
 ![example3](image/README/1727786944492.png)
 
 In this example we are using the 'Workflows' feature in Contentful. When a new task is created (we can addtionally filter on task body and assigned user) we will pull the entry related to this task as an HTML file, translate it with DeepL and update the translation in Contentful. Additionally, we update the status of the task to mark it as resolved.
+
+![example4](image/README/workflow-example.png)
+
+In this example we are also using the 'Workflows' feature in Contentful, but in this case we don't work with tasks. Instead, we are using the workflow itself. When a workflow changes its step we are checking if the step is 'Ready for translation'. If it is, we are pulling the entry as an HTML file, translating it with DeepL and updating the translation in Contentful. Then we are moving the workflow to the next step or if there is no next step, we are completing the workflow.
 
 ## HTML features
 
