@@ -44,12 +44,36 @@ public class WorkflowActions(InvocationContext invocationContext) : ContentfulIn
         
         var workflow = await client.ExecuteWithErrorHandling<WorkflowDto>(request);
 
-        return new WorkflowResponse()
+        return new WorkflowResponse
         {
             StepId = workflow.StepId,
             WorkflowDefinitionId = workflow.Sys.WorkflowDefinition.Sys.Id,
             Version = workflow.Sys.Version,
             EntityId = workflow.Sys.Entity.Sys.Id
         };
+    }
+    
+    [Action("Complete workflow", Description = "Complete a workflow")]
+    public async Task CompleteWorkflowAsync([ActionParameter] WorkflowIdentifier workflowRequest)
+    {
+        var client = new ContentfulRestClient(Creds, workflowRequest.Environment);
+        
+        var workflowResponse = await GetWorkflowAsync(workflowRequest);
+        
+        var request = new ContentfulRestRequest($"/workflows/{workflowRequest.WorkflowId}/completed", Method.Put, Creds)
+            .AddHeader("X-Contentful-Version", workflowResponse.Version.ToString());
+        await client.ExecuteWithErrorHandling(request);
+    }
+    
+    [Action("Cancel workflow", Description = "Cancel a workflow")]
+    public async Task CancelWorkflowAsync([ActionParameter] WorkflowIdentifier workflowRequest)
+    {
+        var client = new ContentfulRestClient(Creds, workflowRequest.Environment);
+        
+        var workflowResponse = await GetWorkflowAsync(workflowRequest);
+        
+        var request = new ContentfulRestRequest($"/workflows/{workflowRequest.WorkflowId}", Method.Delete, Creds)
+            .AddHeader("X-Contentful-Version", workflowResponse.Version.ToString());
+        await client.ExecuteWithErrorHandling(request);
     }
 }
