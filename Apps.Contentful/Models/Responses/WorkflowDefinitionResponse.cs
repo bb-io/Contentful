@@ -22,4 +22,7 @@ public class WorkflowDefinitionResponse
     
     [Display("Previous step")]
     public WorkflowStep? PreviousStep { get; set; } = new ();
+    
+    [Display("Next step")]
+    public WorkflowStep? NextStep { get; set; } = new ();
 }

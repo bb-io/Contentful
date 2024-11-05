@@ -37,13 +37,16 @@ public class WorkflowWebhookList(InvocationContext invocationContext) : Contentf
         var workflowDefinitionRequest = new ContentfulRestRequest($"/workflow_definitions/{workflowDto.Sys.WorkflowDefinition.Sys.Id}", Method.Get, Creds);
         var client = new ContentfulRestClient(Creds, environmentIdentifier.Environment);
         var workflowDefinition = await client.ExecuteWithErrorHandling<WorkflowDefinitionDto>(workflowDefinitionRequest);
+
+        var currentStep = workflowDefinition.Steps.FirstOrDefault(x => x.StepId == workflowDto.StepId)!;
+        var nextStepIndex = workflowDefinition.Steps.IndexOf(currentStep) + 1;
+        var nextStep = nextStepIndex < workflowDefinition.Steps.Count ? workflowDefinition.Steps[nextStepIndex] : null;
         
-        var currentStep = workflowDefinition.Steps.FirstOrDefault(x => x.StepId == workflowDto.StepId);
         var previousStep = workflowDefinition.Steps.FirstOrDefault(x => x.StepId == workflowDto.PreviousStepId);
         
         if (request.CurrentStepId != null && request.CurrentStepId != workflowDto.StepId)
         {
-            return new WebhookResponse<WorkflowDefinitionResponse>()
+            return new WebhookResponse<WorkflowDefinitionResponse>
             {
                 ReceivedWebhookRequestType = WebhookRequestType.Preflight
             };
@@ -51,7 +54,7 @@ public class WorkflowWebhookList(InvocationContext invocationContext) : Contentf
         
         if (request.PreviousStepId != null && request.PreviousStepId != workflowDto.PreviousStepId)
         {
-            return new WebhookResponse<WorkflowDefinitionResponse>()
+            return new WebhookResponse<WorkflowDefinitionResponse>
             {
                 ReceivedWebhookRequestType = WebhookRequestType.Preflight
             };
@@ -66,7 +69,8 @@ public class WorkflowWebhookList(InvocationContext invocationContext) : Contentf
                 Description = workflowDefinition.Description,
                 EntryId = workflowDto.Sys.Entity.Sys.Id,
                 CurrentStep = currentStep ?? new(),
-                PreviousStep = previousStep ?? null
+                PreviousStep = previousStep ?? null,
+                NextStep = nextStep ?? null
             }
         };
     }
