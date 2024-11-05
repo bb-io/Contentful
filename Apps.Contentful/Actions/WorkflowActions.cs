@@ -15,7 +15,7 @@ namespace Apps.Contentful.Actions;
 [ActionList]
 public class WorkflowActions(InvocationContext invocationContext) : ContentfulInvocable(invocationContext)
 {
-    [Action("Get workflow", Description = "returns details of a specific workflow based on the workflow ID")]
+    [Action("Get workflow", Description = "Returns details of a specific workflow based on the workflow ID")]
     public async Task<WorkflowResponse> GetWorkflowAsync([ActionParameter] WorkflowIdentifier workflowRequest)
     {
         var client = new ContentfulRestClient(Creds, workflowRequest.Environment);
