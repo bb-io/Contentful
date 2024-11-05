@@ -65,6 +65,7 @@ public class WorkflowWebhookList(InvocationContext invocationContext) : Contentf
             Result = new()
             {
                 WorkflowDefinitionId = workflowDefinition.Sys.Id,
+                WorkflowId = workflowDto.Sys.Id,
                 Name = workflowDefinition.Name,
                 Description = workflowDefinition.Description,
                 EntryId = workflowDto.Sys.Entity.Sys.Id,
