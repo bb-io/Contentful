@@ -517,7 +517,8 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             input.GetEmbeddedBlockContent ?? false,
             input.IgnoredFieldIds ?? new List<string>());
 
-        var resultHtml = EntryToHtmlConverter.ToHtml(entriesContent, entryIdentifier.Locale, spaceId);
+        var htmlConverter = new EntryToHtmlConverter(InvocationContext, entryIdentifier.Environment);
+        var resultHtml = htmlConverter.ToHtml(entriesContent, entryIdentifier.Locale, spaceId);
 
         var file = await fileManagementClient.UploadAsync(new MemoryStream(Encoding.UTF8.GetBytes(resultHtml)),
             MediaTypeNames.Text.Html, $"{entryIdentifier.EntryId}_{entryIdentifier.Locale}.html");

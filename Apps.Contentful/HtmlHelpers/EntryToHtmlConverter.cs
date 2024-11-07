@@ -1,5 +1,8 @@
+using Apps.Contentful.Api;
 using Apps.Contentful.HtmlHelpers.Constants;
 using Apps.Contentful.Models;
+using Apps.Contentful.Models.Identifiers;
+using Blackbird.Applications.Sdk.Common.Invocation;
 using Contentful.Core.Models;
 using HtmlAgilityPack;
 using Newtonsoft.Json;
@@ -7,9 +10,9 @@ using Newtonsoft.Json.Linq;
 
 namespace Apps.Contentful.HtmlHelpers;
 
-public static class EntryToHtmlConverter
+public class EntryToHtmlConverter(InvocationContext invocationContext, string? environment)
 {
-    public static string ToHtml(List<EntryContentDto> entriesContent, string locale, string spaceId)
+    public string ToHtml(List<EntryContentDto> entriesContent, string locale, string spaceId)
     {
         var entryId = entriesContent.Select(x => x.Id).FirstOrDefault() ?? string.Empty;
         var (doc, bodyNode) = PrepareEmptyHtmlDocument(entryId, locale);
@@ -34,7 +37,7 @@ public static class EntryToHtmlConverter
         return doc.DocumentNode.OuterHtml;
     }
 
-    private static void MapFieldToHtml(Field field, JObject entryFields, string locale, string spaceId,
+    private void MapFieldToHtml(Field field, JObject entryFields, string locale, string spaceId,
         HtmlDocument doc,
         HtmlNode bodyNode)
     {
@@ -60,22 +63,73 @@ public static class EntryToHtmlConverter
             bodyNode.AppendChild(node);
     }
 
-    private static HtmlNode? ConvertLinkToHtml(HtmlDocument doc, Field field, JToken entryField, string locale)
+    private HtmlNode? ConvertLinkToHtml(HtmlDocument doc, Field field, JToken entryField, string locale)
     {
         var linkData = entryField[locale]?["sys"];
 
         if (linkData is null)
             return default;
+        
+        var linkId = linkData["id"]?.ToString();
+        var linkType = linkData["linkType"]?.ToString();
+        
+        if (linkType == "Asset")
+        {
+            var client = new ContentfulClient(invocationContext.AuthenticationCredentialsProviders, environment);
+            var assetTask = client.GetAsset(linkId!);
+            assetTask.Wait();
+            
+            var asset = assetTask.Result;
+
+            if (asset.Files != null)
+            {
+                foreach (var fileEntry in asset.Files)
+                {
+                    var fileLocale = fileEntry.Key;
+                    var file = fileEntry.Value;
+
+                    if (file.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var imageUrl = file.Url;
+
+                        if (imageUrl.StartsWith("//"))
+                        {
+                            imageUrl = "https:" + imageUrl;
+                        }
+                        else if (imageUrl.StartsWith("/"))
+                        {
+                            imageUrl = "https://images.ctfassets.net" + imageUrl;
+                        }
+
+                        var imgNode = doc.CreateElement("img");
+                        imgNode.SetAttributeValue("src", imageUrl);
+                        imgNode.SetAttributeValue(ConvertConstants.FieldTypeAttribute, field.Type);
+                        imgNode.SetAttributeValue(ConvertConstants.FieldIdAttribute, field.Id);
+                        imgNode.SetAttributeValue("data-contentful-link-type", linkType);
+                        imgNode.SetAttributeValue("data-contentful-link-id", linkId);
+                    
+                        var altText = asset.Title.ContainsKey(fileLocale) ? asset.Title[fileLocale] : "";
+                        if (!string.IsNullOrWhiteSpace(altText))
+                        {
+                            imgNode.SetAttributeValue("alt", altText);
+                        }
+
+                        return imgNode;
+                    }
+                }
+            } 
+        }
 
         var additionalAttributes = new Dictionary<string, string>
         {
-            { "data-contentful-link-type", linkData["linkType"].ToString() },
-            { "data-contentful-link-id", linkData["id"].ToString() }
+            { "data-contentful-link-type", linkType! },
+            { "data-contentful-link-id", linkId! }
         };
+        
         return WrapFieldInDiv(doc, field.Type, field.Id, additionalAttributes: additionalAttributes);
     }
 
-    private static HtmlNode? ConvertArrayToHtml(HtmlDocument doc, Field field, JToken entryField,
+    private HtmlNode? ConvertArrayToHtml(HtmlDocument doc, Field field, JToken entryField,
         string locale)
     {
         var itemType = field.Items.Type;
@@ -96,21 +150,44 @@ public static class EntryToHtmlConverter
         return WrapFieldInDiv(doc, field.Type, field.Id, additionalAttributes: additionalAttributes);
     }
 
-    private static HtmlNode? ConvertRichTextToHtml(HtmlDocument doc, Field field, JToken entryField,
+    private HtmlNode? ConvertRichTextToHtml(HtmlDocument doc, Field field, JToken entryField,
         string locale, string spaceId)
     {
         var content = (JArray?)entryField[locale]?["content"];
 
         if (content is null)
             return default;
+        
+        RemoveEmbeddedEntries(content);
 
         var richTextToHtmlConverter = new RichTextToHtmlConverter(content, spaceId);
         var fieldContent = richTextToHtmlConverter.ToHtml();
 
         return WrapFieldInDiv(doc, field.Type, field.Id, fieldContent);
     }
+    
+    private void RemoveEmbeddedEntries(JToken token)
+    {
+        if (token.Type == JTokenType.Object)
+        {
+            var obj = (JObject)token;
+            var nodeType = obj["nodeType"]?.ToString();
 
-    private static HtmlNode? ConvertBooleanToHtml(HtmlDocument doc, Field field, JToken entryField,
+            if (nodeType == "embedded-entry-inline" || nodeType == "embedded-entry-block")
+            {
+                token.Remove();
+                return;
+            }
+        }
+
+        var children = token.Children().ToList();
+        foreach (var child in children)
+        {
+            RemoveEmbeddedEntries(child);
+        }
+    }
+
+    private HtmlNode? ConvertBooleanToHtml(HtmlDocument doc, Field field, JToken entryField,
         string locale)
     {
         var boolValue = (bool?)entryField?[locale];
@@ -125,7 +202,7 @@ public static class EntryToHtmlConverter
         return WrapFieldInDiv(doc, field.Type, field.Id, additionalAttributes: additionalAttributes);
     }
 
-    private static HtmlNode? ConvertObjectToHtml(HtmlDocument doc, Field field, JToken entryField,
+    private HtmlNode? ConvertObjectToHtml(HtmlDocument doc, Field field, JToken entryField,
         string locale)
     {
         var jsonValue = entryField[locale]?.ToString();
@@ -141,31 +218,45 @@ public static class EntryToHtmlConverter
         return WrapFieldInDiv(doc, field.Type, field.Id, additionalAttributes: additionalAttributes);
     }
 
-    private static HtmlNode? ConvertPrimitivesToHtml(HtmlNode bodyNode, HtmlDocument doc, Field field, JToken entryField,
+    private HtmlNode? ConvertPrimitivesToHtml(HtmlNode bodyNode, HtmlDocument doc, Field field, JToken entryField,
         string locale)
     {
         var fieldContent = entryField[locale]?.ToString();
 
         if (fieldContent is null)
             return default;
-        
-        return WrapFieldInDiv(doc, field.Type, field.Id, fieldContent);
+
+        var tagName = HtmlConstants.Div;
+        if (string.Equals(field.Id, "title", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(field.Name, "title", StringComparison.OrdinalIgnoreCase))
+        {
+            tagName = "h1";
+        }
+        else if (string.Equals(field.Id, "subtitle", StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(field.Name, "subtitle", StringComparison.OrdinalIgnoreCase))
+        {
+            tagName = "h2";
+        }
+
+        return WrapFieldInDiv(doc, field.Type, field.Id, fieldContent, tagName: tagName);
     }
 
-    private static HtmlNode WrapFieldInDiv(HtmlDocument doc, string fieldType, string fieldId, string fieldContent = "",
-        Dictionary<string, string>? additionalAttributes = null)
+    private HtmlNode WrapFieldInDiv(HtmlDocument doc, string fieldType, string fieldId, string fieldContent = "",
+        Dictionary<string, string>? additionalAttributes = null, string tagName = HtmlConstants.Div)
     {
-        var node = doc.CreateElement(HtmlConstants.Div);
+        var node = doc.CreateElement(tagName);
         node.SetAttributeValue(ConvertConstants.FieldTypeAttribute, fieldType);
         node.SetAttributeValue(ConvertConstants.FieldIdAttribute, fieldId);
+
         if (additionalAttributes != null)
-            additionalAttributes.ToList().ForEach(x => node.SetAttributeValue(x.Key, x.Value));
+            foreach (var attr in additionalAttributes)
+                node.SetAttributeValue(attr.Key, attr.Value);
 
         node.InnerHtml = fieldContent;
         return node;
     }   
     
-    private static HtmlNode WrapFieldInList(HtmlDocument doc, string fieldType, string fieldId, JArray fieldContent,
+    private HtmlNode WrapFieldInList(HtmlDocument doc, string fieldType, string fieldId, JArray fieldContent,
         Dictionary<string, string>? additionalAttributes = null)
     {
         var node = doc.CreateElement(HtmlConstants.Div);
@@ -188,7 +279,7 @@ public static class EntryToHtmlConverter
         return node;
     }
 
-    private static (HtmlDocument document, HtmlNode bodyNode) PrepareEmptyHtmlDocument(string entryId, string locale)
+    private (HtmlDocument document, HtmlNode bodyNode) PrepareEmptyHtmlDocument(string entryId, string locale)
     {
         var htmlDoc = new HtmlDocument();
         var htmlNode = htmlDoc.CreateElement(HtmlConstants.Html);
