@@ -19,7 +19,7 @@ Before you can connect you need to make sure that:
 ## Create OAuth application
 
 1. Navigate to [OAuth applications](https://app.contentful.com/account/profile/developers/applications) page and click _New Application_.
-2. Enter application _Name_ and _Description_. In _Redirect URI_ field specify `https://bridge.blackbird.io/api/AuthorizationCode`. This is the URL where Blackbird will receive the authorization code.
+2. Enter application _Name_ and _Description_. In _Redirect URI_ field specify `https://{domain_name}/oauthImplicitGrant` (replace `{domain_name}` with a domain name of site where you are trying to setup a connection. For example: `de-1.blackbird.io` or `fly.blackbird.io`)
 3. Under _Redirect URI_ select _Content management manage_.
 4. Click _Create Application_.
 5. After the application is created, _Client ID_ is generated. _Client ID_ is required to connect to Contentful via Blackbird.
