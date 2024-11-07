@@ -4,29 +4,26 @@ using Blackbird.Applications.Sdk.Common.Invocation;
 
 namespace Apps.Contentful.Auth.OAuth2;
 
-public class OAuth2TokenService : BaseInvocable, IOAuth2TokenService
+public class OAuth2TokenService(InvocationContext invocationContext)
+    : BaseInvocable(invocationContext), IOAuth2TokenService
 {
-    public OAuth2TokenService(InvocationContext invocationContext) : base(invocationContext)
-    {
-    }
-
     public bool IsRefreshToken(Dictionary<string, string> values)
     {
         return false;
     }
 
-    public async Task<Dictionary<string, string>> RefreshToken(Dictionary<string, string> values, CancellationToken cancellationToken)
+    public Task<Dictionary<string, string>> RefreshToken(Dictionary<string, string> values, CancellationToken cancellationToken)
     {
         throw new NotImplementedException();
     }
 
-    public async Task<Dictionary<string, string?>> RequestToken(
+    public Task<Dictionary<string, string>> RequestToken(
         string state, 
         string code, 
         Dictionary<string, string> values, 
         CancellationToken cancellationToken)
     {
-        return new Dictionary<string, string?>() { { "access_token", values["access_token"] } };
+        return Task.FromResult(new Dictionary<string, string?> { { "access_token", values["access_token"] } })!;
     }
 
     public Task RevokeToken(Dictionary<string, string> values)
