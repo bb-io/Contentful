@@ -15,7 +15,7 @@ public class WorkflowDefinitionDataHandler(InvocationContext invocationContext, 
         CancellationToken cancellationToken)
     {
         var client = new ContentfulRestClient(Creds, identifier.Environment);
-        var request = new ContentfulRestRequest($"/workflow_definitions", Method.Get, Creds);
+        var request = new ContentfulRestRequest("/workflow_definitions", Method.Get, Creds);
         var items = await client.Paginate<WorkflowDefinitionDto>(request);
         
         var workflowDefinitionDtos = items as WorkflowDefinitionDto[] ?? items.ToArray();
