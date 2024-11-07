@@ -22,12 +22,28 @@ public class WorkflowActions(InvocationContext invocationContext) : ContentfulIn
         var request = new ContentfulRestRequest($"/workflows/{workflowRequest.WorkflowId}", Method.Get, Creds);
         var workflow = await client.ExecuteWithErrorHandling<WorkflowDto>(request);
 
-        return new WorkflowResponse()
+        return new WorkflowResponse
         {
             StepId = workflow.StepId,
             WorkflowDefinitionId = workflow.Sys.WorkflowDefinition.Sys.Id,
             Version = workflow.Sys.Version,
             EntityId = workflow.Sys.Entity.Sys.Id
+        };
+    }
+    
+    [Action("Get workflow definition", Description = "Returns details of a specific workflow definition based on the workflow definition ID")]
+    public async Task<FullWorkflowDefinitionResponse> GetWorkflowDefinitionAsync([ActionParameter] WorkflowDefinitionIdentifier workflowDefinitionRequest)
+    {
+        var client = new ContentfulRestClient(Creds, workflowDefinitionRequest.Environment);
+        var request = new ContentfulRestRequest($"/workflow_definitions/{workflowDefinitionRequest.WorkflowDefinitionId}", Method.Get, Creds);
+        var workflowDefinition = await client.ExecuteWithErrorHandling<WorkflowDefinitionDto>(request);
+
+        return new FullWorkflowDefinitionResponse
+        {
+            WorkflowDefinitionId = workflowDefinition.Sys.Id,
+            Name = workflowDefinition.Name,
+            Description = workflowDefinition.Description,
+            Steps = workflowDefinition.Steps
         };
     }
     

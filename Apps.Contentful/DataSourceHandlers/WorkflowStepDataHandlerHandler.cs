@@ -2,7 +2,6 @@
 using Apps.Contentful.Invocables;
 using Apps.Contentful.Models.Dtos;
 using Apps.Contentful.Models.Identifiers;
-using Apps.Contentful.Models.Requests;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Invocation;
@@ -13,7 +12,7 @@ namespace Apps.Contentful.DataSourceHandlers;
 public class WorkflowStepDataHandler(
     InvocationContext invocationContext,
     [ActionParameter] EnvironmentIdentifier identifier,
-    [ActionParameter] WorkflowStepFilterRequest workflowStepFilterRequest)
+    [ActionParameter] WorkflowDefinitionOptionalIdentifier workflowStepFilterRequest)
     : ContentfulInvocable(invocationContext), IAsyncDataSourceHandler
 {
     public async Task<Dictionary<string, string>> GetDataAsync(DataSourceContext context,
