@@ -16,9 +16,10 @@ public class OAuth2AuthorizeService(InvocationContext invocationContext)
         var parameters = new Dictionary<string, string>
         {
             { CredNames.ClientId, values["client_id"] },
-            { "redirect_uri", $"{InvocationContext.UriInfo.BridgeServiceUrl.ToString().TrimEnd('/')}/AuthorizationCode" },
+            { "redirect_uri", $"{InvocationContext.UriInfo.BridgeServiceUrl.ToString().TrimEnd('/')}/ImplicitGrant" },
             { "actual_redirect_uri", InvocationContext.UriInfo.ImplicitGrantRedirectUri.ToString() },
-            { "authorization_url", oauthUrl},            { "response_type", "token" },
+            { "authorization_url", oauthUrl},            
+            { "response_type", "token" },
             { "scope", ApplicationConstants.Scope },
             { "state", values["state"] }
         };
