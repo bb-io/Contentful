@@ -52,7 +52,7 @@ public class WorkflowWebhookList(InvocationContext invocationContext) : Contentf
             };
         }
         
-        if (request.PreviousStepId != null && request.PreviousStepId != workflowDto.PreviousStepId)
+        if (request.CurrentStepName != null && request.CurrentStepName != currentStep.Name)
         {
             return new WebhookResponse<WorkflowDefinitionResponse>
             {

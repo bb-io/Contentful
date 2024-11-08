@@ -10,6 +10,6 @@ public class WorkflowStepFilterRequest : WorkflowDefinitionOptionalIdentifier
     [Display("Current step ID"), DataSource(typeof(WorkflowStepDataHandler))]
     public string? CurrentStepId { get; set; }
     
-    [Display("Previous step ID"), DataSource(typeof(WorkflowStepDataHandler))]
-    public string? PreviousStepId { get; set; }
+    [Display("Current step name", Description = "Filter by the name of the current step")]
+    public string? CurrentStepName { get; set; }
 }
