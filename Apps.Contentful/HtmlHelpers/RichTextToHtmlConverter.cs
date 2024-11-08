@@ -82,7 +82,7 @@ public class RichTextToHtmlConverter
             case "embedded-entry-block" or "embedded-entry-inline":
                 entryId = jsonObject["data"]["target"]["sys"]["id"].ToString();
                 uri = $"https://app.contentful.com/spaces/{_spaceId}/entries/{entryId}";
-                return $"<a id=\"{nodeType}_{entryId}\" href=\"{uri}\">Entry {entryId}</a>";
+                return $"<a id=\"{nodeType}_{entryId}\" href=\"{uri}\"></a>";
             case "embedded-asset-block":
                 assetId = jsonObject["data"]["target"]["sys"]["id"].ToString();
                 uri = $"https://app.contentful.com/spaces/{_spaceId}/assets/{assetId}";
