@@ -10,7 +10,7 @@ public class OAuth2AuthorizeService(InvocationContext invocationContext)
     : BaseInvocable(invocationContext), IOAuth2AuthorizeService
 {
     public string GetAuthorizationUrl(Dictionary<string, string> values)
-    {
+    {        
         const string oauthUrl = "https://be.contentful.com/oauth/authorize";
         var parameters = new Dictionary<string, string>
         {
