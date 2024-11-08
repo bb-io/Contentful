@@ -158,33 +158,10 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
         if (content is null)
             return default;
         
-        RemoveEmbeddedEntries(content);
-
         var richTextToHtmlConverter = new RichTextToHtmlConverter(content, spaceId);
         var fieldContent = richTextToHtmlConverter.ToHtml();
 
         return WrapFieldInDiv(doc, field.Type, field.Id, fieldContent);
-    }
-    
-    private void RemoveEmbeddedEntries(JToken token)
-    {
-        if (token.Type == JTokenType.Object)
-        {
-            var obj = (JObject)token;
-            var nodeType = obj["nodeType"]?.ToString();
-
-            if (nodeType == "embedded-entry-inline" || nodeType == "embedded-entry-block")
-            {
-                token.Remove();
-                return;
-            }
-        }
-
-        var children = token.Children().ToList();
-        foreach (var child in children)
-        {
-            RemoveEmbeddedEntries(child);
-        }
     }
 
     private HtmlNode? ConvertBooleanToHtml(HtmlDocument doc, Field field, JToken entryField,
