@@ -26,8 +26,14 @@ public class ConnectionDefinition : IConnectionDefinition
             ConnectionUsage = ConnectionUsage.Actions & ConnectionUsage.Webhooks,
             ConnectionProperties = new List<ConnectionProperty>
             {
-                new(CredNames.BaseUrl) { DisplayName = "Base URL", Description = "The base URL of the Contentful API. " +
-                    "Example: https://api.contentful.com or https://api.eu.contentful.com" }
+                new(CredNames.BaseUrl) 
+                { 
+                    DisplayName = "Base URL", 
+                    Description = "The base URL of the Contentful API. " +
+                    "Example: https://api.contentful.com or https://api.eu.contentful.com",
+                    DataItems = [new ("https://api.contentful.com", "(Default) api.contentful.com"), 
+                                 new ("https://api.eu.contentful.com", "(Europe) api.eu.contentful.com")]
+                }
             }
         },
         new()
