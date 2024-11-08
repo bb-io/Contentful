@@ -10,17 +10,19 @@ public class OAuth2AuthorizeService(InvocationContext invocationContext)
     : BaseInvocable(invocationContext), IOAuth2AuthorizeService
 {
     public string GetAuthorizationUrl(Dictionary<string, string> values)
-    {
+    {        
+        var bridgeOauthUrl = $"{InvocationContext.UriInfo.BridgeServiceUrl.ToString().TrimEnd('/')}/oauth";
         const string oauthUrl = "https://be.contentful.com/oauth/authorize";
         var parameters = new Dictionary<string, string>
         {
             { CredNames.ClientId, values["client_id"] },
-            { "redirect_uri", InvocationContext.UriInfo.ImplicitGrantRedirectUri.ToString() },
-            { "response_type", "token" },
+            { "redirect_uri", $"{InvocationContext.UriInfo.BridgeServiceUrl.ToString().TrimEnd('/')}/AuthorizationCode" },
+            { "actual_redirect_uri", InvocationContext.UriInfo.ImplicitGrantRedirectUri.ToString() },
+            { "authorization_url", oauthUrl},            { "response_type", "token" },
             { "scope", ApplicationConstants.Scope },
             { "state", values["state"] }
         };
         
-        return QueryHelpers.AddQueryString(oauthUrl, parameters);
+        return QueryHelpers.AddQueryString(bridgeOauthUrl, parameters);
     }
 }
