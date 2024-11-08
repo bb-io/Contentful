@@ -31,8 +31,8 @@ public class ConnectionDefinition : IConnectionDefinition
                     DisplayName = "Base URL", 
                     Description = "The base URL of the Contentful API. " +
                     "Example: https://api.contentful.com or https://api.eu.contentful.com",
-                    DataItems = [new ("https://api.contentful.com", "api.contentful.com"), 
-                                 new ("https://api.eu.contentful.com", "api.eu.contentful.com")]
+                    DataItems = [new ("https://api.contentful.com", "(Default) api.contentful.com"), 
+                                 new ("https://api.eu.contentful.com", "(Europe) api.eu.contentful.com")]
                 }
             }
         },
