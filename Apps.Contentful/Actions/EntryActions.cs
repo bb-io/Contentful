@@ -166,14 +166,11 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
         if (string.IsNullOrEmpty(entryId))
             throw new Exception("Entry ID not found in the HTML file.");
-
-        var client = new ContentfulClient(Creds, input.Environment);
-        var entryContent = await GetEntryContent(entryId, client, new List<string>(), ignoreLocalizationFields: input.IgnoreLocalizationField ?? false);
-        var linkedIds = GetLinkedEntryIds(entryContent, input.Locale, true, true, true, true).Distinct();
-
+        
+        var linkedIds = GetLinkedEntryIdsFromFile(html);
         return new GetIdsFromHtmlResponse
         {
-            EntryId = entryId ?? string.Empty,
+            EntryId = entryId,
             FieldId = fieldId ?? string.Empty,
             Locale = locale ?? string.Empty,
             LinkedEntryIds = linkedIds.ToList(),
@@ -585,6 +582,45 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         return resultList;
     }
 
+    private IEnumerable<string> GetLinkedEntryIdsFromFile(string html)
+    {
+        var doc = new HtmlDocument();
+        doc.LoadHtml(html);
+        
+        var entryIds = new List<string>();
+        
+        var entryIdNodes = doc.DocumentNode.SelectNodes("//div[@data-contentful-link-id]");
+        if (entryIdNodes != null)
+        {
+            foreach (var node in entryIdNodes)
+            {
+                var id = node.GetAttributeValue("data-contentful-link-id", string.Empty);
+                if (!string.IsNullOrEmpty(id))
+                {
+                    entryIds.Add(id);
+                }
+            }
+        }
+
+        var linkIdNodes = doc.DocumentNode.SelectNodes("//div[@data-contentful-link-ids]");
+        if (linkIdNodes != null)
+        {
+            foreach (var node in linkIdNodes)
+            {
+                var ids = node.GetAttributeValue("data-contentful-link-ids", string.Empty);
+                if (!string.IsNullOrEmpty(ids))
+                {
+                    foreach (var id in ids.Split(','))
+                    {
+                        entryIds.Add(id.Trim());
+                    }
+                }
+            }
+        }      
+        
+        return entryIds.Distinct();
+    }
+    
     private IEnumerable<string> GetLinkedEntryIds(EntryContentDto entryContent, string locale, bool references, bool hyperlinks, bool inline, bool blocks)
     {
         try
