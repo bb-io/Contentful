@@ -118,7 +118,7 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
             throw new InvalidCastException(nameof(webhookRequest.Body));
         
         var entryActions = new EntryActions(invocationContext, null!);
-        var entry = await entryActions.GetEntry(new EntryIdentifier { EntryId = payload.Sys.Id });
+        var entry = await entryActions.GetEntry(new EntryIdentifier { EntryId = payload.Sys.Id, Environment = tagsInput.Environment });
 
         if (types.ContentModels != null && !types.ContentModels.Contains(entry.ContentTypeId))
         {
