@@ -1,4 +1,5 @@
-﻿using Blackbird.Applications.Sdk.Common.Authentication;
+﻿using Apps.Contentful.Constants;
+using Blackbird.Applications.Sdk.Common.Authentication;
 using Contentful.Core;
 using Contentful.Core.Configuration;
 using Contentful.Core.Errors;
@@ -19,7 +20,8 @@ public class ContentfulClient : ContentfulManagementClient
         {
             ManagementApiKey = creds.First(p => p.KeyName == "Authorization").Value,
             SpaceId = creds.First(p => p.KeyName == "spaceId").Value,
-            Environment = environment
+            Environment = environment,
+            ManagementBaseUrl = creds.First(p => p.KeyName == CredNames.BaseUrl).Value + "/spaces/"
         })
     {
         _retryPolicy = Policy
