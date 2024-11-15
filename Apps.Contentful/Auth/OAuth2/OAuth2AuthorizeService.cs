@@ -2,8 +2,8 @@
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication.OAuth2;
 using Blackbird.Applications.Sdk.Common.Invocation;
-using Blackbird.Applications.Sdk.Utils.Extensions.Sdk;
 using Microsoft.AspNetCore.WebUtilities;
+using Newtonsoft.Json;
 
 namespace Apps.Contentful.Auth.OAuth2;
 
@@ -12,7 +12,7 @@ public class OAuth2AuthorizeService(InvocationContext invocationContext)
 {
     public string GetAuthorizationUrl(Dictionary<string, string> values)
     {
-        var oauthUrl = GetOAuthUrl();
+        var oauthUrl = GetOAuthUrl(values);
         var parameters = new Dictionary<string, string>
         {
             { CredNames.ClientId, values["client_id"] },
@@ -25,16 +25,15 @@ public class OAuth2AuthorizeService(InvocationContext invocationContext)
         return QueryHelpers.AddQueryString(oauthUrl, parameters);
     }
 
-    private string GetOAuthUrl()
+    private string GetOAuthUrl(Dictionary<string, string> values)
     {
-        var baseUrl = InvocationContext.AuthenticationCredentialsProviders
-            .Get(CredNames.BaseUrl).Value;
-        
-        if(baseUrl.Contains("eu"))
+        if(!values.TryGetValue(CredNames.BaseUrl, out var baseUrl))
         {
-            return "https://be.eu.contentful.com/oauth/authorize";
+            throw new InvalidOperationException($"Base URL is not set. Values: {JsonConvert.SerializeObject(values)}");
         }
         
-        return "https://be.contentful.com/oauth/authorize";
+        return baseUrl.Contains("eu") 
+            ? "https://be.eu.contentful.com/oauth/authorize" 
+            : "https://be.contentful.com/oauth/authorize";
     }
 }
