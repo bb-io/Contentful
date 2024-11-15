@@ -501,6 +501,13 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     {
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var spaceId = Creds.Get("spaceId").Value;
+        
+        var locales = await client.GetLocalesCollection();
+        if (locales.All(x => x.Code != entryIdentifier.Locale))
+        {
+            var allLocales = string.Join(", ", locales.Select(x => x.Code));
+            throw new Exception($"Locale {entryIdentifier.Locale} not found. Available locales: {allLocales}");
+        }
 
         var entriesContent = await GetLinkedEntriesContent(
             entryIdentifier.EntryId, 
