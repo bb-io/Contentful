@@ -13,7 +13,6 @@ public class ConnectionDefinition : IConnectionDefinition
         {
             Name = "OAuth2",
             AuthenticationType = ConnectionAuthenticationType.OAuth2,
-            ConnectionUsage = ConnectionUsage.Actions,
             ConnectionProperties = new List<ConnectionProperty>
             {
                 new(CredNames.ClientId) { DisplayName = "Client ID" }
@@ -23,7 +22,6 @@ public class ConnectionDefinition : IConnectionDefinition
         {
             Name = "Base URL",
             AuthenticationType = ConnectionAuthenticationType.Undefined,
-            ConnectionUsage = ConnectionUsage.Actions & ConnectionUsage.Webhooks,
             ConnectionProperties = new List<ConnectionProperty>
             {
                 new(CredNames.BaseUrl) 
@@ -40,7 +38,6 @@ public class ConnectionDefinition : IConnectionDefinition
         {
             Name = "Space ID",
             AuthenticationType = ConnectionAuthenticationType.Undefined,
-            ConnectionUsage = ConnectionUsage.Actions & ConnectionUsage.Webhooks,
             ConnectionProperties = new List<ConnectionProperty>
             {
                 new(CredNames.SpaceId) { DisplayName = "Space ID" }
@@ -53,19 +50,16 @@ public class ConnectionDefinition : IConnectionDefinition
     {
         var accessToken = values.First(v => v.Key == "access_token");
         yield return new AuthenticationCredentialsProvider(
-            AuthenticationCredentialsRequestLocation.Header,
             "Authorization",
             accessToken.Value
         );
         var spaceId = values.First(v => v.Key == "spaceId");
         yield return new AuthenticationCredentialsProvider(
-            AuthenticationCredentialsRequestLocation.Header,
             spaceId.Key,
             spaceId.Value
         );
         var baseUrl = values.First(v => v.Key == CredNames.BaseUrl);
         yield return new AuthenticationCredentialsProvider(
-            AuthenticationCredentialsRequestLocation.None,
             baseUrl.Key,
             UrlHelper.FormatUrl(baseUrl.Value)
         );
