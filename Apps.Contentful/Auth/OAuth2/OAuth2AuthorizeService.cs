@@ -12,12 +12,12 @@ public class OAuth2AuthorizeService(InvocationContext invocationContext)
 {
     public string GetAuthorizationUrl(Dictionary<string, string> values)
     {
-        var bridgeOauthUrl = $"{InvocationContext.UriInfo.BridgeServiceUrl.ToString().TrimEnd('/')}/oauth"; //.Replace("https://bridge.blackbird.io","https://9cc8-176-36-119-50.ngrok-free.app")
+        var bridgeOauthUrl = $"{InvocationContext.UriInfo.BridgeServiceUrl.ToString().TrimEnd('/')}/oauth";
         var oauthUrl = GetOAuthUrl(values);
         var parameters = new Dictionary<string, string>
         {
             { CredNames.ClientId, values["client_id"] },
-            { "redirect_uri", $"{InvocationContext.UriInfo.BridgeServiceUrl.ToString().TrimEnd('/')}/ImplicitGrant" }, //.Replace("https://bridge.blackbird.io", "https://9cc8-176-36-119-50.ngrok-free.app")
+            { "redirect_uri", $"{InvocationContext.UriInfo.BridgeServiceUrl.ToString().TrimEnd('/')}/ImplicitGrant" },
             { "actual_redirect_uri", InvocationContext.UriInfo.ImplicitGrantRedirectUri.ToString() },
             { "authorization_url", oauthUrl},            
             { "response_type", "token" },
