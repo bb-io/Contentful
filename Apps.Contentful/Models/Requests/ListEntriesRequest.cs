@@ -1,5 +1,4 @@
-﻿using Apps.Contentful.DataSourceHandlers;
-using Apps.Contentful.DataSourceHandlers.Tags;
+﻿using Apps.Contentful.DataSourceHandlers.Tags;
 using Apps.Contentful.Models.Identifiers;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Dynamic;
@@ -19,4 +18,7 @@ public class ListEntriesRequest : ContentModelOptionalIdentifier
 
     [Display("Updated to")]
     public DateTime? UpdatedTo { get; set; }
+    
+    [Display("Published", Description = "Filter by published entries. If not set, all entries are returned.")]
+    public bool? Published { get; set; }
 }

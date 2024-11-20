@@ -5,13 +5,9 @@ using RestSharp;
 
 namespace Apps.Contentful.Api;
 
-public class ContentfulRestRequest : BlackBirdRestRequest
+public class ContentfulRestRequest(string resource, Method method, IEnumerable<AuthenticationCredentialsProvider> creds)
+    : BlackBirdRestRequest(resource, method, creds)
 {
-    public ContentfulRestRequest(string resource, Method method, IEnumerable<AuthenticationCredentialsProvider> creds) :
-        base(resource, method, creds)
-    {
-    }
-
     protected override void AddAuth(IEnumerable<AuthenticationCredentialsProvider> creds)
     {
         var token = creds.Get("Authorization");

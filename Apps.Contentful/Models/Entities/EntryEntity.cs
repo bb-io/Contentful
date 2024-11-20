@@ -1,4 +1,5 @@
-﻿using Blackbird.Applications.Sdk.Common;
+﻿using Apps.Contentful.Models.Dtos;
+using Blackbird.Applications.Sdk.Common;
 using Contentful.Core.Models;
 
 namespace Apps.Contentful.Models.Entities;
@@ -25,7 +26,7 @@ public class EntryEntity
     public EntryEntity(Entry<object> entry)
     {
         Id = entry.SystemProperties.Id;
-        TagIds = entry.Metadata.Tags.Select(x => x.Sys.Id);
+        TagIds = entry.Metadata?.Tags.Select(x => x.Sys.Id) ?? Enumerable.Empty<string>();
         ContentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
         CreatedAt = entry.SystemProperties.CreatedAt;
         UpdatedAt = entry.SystemProperties.UpdatedAt;
