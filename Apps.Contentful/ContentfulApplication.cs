@@ -21,12 +21,6 @@ public class ContentfulApplication : BaseInvocable, IApplication, ICategoryProvi
         _typesInstances = CreateTypesInstances();
     }
 
-    public string Name
-    {
-        get => "Contentful";
-        set { }
-    }
-
     public T GetInstance<T>()
     {
         if (!_typesInstances.TryGetValue(typeof(T), out var value))

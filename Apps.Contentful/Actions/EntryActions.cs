@@ -22,6 +22,8 @@ using Contentful.Core.Extensions;
 using HtmlAgilityPack;
 using Newtonsoft.Json.Serialization;
 using System.Web;
+using Apps.Contentful.Models.Dtos;
+using RestSharp;
 
 namespace Apps.Contentful.Actions;
 
@@ -362,9 +364,26 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         if (request.UpdatedFrom.HasValue) queryString.Add("sys.updatedAt[gte]", request.UpdatedFrom.Value.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'"));
         if (request.UpdatedTo.HasValue) queryString.Add("sys.updatedAt[lte]", request.UpdatedTo.Value.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'"));
 
-        var entries =
-            await client.Paginate<Entry<object>>(
-                async (query) => await client.GetEntriesCollection<Entry<object>>(query), "?" + queryString.ToString());
+        IEnumerable<Entry<object>> entries;
+        if (request.Published.HasValue && request.Published.Value)
+        {
+            var restfulClient = new ContentfulRestClient(Creds.ToArray(), request.Environment);
+            var contentfulRequest = new ContentfulRestRequest($"/public/entries?{queryString}", Method.Get, Creds); 
+            var restEntries = await restfulClient.Paginate<RestEntryDto<object>>(contentfulRequest);
+
+            entries = restEntries.Select(x => new Entry<object>
+            {
+                SystemProperties = x.SystemProperties, 
+                Fields = x.Fields, 
+                Metadata =x.Metadata
+            });
+        }
+        else
+        { 
+            entries =
+                await client.Paginate<Entry<object>>(
+                    async (query) => await client.GetEntriesCollection<Entry<object>>(query), "?" + queryString);
+        }
         
         if (request.Tags is not null && request.Tags.Any())
         {
@@ -501,6 +520,13 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     {
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var spaceId = Creds.Get("spaceId").Value;
+        
+        var locales = await client.GetLocalesCollection();
+        if (locales.All(x => x.Code != entryIdentifier.Locale))
+        {
+            var allLocales = string.Join(", ", locales.Select(x => x.Code));
+            throw new Exception($"Locale {entryIdentifier.Locale} not found. Available locales: {allLocales}");
+        }
 
         var entriesContent = await GetLinkedEntriesContent(
             entryIdentifier.EntryId, 
