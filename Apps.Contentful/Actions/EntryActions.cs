@@ -24,6 +24,7 @@ using Newtonsoft.Json.Serialization;
 using System.Web;
 using Apps.Contentful.Models.Dtos;
 using RestSharp;
+using System.Text.RegularExpressions;
 
 namespace Apps.Contentful.Actions;
 
@@ -642,8 +643,25 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                     }
                 }
             }
-        }      
-        
+        }
+
+        var embeddedIdNodes = doc.DocumentNode.SelectNodes("//a[@id]");
+        if (embeddedIdNodes != null)
+        {
+            foreach (var node in embeddedIdNodes)
+            {
+                var id = node.GetAttributeValue("id", string.Empty);
+                if (!string.IsNullOrEmpty(id))
+                {
+                    var match = Regex.Match(id, "(embedded-entry-block|embedded-entry-inline)_(.*?)$")?.Groups[2]?.Value;
+                    if (!string.IsNullOrEmpty(match))
+                    {
+                        entryIds.Add(match);
+                    }
+                }
+            }
+        }
+
         return entryIds.Distinct();
     }
     
