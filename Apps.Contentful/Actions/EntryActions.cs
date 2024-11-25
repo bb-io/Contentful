@@ -36,6 +36,30 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
     #region Text/Rich text fields
 
+    [Action("Get first not empty entry's text/rich text field", Description =
+        "Get the first not empty text content of the field of the specified entry. " +
+        "Field can be short text, long text or rich text. In all cases plain text is returned.")]
+    public async Task<GetTextContentResponse> GetFirstNotEmptyTextFieldContent(
+        [ActionParameter] EntryLocaleIdentifier entryIdentifier,
+        [ActionParameter] GetFirstNotEmptyTextFieldContentRequest request)
+    {
+        foreach (var fieldId in request.FieldIds)
+        {
+            try
+            {
+                var result = await GetTextFieldContent(entryIdentifier, new FieldIdentifier { FieldId = fieldId });
+                if (!string.IsNullOrEmpty(result.TextContent))
+                    return result;
+            }
+            catch (Exception)
+            {
+                continue;
+            }
+        }
+
+        return new GetTextContentResponse { TextContent = null };
+    }
+
     [Action("Get entry's text/rich text field", Description =
         "Get the text content of the field of the specified entry. " +
         "Field can be short text, long text or rich text. In all " +
@@ -168,7 +192,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
         if (string.IsNullOrEmpty(entryId))
             throw new Exception("Entry ID not found in the HTML file.");
-        
+
         var linkedIds = GetLinkedEntryIdsFromFile(html);
         return new GetIdsFromHtmlResponse
         {
@@ -357,48 +381,50 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     public async Task<ListEntriesResponse> ListEntries([ActionParameter] ListEntriesRequest request)
     {
         var client = new ContentfulClient(Creds, request.Environment);
-        
+
         var queryString = HttpUtility.ParseQueryString(string.Empty);
 
         if (request.ContentModelId != null) queryString.Add("content_type", request.ContentModelId);
-        if (request.UpdatedFrom.HasValue) queryString.Add("sys.updatedAt[gte]", request.UpdatedFrom.Value.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'"));
-        if (request.UpdatedTo.HasValue) queryString.Add("sys.updatedAt[lte]", request.UpdatedTo.Value.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'"));
+        if (request.UpdatedFrom.HasValue)
+            queryString.Add("sys.updatedAt[gte]", request.UpdatedFrom.Value.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'"));
+        if (request.UpdatedTo.HasValue)
+            queryString.Add("sys.updatedAt[lte]", request.UpdatedTo.Value.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'"));
 
         IEnumerable<Entry<object>> entries;
         if (request.Published.HasValue && request.Published.Value)
         {
             var restfulClient = new ContentfulRestClient(Creds.ToArray(), request.Environment);
-            var contentfulRequest = new ContentfulRestRequest($"/public/entries?{queryString}", Method.Get, Creds); 
+            var contentfulRequest = new ContentfulRestRequest($"/public/entries?{queryString}", Method.Get, Creds);
             var restEntries = await restfulClient.Paginate<RestEntryDto<object>>(contentfulRequest);
 
             entries = restEntries.Select(x => new Entry<object>
             {
-                SystemProperties = x.SystemProperties, 
-                Fields = x.Fields, 
-                Metadata =x.Metadata
+                SystemProperties = x.SystemProperties,
+                Fields = x.Fields,
+                Metadata = x.Metadata
             });
         }
         else
-        { 
+        {
             entries =
                 await client.Paginate<Entry<object>>(
                     async (query) => await client.GetEntriesCollection<Entry<object>>(query), "?" + queryString);
         }
-        
+
         if (request.Tags is not null && request.Tags.Any())
         {
             entries = entries.Where(e => e.Metadata.Tags.Any(t => request.Tags.Contains(t.Sys.Id)));
-        }      
-        
+        }
+
         if (request.ExcludeTags is not null && request.ExcludeTags.Any())
         {
             entries = entries.Where(e => e.Metadata.Tags.All(t => !request.ExcludeTags.Contains(t.Sys.Id)));
         }
-        
+
         var entriesResponse = entries.Select(e => new EntryEntity(e)).ToArray();
         return new ListEntriesResponse(entriesResponse, entriesResponse.Length);
     }
-    
+
     [Action("Get entry", Description = "Get details of a specific entry")]
     public async Task<EntryEntity> GetEntry([ActionParameter] EntryIdentifier input)
     {
@@ -520,7 +546,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     {
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var spaceId = Creds.Get("spaceId").Value;
-        
+
         var locales = await client.GetLocalesCollection();
         if (locales.All(x => x.Code != entryIdentifier.Locale))
         {
@@ -529,14 +555,14 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         }
 
         var entriesContent = await GetLinkedEntriesContent(
-            entryIdentifier.EntryId, 
-            entryIdentifier.Locale, 
-            client, 
-            new(), 
-            input.GetReferenceContent ?? false, 
-            input.GetNonLocalizationReferenceContent ?? false, 
-            input.GetHyperlinkContent ?? false, 
-            input.GetEmbeddedInlineContent ?? false, 
+            entryIdentifier.EntryId,
+            entryIdentifier.Locale,
+            client,
+            new(),
+            input.GetReferenceContent ?? false,
+            input.GetNonLocalizationReferenceContent ?? false,
+            input.GetHyperlinkContent ?? false,
+            input.GetEmbeddedInlineContent ?? false,
             input.GetEmbeddedBlockContent ?? false,
             input.IgnoredFieldIds ?? new List<string>());
 
@@ -577,7 +603,8 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                 if (JToken.DeepEquals(oldEntryFields.Escape(), (entry.Fields as JObject)!.Escape()))
                     continue;
 
-                await client.ExecuteWithErrorHandling(() => client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version));
+                await client.ExecuteWithErrorHandling(() =>
+                    client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version));
             }
             catch (Exception ex)
             {
@@ -593,17 +620,21 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
     private async Task<List<EntryContentDto>> GetLinkedEntriesContent(string entryId, string locale,
         ContentfulClient client,
-        List<EntryContentDto> resultList, bool references, bool ignoreReferenceLocalization, bool hyperlinks, bool inline, bool blocks, IEnumerable<string> ignoredFieldIds)
+        List<EntryContentDto> resultList, bool references, bool ignoreReferenceLocalization, bool hyperlinks,
+        bool inline, bool blocks, IEnumerable<string> ignoredFieldIds)
     {
         if (resultList.Any(x => x.Id == entryId))
             return resultList;
 
-        var entryContent = await client.ExecuteWithErrorHandling(() => GetEntryContent(entryId, client, ignoredFieldIds, ignoreReferenceLocalization));
-        var linkedIds = GetLinkedEntryIds(entryContent, locale, references, hyperlinks, inline, blocks).Distinct().ToList();
+        var entryContent = await client.ExecuteWithErrorHandling(() =>
+            GetEntryContent(entryId, client, ignoredFieldIds, ignoreReferenceLocalization));
+        var linkedIds = GetLinkedEntryIds(entryContent, locale, references, hyperlinks, inline, blocks).Distinct()
+            .ToList();
 
         resultList.Add(entryContent);
         foreach (var linkedEntryId in linkedIds)
-            await GetLinkedEntriesContent(linkedEntryId, locale, client, resultList, references, ignoreReferenceLocalization, hyperlinks, inline, blocks, ignoredFieldIds);
+            await GetLinkedEntriesContent(linkedEntryId, locale, client, resultList, references,
+                ignoreReferenceLocalization, hyperlinks, inline, blocks, ignoredFieldIds);
 
         return resultList;
     }
@@ -612,9 +643,9 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     {
         var doc = new HtmlDocument();
         doc.LoadHtml(html);
-        
+
         var entryIds = new List<string>();
-        
+
         var entryIdNodes = doc.DocumentNode.SelectNodes("//div[@data-contentful-link-id]");
         if (entryIdNodes != null)
         {
@@ -642,12 +673,13 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                     }
                 }
             }
-        }      
-        
+        }
+
         return entryIds.Distinct();
     }
-    
-    private IEnumerable<string> GetLinkedEntryIds(EntryContentDto entryContent, string locale, bool references, bool hyperlinks, bool inline, bool blocks)
+
+    private IEnumerable<string> GetLinkedEntryIds(EntryContentDto entryContent, string locale, bool references,
+        bool hyperlinks, bool inline, bool blocks)
     {
         try
         {
@@ -680,8 +712,9 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                     .SelectMany(x => (entryContent.EntryFields[x.Id]?[locale] as JObject)?.Descendants().Where(y =>
                                          y is JProperty { Name: "nodeType" } jProperty &&
                                          jProperty.Value.ToString() == "entry-hyperlink") ??
-                                     Enumerable.Empty<JToken>()).Where(x => x.Parent?["data"]?["target"]?["sys"]?["linkType"]?.Value<string>() == "Entry")
-                                     .Select(x => x.Parent?["data"]?["target"]?["sys"]?["id"]?.Value<string>()).ToList();
+                                     Enumerable.Empty<JToken>()).Where(x =>
+                        x.Parent?["data"]?["target"]?["sys"]?["linkType"]?.Value<string>() == "Entry")
+                    .Select(x => x.Parent?["data"]?["target"]?["sys"]?["id"]?.Value<string>()).ToList();
 
                 result = result.Concat(richTextFieldEntryHyperlinkIds).ToList();
             }
@@ -693,8 +726,9 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                     .SelectMany(x => (entryContent.EntryFields[x.Id]?[locale] as JObject)?.Descendants().Where(y =>
                                          y is JProperty { Name: "nodeType" } jProperty &&
                                          jProperty.Value.ToString() == "embedded-entry-inline") ??
-                                     Enumerable.Empty<JToken>()).Where(x => x.Parent?["data"]?["target"]?["sys"]?["linkType"]?.Value<string>() == "Entry")
-                                     .Select(x => x.Parent?["data"]?["target"]?["sys"]?["id"]?.Value<string>()).ToList();
+                                     Enumerable.Empty<JToken>()).Where(x =>
+                        x.Parent?["data"]?["target"]?["sys"]?["linkType"]?.Value<string>() == "Entry")
+                    .Select(x => x.Parent?["data"]?["target"]?["sys"]?["id"]?.Value<string>()).ToList();
 
                 result = result.Concat(richTextFieldInlineEntryIds).ToList();
             }
@@ -706,8 +740,9 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                     .SelectMany(x => (entryContent.EntryFields[x.Id]?[locale] as JObject)?.Descendants().Where(y =>
                                          y is JProperty { Name: "nodeType" } jProperty &&
                                          jProperty.Value.ToString() == "embedded-entry-block") ??
-                                     Enumerable.Empty<JToken>()).Where(x => x.Parent?["data"]?["target"]?["sys"]?["linkType"]?.Value<string>() == "Entry")
-                                     .Select(x => x.Parent?["data"]?["target"]?["sys"]?["id"]?.Value<string>()).ToList();
+                                     Enumerable.Empty<JToken>()).Where(x =>
+                        x.Parent?["data"]?["target"]?["sys"]?["linkType"]?.Value<string>() == "Entry")
+                    .Select(x => x.Parent?["data"]?["target"]?["sys"]?["id"]?.Value<string>()).ToList();
 
                 result = result.Concat(richTextFieldBlockEntryIds).ToList();
             }
@@ -721,9 +756,9 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         }
     }
 
-    private async Task<EntryContentDto> GetEntryContent(string entryId, 
-        ContentfulClient client, 
-        IEnumerable<string> ignoredFieldIds, 
+    private async Task<EntryContentDto> GetEntryContent(string entryId,
+        ContentfulClient client,
+        IEnumerable<string> ignoredFieldIds,
         bool ignoreLocalizationForLinks = false,
         bool ignoreLocalizationFields = false)
     {
@@ -734,14 +769,18 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
         if (ignoreLocalizationForLinks)
         {
-            return new(entryId, entry.Fields, contentType.Fields.Where(x => x.Localized || x.Type == "Link" || (x.Type == "Array" && x.Items?.Type == "Link")).Where(x => !ignoredFieldIds.Contains(x.Id)).ToArray());
+            return new(entryId, entry.Fields,
+                contentType.Fields
+                    .Where(x => x.Localized || x.Type == "Link" || (x.Type == "Array" && x.Items?.Type == "Link"))
+                    .Where(x => !ignoredFieldIds.Contains(x.Id)).ToArray());
         }
-        
+
         if (!ignoreLocalizationFields)
         {
-            return new(entryId, entry.Fields, contentType.Fields.Where(x => x.Localized).Where(x => !ignoredFieldIds.Contains(x.Id)).ToArray());
+            return new(entryId, entry.Fields,
+                contentType.Fields.Where(x => x.Localized).Where(x => !ignoredFieldIds.Contains(x.Id)).ToArray());
         }
-        
+
         return new(entryId, entry.Fields, contentType.Fields.Where(x => !ignoredFieldIds.Contains(x.Id)).ToArray());
     }
 
