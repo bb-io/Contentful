@@ -123,7 +123,8 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
         var additionalAttributes = new Dictionary<string, string>
         {
             { "data-contentful-link-type", linkType! },
-            { "data-contentful-link-id", linkId! }
+            { "data-contentful-link-id", linkId! },
+            { "data-contentful-localized", field.Localized.ToString() }
         };
         
         return WrapFieldInDiv(doc, field.Type, field.Id, additionalAttributes: additionalAttributes);
