@@ -77,6 +77,7 @@ public static class EntryToJsonConverter
             case "Link":
                 var linkType = htmlNode.Attributes["data-contentful-link-type"].Value;
                 var id = htmlNode.Attributes["data-contentful-link-id"].Value;
+                var localized = htmlNode.Attributes["data-contentful-localized"]?.Value;
                 var linkData = new
                 {
                     sys = new
@@ -86,7 +87,21 @@ public static class EntryToJsonConverter
                         id
                     }
                 };
-                entryFields[fieldId][locale] = JObject.Parse(JsonConvert.SerializeObject(linkData));
+                if(linkType == "Asset")
+                {
+                    entryFields[fieldId]![locale] = JObject.Parse(JsonConvert.SerializeObject(linkData));
+                }
+                else
+                {
+                    if (localized != null && localized.Equals("true", StringComparison.OrdinalIgnoreCase))
+                    {
+                        entryFields[fieldId]![locale] = JObject.Parse(JsonConvert.SerializeObject(linkData));
+                    }
+                    else
+                    {
+                        entryFields[fieldId]?[locale]?.Remove();
+                    }   
+                }
                 break;
             case "Array":
                 if (htmlNode.Attributes.Any(a => a.Name == "data-contentful-link-type"))
