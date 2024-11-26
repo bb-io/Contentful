@@ -394,6 +394,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         if (request.Published.HasValue && request.Published.Value)
         {
             var restfulClient = new ContentfulRestClient(Creds.ToArray(), request.Environment);
+            queryString.Add("include", "0");
             var contentfulRequest = new ContentfulRestRequest($"/public/entries?{queryString}", Method.Get, Creds);
             var restEntries = await restfulClient.Paginate<RestEntryDto<object>>(contentfulRequest);
 

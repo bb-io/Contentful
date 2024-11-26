@@ -21,7 +21,7 @@ public class ContentfulClient : ContentfulManagementClient
             ManagementApiKey = creds.First(p => p.KeyName == "Authorization").Value,
             SpaceId = creds.First(p => p.KeyName == "spaceId").Value,
             Environment = environment,
-            ManagementBaseUrl = creds.First(p => p.KeyName == CredNames.BaseUrl).Value + "/spaces/"
+            ManagementBaseUrl = creds.First(p => p.KeyName == CredNames.BaseUrl).Value + "/spaces/",
         })
     {
         _retryPolicy = Policy
