@@ -149,6 +149,12 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
             { "data-contentful-link-type", field.Items.LinkType },
             { "data-contentful-link-ids", itemIds }
         };
+
+        if (itemType == "Link")
+        {
+            additionalAttributes.Add("data-contentful-localized", field.Localized.ToString());
+        }
+        
         return WrapFieldInDiv(doc, field.Type, field.Id, additionalAttributes: additionalAttributes);
     }
 

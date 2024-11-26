@@ -108,6 +108,7 @@ public static class EntryToJsonConverter
                 {
                     linkType = htmlNode.Attributes["data-contentful-link-type"].Value;
                     var itemIds = htmlNode.Attributes["data-contentful-link-ids"].Value.Split(",");
+                    var arrayLocalized = htmlNode.Attributes["data-contentful-localized"]?.Value;
                     var arrayData = itemIds.Select(id => new
                     {
                         sys = new
@@ -117,8 +118,31 @@ public static class EntryToJsonConverter
                             id
                         }
                     });
-                    entryFields[fieldId][locale] =
-                        JArray.Parse(JsonConvert.SerializeObject(arrayData));
+                    
+                    if (linkType == "Entry")
+                    {
+                        if (arrayLocalized != null && arrayLocalized.Equals("true", StringComparison.OrdinalIgnoreCase))
+                        {
+                            entryFields[fieldId]![locale] =
+                                JArray.Parse(JsonConvert.SerializeObject(arrayData));
+                        }
+                        else
+                        {
+                            var fieldObject = entryFields[fieldId] as JObject;
+                            if (fieldObject != null)
+                            {
+                                if (fieldObject.ContainsKey(locale))
+                                {
+                                    fieldObject.Remove(locale);
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        entryFields[fieldId][locale] =
+                            JArray.Parse(JsonConvert.SerializeObject(arrayData));
+                    }
                 }
                 else
                 {
