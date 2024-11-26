@@ -15,6 +15,30 @@ namespace Apps.Contentful.Actions;
 [ActionList]
 public class WorkflowActions(InvocationContext invocationContext) : ContentfulInvocable(invocationContext)
 {
+    [Action("Search workflows", Description = "Search for active workflows based on the provided inputs")]
+    public async Task<WorkflowsResponse> SearchWorkflowsAsync([ActionParameter] SearchWorkflowsRequest searchRequest)
+    {
+        var client = new ContentfulRestClient(Creds, searchRequest.Environment);
+        var request = new ContentfulRestRequest("/workflows", Method.Get, Creds);
+        var workflows = await client.Paginate<WorkflowDto>(request);
+
+        var workflowResponses = workflows.Select(workflow => new WorkflowResponse
+        {
+            StepId = workflow.StepId,
+            WorkflowDefinitionId = workflow.Sys.WorkflowDefinition.Sys.Id,
+            Version = workflow.Sys.Version,
+            EntityId = workflow.Sys.Entity.Sys.Id,
+            WorkflowId = workflow.Sys.Id
+        });
+        
+        if (!string.IsNullOrEmpty(searchRequest.WorkflowDefinitionId))
+        {
+            workflowResponses = workflowResponses.Where(workflow => workflow.WorkflowDefinitionId == searchRequest.WorkflowDefinitionId);
+        }
+        
+        return new WorkflowsResponse(workflowResponses);
+    }
+    
     [Action("Get workflow", Description = "Returns details of a specific workflow based on the workflow ID")]
     public async Task<WorkflowResponse> GetWorkflowAsync([ActionParameter] WorkflowIdentifier workflowRequest)
     {
@@ -27,7 +51,8 @@ public class WorkflowActions(InvocationContext invocationContext) : ContentfulIn
             StepId = workflow.StepId,
             WorkflowDefinitionId = workflow.Sys.WorkflowDefinition.Sys.Id,
             Version = workflow.Sys.Version,
-            EntityId = workflow.Sys.Entity.Sys.Id
+            EntityId = workflow.Sys.Entity.Sys.Id,
+            WorkflowId = workflow.Sys.Id
         };
     }
     
@@ -65,7 +90,8 @@ public class WorkflowActions(InvocationContext invocationContext) : ContentfulIn
             StepId = workflow.StepId,
             WorkflowDefinitionId = workflow.Sys.WorkflowDefinition.Sys.Id,
             Version = workflow.Sys.Version,
-            EntityId = workflow.Sys.Entity.Sys.Id
+            EntityId = workflow.Sys.Entity.Sys.Id,
+            WorkflowId = workflow.Sys.Id
         };
     }
     
