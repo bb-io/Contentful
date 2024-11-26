@@ -30,6 +30,12 @@ public class WorkflowActions(InvocationContext invocationContext) : ContentfulIn
             EntityId = workflow.Sys.Entity.Sys.Id,
             WorkflowId = workflow.Sys.Id
         });
+        
+        if (!string.IsNullOrEmpty(searchRequest.WorkflowDefinitionId))
+        {
+            workflowResponses = workflowResponses.Where(workflow => workflow.WorkflowDefinitionId == searchRequest.WorkflowDefinitionId);
+        }
+        
         return new WorkflowsResponse(workflowResponses);
     }
     
