@@ -65,6 +65,13 @@ public class TagActions : ContentfulInvocable
     public async Task AddEntryTag([ActionParameter] EntryTagIdentifier input)
     {
         var entry = await new ContentfulClient(Creds, input.Environment).GetEntry(input.EntryId);
+
+        var existingTags = entry.Metadata.Tags
+            .Select(x => x.Sys.Id).ToArray();
+       if (existingTags.Contains(input.TagId)) 
+        {
+            return;
+        }
         
         var tags = entry.Metadata.Tags
             .Select(x => x.Sys.Id)
@@ -87,7 +94,14 @@ public class TagActions : ContentfulInvocable
     public async Task RemoveEntryTag([ActionParameter] EntryTagIdentifier input)
     {
         var entry = await new ContentfulClient(Creds, input.Environment).GetEntry(input.EntryId);
-        
+
+        var existingTags = entry.Metadata.Tags
+            .Select(x => x.Sys.Id).ToArray();
+        if (!existingTags.Contains(input.TagId))
+        {
+            return;
+        }
+
         var tags = entry.Metadata.Tags
             .Where(x => x.Sys.Id != input.TagId)
             .Select(x => new PropertiesRequest()
