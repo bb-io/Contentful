@@ -30,7 +30,8 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
             }
             catch(Exception ex)
             {
-                throw new Exception($"Error converting Contentful entry {x.Id} to HTML for locale {locale} (space {spaceId}) | {JsonConvert.SerializeObject(x.EntryFields)}");
+                throw new Exception($"Error converting Contentful entry {x.Id} to HTML for locale {locale} (space {spaceId}); " +
+                                    $"Exception message: {ex.Message}; Exception type: {ex.GetType()} | {JsonConvert.SerializeObject(x.EntryFields)};");
             }
         });
 
