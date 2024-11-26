@@ -36,7 +36,32 @@ public class WorkflowActions(InvocationContext invocationContext) : ContentfulIn
             workflowResponses = workflowResponses.Where(workflow => workflow.WorkflowDefinitionId == searchRequest.WorkflowDefinitionId);
         }
         
-        return new WorkflowsResponse(workflowResponses);
+        var workflowStepResponses = new List<WorkflowDefinitionResponse>();
+
+        foreach (var workflowResponse in workflowResponses)
+        {
+            var workflowDefinitionRequest = new ContentfulRestRequest($"/workflow_definitions/{workflowResponse.WorkflowDefinitionId}", Method.Get, Creds);
+            var workflowDefinition = await client.ExecuteWithErrorHandling<WorkflowDefinitionDto>(workflowDefinitionRequest);
+            
+            var currentStep = workflowDefinition.Steps.FirstOrDefault(x => x.StepId == workflowResponse.StepId) ?? new WorkflowStep();
+            var nextStepIndex = workflowDefinition.Steps.IndexOf(currentStep) + 1;
+            var nextStep = nextStepIndex < workflowDefinition.Steps.Count ? workflowDefinition.Steps[nextStepIndex] : null;
+            var previousStep = workflowDefinition.Steps.FirstOrDefault(x => x.StepId == workflowResponse.StepId);
+            
+            workflowStepResponses.Add(new WorkflowDefinitionResponse
+            {
+                WorkflowId = workflowResponse.WorkflowId,
+                WorkflowDefinitionId = workflowResponse.WorkflowDefinitionId,
+                Name = workflowDefinition.Name,
+                Description = workflowDefinition.Description,
+                EntryId = workflowResponse.EntityId,
+                CurrentStep = currentStep,
+                NextStep = nextStep,
+                PreviousStep = previousStep
+            });
+        }
+        
+        return new WorkflowsResponse(workflowStepResponses);
     }
     
     [Action("Get workflow", Description = "Returns details of a specific workflow based on the workflow ID")]
