@@ -565,7 +565,8 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             input.GetHyperlinkContent ?? false,
             input.GetEmbeddedInlineContent ?? false,
             input.GetEmbeddedBlockContent ?? false,
-            input.IgnoredFieldIds ?? new List<string>());
+            input.IgnoredFieldIds ?? new List<string>(),
+            input.IgnoredContentTypeIds?.ToList() ?? new List<string>());
 
         var htmlConverter = new EntryToHtmlConverter(InvocationContext, entryIdentifier.Environment);
         var resultHtml = htmlConverter.ToHtml(entriesContent, entryIdentifier.Locale, spaceId);
@@ -622,21 +623,27 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     private async Task<List<EntryContentDto>> GetLinkedEntriesContent(string entryId, string locale,
         ContentfulClient client,
         List<EntryContentDto> resultList, bool references, bool ignoreReferenceLocalization, bool hyperlinks,
-        bool inline, bool blocks, IEnumerable<string> ignoredFieldIds)
+        bool inline, bool blocks, IEnumerable<string> ignoredFieldIds, List<string> ignoredContentTypeIds)
     {
         if (resultList.Any(x => x.Id == entryId))
             return resultList;
 
         var entryContent = await client.ExecuteWithErrorHandling(() =>
-            GetEntryContent(entryId, client, ignoredFieldIds, ignoreReferenceLocalization));
-        var linkedIds = GetLinkedEntryIds(entryContent, locale, references, hyperlinks, inline, blocks).Distinct()
-            .ToList();
+            GetEntryContent(entryId, client, ignoredFieldIds, ignoredContentTypeIds, ignoreReferenceLocalization));
+        
+        if (entryContent != null)
+        {
+            var linkedIds = GetLinkedEntryIds(entryContent, locale, references, hyperlinks, inline, blocks).Distinct()
+                .ToList();
 
-        resultList.Add(entryContent);
-        foreach (var linkedEntryId in linkedIds)
-            await GetLinkedEntriesContent(linkedEntryId, locale, client, resultList, references,
-                ignoreReferenceLocalization, hyperlinks, inline, blocks, ignoredFieldIds);
+            resultList.Add(entryContent);
+            foreach (var linkedEntryId in linkedIds)
+                await GetLinkedEntriesContent(linkedEntryId, locale, client, resultList, references,
+                    ignoreReferenceLocalization, hyperlinks, inline, blocks, ignoredFieldIds, ignoredContentTypeIds);
 
+            return resultList;
+        }
+        
         return resultList;
     }
 
@@ -757,13 +764,19 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         }
     }
 
-    private async Task<EntryContentDto> GetEntryContent(string entryId,
+    private async Task<EntryContentDto?> GetEntryContent(string entryId,
         ContentfulClient client,
         IEnumerable<string> ignoredFieldIds,
+        IEnumerable<string> ignoredContentTypeIds,
         bool ignoreLocalizationForLinks = false,
         bool ignoreLocalizationFields = false)
     {
         var entry = await client.GetEntry(entryId);
+        
+        if(ignoredContentTypeIds.Contains(entry.SystemProperties.ContentType.SystemProperties.Id))
+        {
+            return null;
+        }
 
         var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
         var contentType = await client.GetContentType(contentTypeId);

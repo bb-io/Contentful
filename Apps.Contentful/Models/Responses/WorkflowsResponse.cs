@@ -2,11 +2,11 @@
 
 public class WorkflowsResponse
 {
-    public List<WorkflowResponse> Workflows { get; set; }
+    public List<WorkflowDefinitionResponse> Workflows { get; set; }
 
     public double TotalCount { get; set; }
 
-    public WorkflowsResponse(IEnumerable<WorkflowResponse> workflow)
+    public WorkflowsResponse(IEnumerable<WorkflowDefinitionResponse> workflow)
     {
         Workflows = workflow.ToList();
         TotalCount = Workflows.Count;

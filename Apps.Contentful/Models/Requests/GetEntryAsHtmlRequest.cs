@@ -1,4 +1,6 @@
+using Apps.Contentful.DataSourceHandlers;
 using Blackbird.Applications.Sdk.Common;
+using Blackbird.Applications.Sdk.Common.Dynamic;
 
 namespace Apps.Contentful.Models.Requests;
 
@@ -19,6 +21,9 @@ public class GetEntryAsHtmlRequest
     [Display("Include embedded block entries", Description = "Recursively include content of entries that are referenced as embedded block entries in 'Rich text' fields")]
     public bool? GetEmbeddedBlockContent { get; set; }
 
-    [Display("Ignored field IDs", Description = "All field IDs in this collection will be omitted from the exported content")]
+    [Display("Exclude field IDs", Description = "All field IDs in this collection will be omitted from the exported content")]
     public IEnumerable<string>? IgnoredFieldIds { get; set; }
+    
+    [Display("Excluded content type IDs", Description = "All content type IDs in this collection will be omitted from the exported content"), DataSource(typeof(ContentModelDataSourceHandler))]
+    public IEnumerable<string>? IgnoredContentTypeIds { get; set; }
 }

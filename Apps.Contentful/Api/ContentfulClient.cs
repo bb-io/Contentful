@@ -11,7 +11,7 @@ namespace Apps.Contentful.Api;
 public class ContentfulClient : ContentfulManagementClient
 {
     private const int Limit = 100;
-    private const int RetryCount = 3;
+    private const int RetryCount = 5;
     
     private readonly AsyncRetryPolicy _retryPolicy;
 
@@ -22,6 +22,7 @@ public class ContentfulClient : ContentfulManagementClient
             SpaceId = creds.First(p => p.KeyName == "spaceId").Value,
             Environment = environment,
             ManagementBaseUrl = creds.First(p => p.KeyName == CredNames.BaseUrl).Value + "/spaces/",
+            MaxNumberOfRateLimitRetries = RetryCount
         })
     {
         _retryPolicy = Policy
@@ -29,7 +30,7 @@ public class ContentfulClient : ContentfulManagementClient
             .WaitAndRetryAsync(RetryCount, (_) => TimeSpan.Zero, (exception, _) =>
             {
                 if (exception is ContentfulRateLimitException contentfulRateLimitException)
-                    return Task.Delay(TimeSpan.FromSeconds(contentfulRateLimitException.SecondsUntilNextRequest + 1));
+                    return Task.Delay(TimeSpan.FromSeconds(contentfulRateLimitException.SecondsUntilNextRequest + 5));
 
                 return Task.CompletedTask;
             });
