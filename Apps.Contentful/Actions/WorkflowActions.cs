@@ -19,8 +19,8 @@ public class WorkflowActions(InvocationContext invocationContext) : ContentfulIn
     public async Task<WorkflowsResponse> SearchWorkflowsAsync([ActionParameter] SearchWorkflowsRequest searchRequest)
     {
         var client = new ContentfulRestClient(Creds, searchRequest.Environment);
-        var request = new ContentfulRestRequest("/workflows", Method.Get, Creds);
-        var workflows = await client.Paginate<WorkflowDto>(request);
+        var workflowsRequest = new ContentfulRestRequest("/workflows", Method.Get, Creds);
+        var workflows = await client.Paginate<WorkflowDto>(workflowsRequest);
 
         var workflowResponses = workflows.Select(workflow => new WorkflowResponse
         {
@@ -30,24 +30,48 @@ public class WorkflowActions(InvocationContext invocationContext) : ContentfulIn
             EntityId = workflow.Sys.Entity.Sys.Id,
             WorkflowId = workflow.Sys.Id
         });
-        
+
         if (!string.IsNullOrEmpty(searchRequest.WorkflowDefinitionId))
         {
-            workflowResponses = workflowResponses.Where(workflow => workflow.WorkflowDefinitionId == searchRequest.WorkflowDefinitionId);
+            workflowResponses = workflowResponses
+                .Where(workflow => workflow.WorkflowDefinitionId == searchRequest.WorkflowDefinitionId);
         }
-        
-        var workflowStepResponses = new List<WorkflowDefinitionResponse>();
 
+        var workflowDefinitionIds = workflowResponses
+            .Select(w => w.WorkflowDefinitionId)
+            .Distinct()
+            .ToList();
+
+        var definitionTasks = workflowDefinitionIds.Select(id =>
+        {
+            var defRequest = new ContentfulRestRequest($"/workflow_definitions/{id}", Method.Get, Creds);
+            return client.ExecuteWithErrorHandling<WorkflowDefinitionDto>(defRequest);
+        });
+
+        var workflowDefinitions = await Task.WhenAll(definitionTasks);
+
+        var workflowDefinitionDict = workflowDefinitions
+            .Where(def => def != null)
+            .ToDictionary(def => def.Sys.Id, def => def);
+
+        var workflowStepResponses = new List<WorkflowDefinitionResponse>();
         foreach (var workflowResponse in workflowResponses)
         {
-            var workflowDefinitionRequest = new ContentfulRestRequest($"/workflow_definitions/{workflowResponse.WorkflowDefinitionId}", Method.Get, Creds);
-            var workflowDefinition = await client.ExecuteWithErrorHandling<WorkflowDefinitionDto>(workflowDefinitionRequest);
-            
-            var currentStep = workflowDefinition.Steps.FirstOrDefault(x => x.StepId == workflowResponse.StepId) ?? new WorkflowStep();
-            var nextStepIndex = workflowDefinition.Steps.IndexOf(currentStep) + 1;
-            var nextStep = nextStepIndex < workflowDefinition.Steps.Count ? workflowDefinition.Steps[nextStepIndex] : null;
-            var previousStep = workflowDefinition.Steps.FirstOrDefault(x => x.StepId == workflowResponse.StepId);
-            
+            if (!workflowDefinitionDict.TryGetValue(workflowResponse.WorkflowDefinitionId, out var workflowDefinition))
+            {
+                continue;
+            }
+
+            var currentStep = workflowDefinition.Steps.FirstOrDefault(x => x.StepId == workflowResponse.StepId)
+                              ?? new WorkflowStep();
+            var currentStepIndex = workflowDefinition.Steps.IndexOf(currentStep);
+            var nextStep = (currentStepIndex + 1) < workflowDefinition.Steps.Count
+                ? workflowDefinition.Steps[currentStepIndex + 1]
+                : null;
+            var previousStep = (currentStepIndex - 1) >= 0
+                ? workflowDefinition.Steps[currentStepIndex - 1]
+                : null;
+
             workflowStepResponses.Add(new WorkflowDefinitionResponse
             {
                 WorkflowId = workflowResponse.WorkflowId,
@@ -60,10 +84,10 @@ public class WorkflowActions(InvocationContext invocationContext) : ContentfulIn
                 PreviousStep = previousStep
             });
         }
-        
+
         return new WorkflowsResponse(workflowStepResponses);
     }
-    
+
     [Action("Get workflow", Description = "Returns details of a specific workflow based on the workflow ID")]
     public async Task<WorkflowResponse> GetWorkflowAsync([ActionParameter] WorkflowIdentifier workflowRequest)
     {
@@ -80,12 +104,16 @@ public class WorkflowActions(InvocationContext invocationContext) : ContentfulIn
             WorkflowId = workflow.Sys.Id
         };
     }
-    
-    [Action("Get workflow definition", Description = "Returns details of a specific workflow definition based on the workflow definition ID")]
-    public async Task<FullWorkflowDefinitionResponse> GetWorkflowDefinitionAsync([ActionParameter] WorkflowDefinitionIdentifier workflowDefinitionRequest)
+
+    [Action("Get workflow definition",
+        Description = "Returns details of a specific workflow definition based on the workflow definition ID")]
+    public async Task<FullWorkflowDefinitionResponse> GetWorkflowDefinitionAsync(
+        [ActionParameter] WorkflowDefinitionIdentifier workflowDefinitionRequest)
     {
         var client = new ContentfulRestClient(Creds, workflowDefinitionRequest.Environment);
-        var request = new ContentfulRestRequest($"/workflow_definitions/{workflowDefinitionRequest.WorkflowDefinitionId}", Method.Get, Creds);
+        var request =
+            new ContentfulRestRequest($"/workflow_definitions/{workflowDefinitionRequest.WorkflowDefinitionId}",
+                Method.Get, Creds);
         var workflowDefinition = await client.ExecuteWithErrorHandling<WorkflowDefinitionDto>(request);
 
         return new FullWorkflowDefinitionResponse
@@ -96,18 +124,19 @@ public class WorkflowActions(InvocationContext invocationContext) : ContentfulIn
             Steps = workflowDefinition.Steps
         };
     }
-    
+
     [Action("Update workflow step", Description = "Move a workflow to a specific step")]
-    public async Task<WorkflowResponse> UpdateWorkflowStepAsync([ActionParameter] UpdateWorkflowStepRequest updateRequest)
+    public async Task<WorkflowResponse> UpdateWorkflowStepAsync(
+        [ActionParameter] UpdateWorkflowStepRequest updateRequest)
     {
         var client = new ContentfulRestClient(Creds, updateRequest.Environment);
-        
+
         var workflowResponse = await GetWorkflowAsync(updateRequest);
-        
+
         var request = new ContentfulRestRequest($"/workflows/{updateRequest.WorkflowId}", Method.Put, Creds)
             .WithJsonBody(new { stepId = updateRequest.StepId })
             .AddHeader("X-Contentful-Version", workflowResponse.Version.ToString());
-        
+
         var workflow = await client.ExecuteWithErrorHandling<WorkflowDto>(request);
 
         return new WorkflowResponse
@@ -119,25 +148,25 @@ public class WorkflowActions(InvocationContext invocationContext) : ContentfulIn
             WorkflowId = workflow.Sys.Id
         };
     }
-    
+
     [Action("Complete workflow", Description = "Complete a workflow")]
     public async Task CompleteWorkflowAsync([ActionParameter] WorkflowIdentifier workflowRequest)
     {
         var client = new ContentfulRestClient(Creds, workflowRequest.Environment);
-        
+
         var workflowResponse = await GetWorkflowAsync(workflowRequest);
         var request = new ContentfulRestRequest($"/workflows/{workflowRequest.WorkflowId}/complete", Method.Put, Creds)
             .AddHeader("X-Contentful-Version", workflowResponse.Version.ToString());
         await client.ExecuteWithErrorHandling(request);
     }
-    
+
     [Action("Cancel workflow", Description = "Cancel a workflow")]
     public async Task CancelWorkflowAsync([ActionParameter] WorkflowIdentifier workflowRequest)
     {
         var client = new ContentfulRestClient(Creds, workflowRequest.Environment);
-        
+
         var workflowResponse = await GetWorkflowAsync(workflowRequest);
-        
+
         var request = new ContentfulRestRequest($"/workflows/{workflowRequest.WorkflowId}", Method.Delete, Creds)
             .AddHeader("X-Contentful-Version", workflowResponse.Version.ToString());
         await client.ExecuteWithErrorHandling(request);
