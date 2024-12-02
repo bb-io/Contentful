@@ -99,7 +99,11 @@ public static class EntryToJsonConverter
                     }
                     else
                     {
-                        entryFields[fieldId]?[locale]?.Remove();
+                        var fieldObject = entryFields[fieldId] as JObject;
+                        if (fieldObject != null)
+                        {
+                            fieldObject.Remove(locale);
+                        }                    
                     }   
                 }
                 break;
