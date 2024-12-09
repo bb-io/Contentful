@@ -9,4 +9,7 @@ public class SearchWorkflowsRequest : EnvironmentIdentifier
 {
     [Display("Workflow definition ID", Description = "The ID of the workflow definition to search for"), DataSource(typeof(WorkflowDefinitionDataHandler))]
     public string? WorkflowDefinitionId { get; set; }
+
+    [Display("Current step name", Description = "Filter by current step name")]
+    public string? CurrentStepName { get; set; }
 }
