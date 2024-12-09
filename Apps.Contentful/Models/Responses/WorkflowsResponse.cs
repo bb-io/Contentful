@@ -11,7 +11,7 @@ public class WorkflowsResponse
 
     public WorkflowsResponse(IEnumerable<WorkflowDefinitionResponse> workflow)
     {
-        Workflows = workflow.ToList();
+        Workflows = workflow?.ToList() ?? new();
         TotalCount = Workflows.Count;
     }
 }
