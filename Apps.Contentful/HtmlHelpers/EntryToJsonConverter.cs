@@ -21,6 +21,7 @@ public static class EntryToJsonConverter
             .Select(x => new EntryHtmlContentDto(x.Attributes[ConvertConstants.EntryIdAttribute].Value, x))
             .ToList();
     }
+
     public static void ToJson(Entry<object> entry, HtmlNode html, string locale)
     {
         var entryFields = (JObject)entry.Fields;
@@ -48,7 +49,7 @@ public static class EntryToJsonConverter
                     entryFields[fieldId][locale] = Decimal.ToInt64(decimalValue);
                     break;
                 }
-               
+
                 entryFields[fieldId][locale] = decimalValue;
 
                 break;
@@ -72,7 +73,8 @@ public static class EntryToJsonConverter
                     ContractResolver = new CamelCasePropertyNamesContractResolver(),
                     NullValueHandling = NullValueHandling.Ignore
                 };
-                entryFields[fieldId][locale] = JObject.Parse(JsonConvert.SerializeObject(richText, serializerSettings));
+                entryFields[fieldId][locale] =
+                    JObject.Parse(JsonConvert.SerializeObject(richText, serializerSettings));
                 break;
             case "Link":
                 var linkType = htmlNode.Attributes["data-contentful-link-type"].Value;
@@ -87,7 +89,7 @@ public static class EntryToJsonConverter
                         id
                     }
                 };
-                if(linkType == "Asset")
+                if (linkType == "Asset")
                 {
                     entryFields[fieldId]![locale] = JObject.Parse(JsonConvert.SerializeObject(linkData));
                 }
@@ -103,9 +105,10 @@ public static class EntryToJsonConverter
                         if (fieldObject != null)
                         {
                             fieldObject.Remove(locale);
-                        }                    
-                    }   
+                        }
+                    }
                 }
+
                 break;
             case "Array":
                 if (htmlNode.Attributes.Any(a => a.Name == "data-contentful-link-type"))
@@ -122,10 +125,11 @@ public static class EntryToJsonConverter
                             id
                         }
                     });
-                    
+
                     if (linkType == "Entry")
                     {
-                        if (arrayLocalized != null && arrayLocalized.Equals("true", StringComparison.OrdinalIgnoreCase))
+                        if (arrayLocalized != null &&
+                            arrayLocalized.Equals("true", StringComparison.OrdinalIgnoreCase))
                         {
                             entryFields[fieldId]![locale] =
                                 JArray.Parse(JsonConvert.SerializeObject(arrayData));

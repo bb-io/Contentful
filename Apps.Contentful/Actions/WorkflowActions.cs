@@ -85,6 +85,14 @@ public class WorkflowActions(InvocationContext invocationContext) : ContentfulIn
             });
         }
 
+        if (searchRequest.CurrentStepNames != null)
+        {
+            workflowStepResponses = workflowStepResponses.Where(x =>
+                x.CurrentStep != null! &&
+                searchRequest.CurrentStepNames.Contains(x.CurrentStep.Name))
+                .ToList();
+        }
+
         return new WorkflowsResponse(workflowStepResponses);
     }
 
