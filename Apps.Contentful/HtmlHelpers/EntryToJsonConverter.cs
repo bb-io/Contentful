@@ -38,7 +38,7 @@ public static class EntryToJsonConverter
         void SetEntryFieldValue(string id, object newValue)
         {
             var jTokenValue = JToken.FromObject(newValue);
-            if (entryFields.TryGetValue(id, out _))
+            if (entryFields.TryGetValue(id, out var entryField))
             {
                 if (entryFields[id] is JObject field && field.TryGetValue(locale, out _))
                 {
@@ -46,8 +46,17 @@ public static class EntryToJsonConverter
                 }
                 else
                 {
-                    var localeJObject = new JObject { { locale, jTokenValue } };
-                    entryFields[id] = localeJObject;
+                    var jObject = entryField as JObject;
+                    if (jObject != null)
+                    {
+                        jObject.Add(locale, jTokenValue);
+                        entryFields[id] = jObject;
+                    }
+                    else
+                    {
+                        var localeJObject = new JObject { { locale, jTokenValue } };
+                        entryFields[id] = localeJObject;
+                    }
                 }
             }
             else
