@@ -23,6 +23,7 @@ using HtmlAgilityPack;
 using Newtonsoft.Json.Serialization;
 using System.Web;
 using Apps.Contentful.Models.Dtos;
+using Apps.Contentful.Utils;
 using RestSharp;
 
 namespace Apps.Contentful.Actions;
@@ -773,7 +774,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         bool ignoreLocalizationForLinks = false,
         bool ignoreLocalizationFields = false)
     {
-        var entry = await client.GetEntry(entryId);
+        var entry = await client.GetEntryWithErrorHandling(entryId);
         
         if(rootEntryId != entry.SystemProperties.Id && ignoredContentTypeIds.Contains(entry.SystemProperties.ContentType.SystemProperties.Id))
         {

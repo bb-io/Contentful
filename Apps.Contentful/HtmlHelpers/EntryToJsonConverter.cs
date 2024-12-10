@@ -34,47 +34,61 @@ public static class EntryToJsonConverter
     {
         var fieldId = htmlNode.Attributes[ConvertConstants.FieldIdAttribute].Value;
         var fieldType = htmlNode.Attributes[ConvertConstants.FieldTypeAttribute].Value;
+        
+        void SetEntryFieldValue(string id, object newValue)
+        {
+            var jTokenValue = JToken.FromObject(newValue);
+            if (entryFields.TryGetValue(id, out _))
+            {
+                if (entryFields[id] is JObject field && field.TryGetValue(locale, out _))
+                {
+                    entryFields[id]![locale] = jTokenValue;
+                }
+                else
+                {
+                    var localeJObject = new JObject { { locale, jTokenValue } };
+                    entryFields[id] = localeJObject;
+                }
+            }
+            else
+            {
+                var localeJObject = new JObject { { locale, jTokenValue } };
+                entryFields.Add(id, localeJObject);
+            }
+        }
 
         switch (fieldType)
         {
             case "Integer":
                 var intValue = Convert.ToInt32(htmlNode.InnerText);
-                entryFields[fieldId][locale] = intValue;
+                SetEntryFieldValue(fieldId, intValue);
                 break;
             case "Number":
                 var decimalValue = Convert.ToDecimal(htmlNode.InnerText);
-
-                if (decimalValue == Decimal.Floor(decimalValue))
-                {
-                    entryFields[fieldId][locale] = Decimal.ToInt64(decimalValue);
-                    break;
-                }
-
-                entryFields[fieldId][locale] = decimalValue;
-
+                SetEntryFieldValue(fieldId, decimalValue == Decimal.Floor(decimalValue) ? Decimal.ToInt64(decimalValue) : decimalValue);
                 break;
             case "Symbol" or "Text":
-                entryFields[fieldId][locale] = HttpUtility.HtmlDecode(htmlNode.InnerText);
+                SetEntryFieldValue(fieldId, HttpUtility.HtmlDecode(htmlNode.InnerText));
                 break;
             case "Object" or "Location":
                 var jsonValue = htmlNode.Attributes["data-contentful-json-value"].Value;
                 var jsonObject = JToken.Parse(HttpUtility.HtmlDecode(jsonValue));
-                entryFields[fieldId][locale] = jsonObject;
+                SetEntryFieldValue(fieldId, jsonObject);
                 break;
             case "Boolean":
                 var boolValue = Convert.ToBoolean(htmlNode.Attributes["data-contentful-bool-value"].Value);
-                entryFields[fieldId][locale] = boolValue;
+                SetEntryFieldValue(fieldId, boolValue);
                 break;
             case "RichText":
                 var htmlToRichTextConverter = new HtmlToRichTextConverter();
                 var richText = htmlToRichTextConverter.ToRichText(htmlNode.InnerHtml);
-                var serializerSettings = new JsonSerializerSettings()
+                var serializerSettings = new JsonSerializerSettings
                 {
                     ContractResolver = new CamelCasePropertyNamesContractResolver(),
                     NullValueHandling = NullValueHandling.Ignore
                 };
-                entryFields[fieldId][locale] =
-                    JObject.Parse(JsonConvert.SerializeObject(richText, serializerSettings));
+                var richTextValue = JObject.Parse(JsonConvert.SerializeObject(richText, serializerSettings));
+                SetEntryFieldValue(fieldId, richTextValue);
                 break;
             case "Link":
                 var linkType = htmlNode.Attributes["data-contentful-link-type"].Value;
@@ -91,7 +105,7 @@ public static class EntryToJsonConverter
                 };
                 if (linkType == "Asset")
                 {
-                    entryFields[fieldId]![locale] = JObject.Parse(JsonConvert.SerializeObject(linkData));
+                    SetEntryFieldValue(fieldId, JObject.Parse(JsonConvert.SerializeObject(linkData)));
                 }
                 else
                 {
@@ -131,8 +145,7 @@ public static class EntryToJsonConverter
                         if (arrayLocalized != null &&
                             arrayLocalized.Equals("true", StringComparison.OrdinalIgnoreCase))
                         {
-                            entryFields[fieldId]![locale] =
-                                JArray.Parse(JsonConvert.SerializeObject(arrayData));
+                            SetEntryFieldValue(fieldId, JArray.Parse(JsonConvert.SerializeObject(arrayData)));
                         }
                         else
                         {
@@ -148,8 +161,8 @@ public static class EntryToJsonConverter
                     }
                     else
                     {
-                        entryFields[fieldId][locale] =
-                            JArray.Parse(JsonConvert.SerializeObject(arrayData));
+                        var jArray = JArray.Parse(JsonConvert.SerializeObject(arrayData));
+                        SetEntryFieldValue(fieldId, jArray);
                     }
                 }
                 else
@@ -158,10 +171,10 @@ public static class EntryToJsonConverter
                         .Descendants()
                         .Where(x => x.Name == HtmlConstants.Li)
                         .Select(x => HttpUtility.HtmlDecode(x.InnerText));
-
-                    entryFields[fieldId][locale] = JArray.FromObject(arrayContent);
+                    
+                    SetEntryFieldValue(fieldId, JArray.FromObject(arrayContent));
                 }
-
+                
                 break;
         }
     }
