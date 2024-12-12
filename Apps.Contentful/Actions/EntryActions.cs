@@ -612,8 +612,13 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             }
             catch (Exception ex)
             {
+                if (ex.Message.Contains("archived"))
+                {
+                    continue;
+                }
+
                 throw new(
-                    $"Converting entry to HTML failed. Locale: {localeIdentifier.Locale}; Exception: {ex}; Entry: {JsonConvert.SerializeObject(entry)}; HTML: {entryToUpdate.HtmlNode.OuterHtml};");
+                    $"Converting entry to HTML failed. Entry ID: {entry.SystemProperties.Id};  Exception: {ex}; Locale: {localeIdentifier.Locale}; Entry: {JsonConvert.SerializeObject(entry)}; HTML: {entryToUpdate.HtmlNode.OuterHtml};");
             }
         }
     }
