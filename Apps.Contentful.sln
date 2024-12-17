@@ -5,11 +5,6 @@ VisualStudioVersion = 17.5.33424.131
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Apps.Contentful", "Apps.Contentful\Apps.Contentful.csproj", "{2A519758-C2DE-4D05-AF2C-9DA696101A05}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApp1", "ConsoleApp1\ConsoleApp1.csproj", "{E902BBC9-497F-404E-9BB7-37DC0B66D08C}"
-	ProjectSection(ProjectDependencies) = postProject
-		{2A519758-C2DE-4D05-AF2C-9DA696101A05} = {2A519758-C2DE-4D05-AF2C-9DA696101A05}
-	EndProjectSection
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
