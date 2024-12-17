@@ -26,4 +26,7 @@ public class GetEntryAsHtmlRequest
     
     [Display("Excluded content type IDs", Description = "All content type IDs in this collection will be omitted from the exported content"), DataSource(typeof(ContentModelDataSourceHandler))]
     public IEnumerable<string>? IgnoredContentTypeIds { get; set; }
+
+    [Display("Max depth for referenced entries", Description = "Maximum depth of nested reference entries to include")]
+    public int? MaxDepth { get; set; }
 }

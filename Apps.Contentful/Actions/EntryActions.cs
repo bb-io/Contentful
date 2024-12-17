@@ -568,7 +568,8 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             input.GetEmbeddedBlockContent ?? false,
             input.IgnoredFieldIds ?? new List<string>(),
             input.IgnoredContentTypeIds?.ToList() ?? new List<string>(),
-            entryIdentifier.EntryId);
+            entryIdentifier.EntryId,
+            input.MaxDepth);
 
         var htmlConverter = new EntryToHtmlConverter(InvocationContext, entryIdentifier.Environment);
         var resultHtml = htmlConverter.ToHtml(entriesContent, entryIdentifier.Locale, spaceId);
@@ -630,8 +631,11 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     private async Task<List<EntryContentDto>> GetLinkedEntriesContent(string entryId, string locale,
         ContentfulClient client,
         List<EntryContentDto> resultList, bool references, bool ignoreReferenceLocalization, bool hyperlinks,
-        bool inline, bool blocks, IEnumerable<string> ignoredFieldIds, List<string> ignoredContentTypeIds, string rootEntryId)
+        bool inline, bool blocks, IEnumerable<string> ignoredFieldIds, List<string> ignoredContentTypeIds, string rootEntryId, int? maxDepth =null, int currentDepth=0)
     {
+        if (maxDepth.HasValue && currentDepth >= maxDepth.Value)
+            return resultList;
+
         if (resultList.Any(x => x.Id == entryId))
             return resultList;
 
@@ -646,7 +650,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             resultList.Add(entryContent);
             foreach (var linkedEntryId in linkedIds)
                 await GetLinkedEntriesContent(linkedEntryId, locale, client, resultList, references,
-                    ignoreReferenceLocalization, hyperlinks, inline, blocks, ignoredFieldIds, ignoredContentTypeIds, rootEntryId);
+                    ignoreReferenceLocalization, hyperlinks, inline, blocks, ignoredFieldIds, ignoredContentTypeIds, rootEntryId, maxDepth, currentDepth+1);
 
             return resultList;
         }
