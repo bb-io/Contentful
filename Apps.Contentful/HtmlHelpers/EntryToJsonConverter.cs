@@ -34,7 +34,7 @@ public static class EntryToJsonConverter
     {
         var fieldId = htmlNode.Attributes[ConvertConstants.FieldIdAttribute].Value;
         var fieldType = htmlNode.Attributes[ConvertConstants.FieldTypeAttribute].Value;
-        
+
         void SetEntryFieldValue(string id, object newValue)
         {
             var jTokenValue = JToken.FromObject(newValue);
@@ -74,12 +74,17 @@ public static class EntryToJsonConverter
                 break;
             case "Number":
                 var decimalValue = Convert.ToDecimal(htmlNode.InnerText);
-                SetEntryFieldValue(fieldId, decimalValue == Decimal.Floor(decimalValue) ? Decimal.ToInt64(decimalValue) : decimalValue);
+                SetEntryFieldValue(fieldId,
+                    decimalValue == Decimal.Floor(decimalValue) ? Decimal.ToInt64(decimalValue) : decimalValue);
                 break;
             case "Symbol" or "Text":
                 SetEntryFieldValue(fieldId, HttpUtility.HtmlDecode(htmlNode.InnerText));
                 break;
-            case "Object" or "Location":
+            case "Object":
+                var parsedObject = ParseJsonObjectFromHtmlNode(htmlNode);
+                SetEntryFieldValue(fieldId, parsedObject);
+                break;
+            case "Location":
                 var jsonValue = htmlNode.Attributes["data-contentful-json-value"].Value;
                 var jsonObject = JToken.Parse(HttpUtility.HtmlDecode(jsonValue));
                 SetEntryFieldValue(fieldId, jsonObject);
@@ -180,11 +185,107 @@ public static class EntryToJsonConverter
                         .Descendants()
                         .Where(x => x.Name == HtmlConstants.Li)
                         .Select(x => HttpUtility.HtmlDecode(x.InnerText));
-                    
+
                     SetEntryFieldValue(fieldId, JArray.FromObject(arrayContent));
                 }
-                
+
                 break;
         }
+    }
+
+    private static JToken ParseJsonObjectFromHtmlNode(HtmlNode htmlNode)
+    {
+        // Try to find a dl with data-contentful-json-object='true' first
+        var dlNode = htmlNode.SelectSingleNode("./dl[@data-contentful-json-object='true']");
+        if (dlNode == null)
+        {
+            // If not found, fallback to any dl node
+            dlNode = htmlNode.SelectSingleNode("./dl");
+        }
+
+        if (dlNode == null)
+            return new JObject(); // No dl found, return empty object
+
+        return ParseDlAsObject(dlNode);
+    }
+
+    private static JToken ParseDlAsObject(HtmlNode dlNode)
+    {
+        var obj = new JObject();
+
+        // Look for direct dd children with data-json-key attributes
+        var ddNodes = dlNode.SelectNodes("./dd[@data-json-key]");
+        if (ddNodes == null)
+            return obj; // Empty object if no dd found
+
+        foreach (var dd in ddNodes)
+        {
+            var key = dd.GetAttributeValue("data-json-key", "");
+            var valueToken = ParseValueFromNode(dd);
+            obj[key] = valueToken;
+        }
+
+        return obj;
+    }
+
+    private static JToken ParseValueFromNode(HtmlNode node)
+    {
+        // Check if there's a nested object dl (with or without data-contentful-json-object='true')
+        // Priority: look for data-contentful-json-object='true' first
+        var dlChild = node.SelectSingleNode("./dl[@data-contentful-json-object='true']")
+                      ?? node.SelectSingleNode("./dl");
+
+        if (dlChild != null)
+        {
+            // Nested object
+            return ParseDlAsObject(dlChild);
+        }
+
+        // Check for array <ul>
+        var ulChild = node.SelectSingleNode("./ul");
+        if (ulChild != null)
+        {
+            // Array
+            return ParseUlAsArray(ulChild);
+        }
+
+        // Otherwise, treat as a string
+        var textValue = System.Web.HttpUtility.HtmlDecode(node.InnerText.Trim());
+        return JValue.FromObject(textValue);
+    }
+
+    private static JToken ParseUlAsArray(HtmlNode ulNode)
+    {
+        var array = new JArray();
+        var liNodes = ulNode.SelectNodes("./li");
+        if (liNodes != null)
+        {
+            foreach (var li in liNodes)
+            {
+                // Check for nested objects or arrays in li
+                var dlChild = li.SelectSingleNode("./dl[@data-contentful-json-object='true']")
+                              ?? li.SelectSingleNode("./dl");
+                if (dlChild != null)
+                {
+                    // Nested object in array
+                    array.Add(ParseDlAsObject(dlChild));
+                    continue;
+                }
+
+                var ulChild = li.SelectSingleNode("./ul");
+                if (ulChild != null)
+                {
+                    // Nested array in array
+                    array.Add(ParseUlAsArray(ulChild));
+                    continue;
+                }
+
+                // Otherwise, just text
+                var textValue = System.Web.HttpUtility.HtmlDecode(li.InnerText.Trim());
+                array.Add(JValue.FromObject(textValue));
+            }
+        }
+
+        return array;
     }
 }
