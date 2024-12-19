@@ -72,43 +72,33 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
         if (jsonToken == null || jsonToken.Type != JTokenType.Object)
             return null;
 
-        // Create a container <div> to hold the entire JSON structure
-        // and mark it as a JSON object container.
         var containerNode = doc.CreateElement("div");
         containerNode.SetAttributeValue(ConvertConstants.FieldTypeAttribute, field.Type);
         containerNode.SetAttributeValue(ConvertConstants.FieldIdAttribute, field.Id);
         containerNode.SetAttributeValue("data-contentful-json-object", "true");
 
-        // Convert the JObject to a <dl> definition list
         var dlNode = doc.CreateElement("dl");
         containerNode.AppendChild(dlNode);
 
-        // Recursive function to render JToken as HTML
         HtmlNode RenderToken(JToken token)
         {
             switch (token.Type)
             {
                 case JTokenType.Object:
-                    // For objects, create a <dl> and for each property create <dt> and <dd> pairs.
                     var innerDl = doc.CreateElement("dl");
                     innerDl.SetAttributeValue("data-contentful-json-object", "true");
 
                     foreach (var prop in ((JObject)token).Properties())
                     {
-                        // Create <dd> for the value
                         var ddNode = doc.CreateElement("dd");
                         ddNode.SetAttributeValue("data-json-key", prop.Name);
 
-                        // If value is a string, encode and place it directly
-                        // If it's another object/array, recursively render
                         if (prop.Value.Type == JTokenType.String)
                         {
-                            // Only string values are translatable text
                             ddNode.InnerHtml = System.Net.WebUtility.HtmlEncode(prop.Value.ToString());
                         }
                         else
                         {
-                            // For non-string values (object/array), recurse
                             var childNode = RenderToken(prop.Value);
                             ddNode.AppendChild(childNode);
                         }
@@ -119,7 +109,6 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
                     return innerDl;
 
                 case JTokenType.Array:
-                    // For arrays, create a <ul> and each element is a <li>
                     var ulNode = doc.CreateElement("ul");
 
                     foreach (var item in (JArray)token)
@@ -131,7 +120,6 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
                         }
                         else
                         {
-                            // If it's an object or array, recurse
                             var childNode = RenderToken(item);
                             liNode.AppendChild(childNode);
                         }
@@ -142,20 +130,17 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
                     return ulNode;
 
                 case JTokenType.String:
-                    // Just in case we get a string here directly
                     var textNode = doc.CreateElement("span");
                     textNode.InnerHtml = System.Net.WebUtility.HtmlEncode(token.ToString());
                     return textNode;
 
                 default:
-                    // For other types (numbers, bool, null), treat them as strings
                     var defaultNode = doc.CreateElement("span");
                     defaultNode.InnerHtml = System.Net.WebUtility.HtmlEncode(token.ToString() ?? "");
                     return defaultNode;
             }
         }
 
-        // Render the main object
         var rootObject = (JObject)jsonToken;
         foreach (var prop in rootObject.Properties())
         {
