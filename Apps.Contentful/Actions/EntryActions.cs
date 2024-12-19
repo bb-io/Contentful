@@ -548,14 +548,14 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     {
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var spaceId = Creds.Get("spaceId").Value;
-
+        
         var locales = await client.GetLocalesCollection();
         if (locales.All(x => x.Code != entryIdentifier.Locale))
         {
             var allLocales = string.Join(", ", locales.Select(x => x.Code));
             throw new Exception($"Locale {entryIdentifier.Locale} not found. Available locales: {allLocales}");
         }
-
+        
         var entriesContent = await GetLinkedEntriesContent(
             entryIdentifier.EntryId,
             entryIdentifier.Locale,
@@ -590,7 +590,14 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         [ActionParameter] FileRequest input)
     {
         var client = new ContentfulClient(Creds, localeIdentifier.Environment);
-
+        
+        var locales = await client.GetLocalesCollection();
+        if (locales.All(x => x.Code != localeIdentifier.Locale))
+        {
+            var allLocales = string.Join(", ", locales.Select(x => x.Code));
+            throw new Exception($"Locale {localeIdentifier.Locale} not found. Available locales: {allLocales}");
+        }
+        
         var file = await fileManagementClient.DownloadAsync(input.File);
         var html = Encoding.UTF8.GetString(await file.GetByteData());
 
