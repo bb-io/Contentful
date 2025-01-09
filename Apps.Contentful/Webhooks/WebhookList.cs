@@ -26,16 +26,22 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
 
     [Webhook("On entry saved", typeof(EntrySavedHandler), Description = "On entry saved")]
     public Task<WebhookResponse<FieldsChangedResponse>> EntrySaved(WebhookRequest webhookRequest,
-        [WebhookParameter] LocaleOptionalIdentifier localeOptionalIdentifier)
-        => HandleFieldsChangedResponse(webhookRequest, localeOptionalIdentifier);
+        [WebhookParameter] LocaleOptionalIdentifier localeOptionalIdentifier, 
+        [WebhookParameter] OptionalTagListIdentifier tags, 
+        [WebhookParameter] OptionalMultipleContentTypeIdentifier types)
+        => HandleFieldsChangedResponse(webhookRequest, localeOptionalIdentifier, tags, types);
 
     [Webhook("On entry auto saved", typeof(EntryAutoSavedHandler), Description = "On entry auto saved")]
     public Task<WebhookResponse<FieldsChangedResponse>> EntryAutoSaved(WebhookRequest webhookRequest,
-        [WebhookParameter] LocaleOptionalIdentifier localeOptionalIdentifier)
-        => HandleFieldsChangedResponse(webhookRequest, localeOptionalIdentifier);
+        [WebhookParameter] LocaleOptionalIdentifier localeOptionalIdentifier, 
+        [WebhookParameter] OptionalTagListIdentifier tags, 
+        [WebhookParameter] OptionalMultipleContentTypeIdentifier types)
+        => HandleFieldsChangedResponse(webhookRequest, localeOptionalIdentifier, tags, types);
 
     [Webhook("On entry published", typeof(EntryPublishedHandler), Description = "On entry published")]
-    public Task<WebhookResponse<EntryEntity>> EntryPublished(WebhookRequest webhookRequest, [WebhookParameter] OptionalTagListIdentifier tags, [WebhookParameter] OptionalMultipleContentTypeIdentifier types)
+    public Task<WebhookResponse<EntryEntity>> EntryPublished(WebhookRequest webhookRequest, 
+        [WebhookParameter] OptionalTagListIdentifier tags, 
+        [WebhookParameter] OptionalMultipleContentTypeIdentifier types)
         => HandleEntryWebhookResponse(webhookRequest, tags, types);
 
     [Webhook("On entry unpublished", typeof(EntryUnpublishedHandler), Description = "On entry unpublished")]
@@ -110,7 +116,9 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
         });
     }
     
-    private async Task<WebhookResponse<EntryEntity>> HandleEntryWebhookResponse(WebhookRequest webhookRequest, OptionalTagListIdentifier tagsInput, OptionalMultipleContentTypeIdentifier types)
+    private async Task<WebhookResponse<EntryEntity>> HandleEntryWebhookResponse(WebhookRequest webhookRequest, 
+        OptionalTagListIdentifier tagsInput, 
+        OptionalMultipleContentTypeIdentifier types)
     {
         var payload = JsonConvert.DeserializeObject<GenericEntryPayload>(webhookRequest.Body.ToString()!);
 
@@ -155,9 +163,11 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
         };
     }
     
-    private static Task<WebhookResponse<FieldsChangedResponse>> HandleFieldsChangedResponse(
+    private async Task<WebhookResponse<FieldsChangedResponse>> HandleFieldsChangedResponse(
         WebhookRequest webhookRequest,
-        LocaleOptionalIdentifier localeOptionalIdentifier)
+        LocaleOptionalIdentifier localeOptionalIdentifier,
+        OptionalTagListIdentifier tagsInput,
+        OptionalMultipleContentTypeIdentifier types)
     {
         var payload = JsonConvert.DeserializeObject<GenericEntryPayload>(webhookRequest.Body.ToString()!);
 
@@ -186,12 +196,43 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
                 });
             }
         }
+        
+        var entryActions = new EntryActions(invocationContext, null!);
+        var entry = await entryActions.GetEntry(new EntryIdentifier { EntryId = payload.Sys.Id, Environment = tagsInput.Environment });
+        
+        if (types.ContentModels != null && !types.ContentModels.Contains(entry.ContentTypeId))
+        {
+            return new()
+            {
+                HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
+                Result = null,
+                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
+            };
+        }
+        
+        if (tagsInput.TagIds != null && !tagsInput.TagIds.All(x => entry.TagIds.Contains(x)))
+        {
+            return new() {
+                HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
+                Result = null,
+                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
+            };
+        }
 
-        return Task.FromResult<WebhookResponse<FieldsChangedResponse>>(new()
+        if (tagsInput.ExcludeTags != null && tagsInput.ExcludeTags.Any(x => entry.TagIds.Contains(x)))
+        {
+            return new() {
+                HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
+                Result = null,
+                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
+            };
+        }
+
+        return new()
         {
             HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
             Result = changes
-        });
+        };
     }
 
     private static Task<WebhookResponse<AssetChangedResponse>> HandleAssetChangedResponse(
