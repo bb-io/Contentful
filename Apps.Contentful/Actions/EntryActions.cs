@@ -432,7 +432,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     {
         var client = new ContentfulClient(Creds, input.Environment);
 
-        var entry = await client.GetEntry(input.EntryId);
+        var entry = await ExceptionWrapper.ExecuteWithErrorHandling(async () => await client.GetEntry(input.EntryId));
         return new(entry);
     }
 
