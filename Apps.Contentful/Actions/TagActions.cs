@@ -6,6 +6,7 @@ using Apps.Contentful.Models.Identifiers;
 using Apps.Contentful.Models.Requests.Base;
 using Apps.Contentful.Models.Requests.Tags;
 using Apps.Contentful.Models.Responses.Tags;
+using Apps.Contentful.Utils;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Invocation;
@@ -64,7 +65,8 @@ public class TagActions : ContentfulInvocable
     [Action("Add tag to entry", Description = "Add specific tag to an entry")]
     public async Task AddEntryTag([ActionParameter] EntryTagIdentifier input)
     {
-        var entry = await new ContentfulClient(Creds, input.Environment).GetEntry(input.EntryId);
+        var client = new ContentfulClient(Creds, input.Environment);
+        var entry = await ExceptionWrapper.ExecuteWithErrorHandling(async () => await client.GetEntry(input.EntryId));
 
         var existingTags = entry.Metadata.Tags
             .Select(x => x.Sys.Id).ToArray();

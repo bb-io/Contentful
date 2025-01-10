@@ -1,8 +1,8 @@
 ﻿using System.Net;
 using Apps.Contentful.Constants;
-using Apps.Contentful.Models.Exceptions;
 using Apps.Contentful.Models.Wrappers;
 using Blackbird.Applications.Sdk.Common.Authentication;
+using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Utils.Extensions.Sdk;
 using Blackbird.Applications.Sdk.Utils.Extensions.String;
 using Blackbird.Applications.Sdk.Utils.RestSharp;
@@ -91,7 +91,8 @@ public class ContentfulRestClient(AuthenticationCredentialsProvider[] creds, str
         }
 
         var fullMessage = error["message"]?.ToString() ?? "Unknown error";
-        return new ApiValidationException(fullMessage, errorMessages);
+        var errors = string.Join("; ", errorMessages);
+        return new PluginApplicationException($"{fullMessage} - {errors}");
     }
 
     private static string GetEnvironmentSegment(string? environment) =>
