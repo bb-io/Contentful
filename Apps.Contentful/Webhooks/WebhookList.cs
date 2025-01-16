@@ -22,27 +22,30 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
 
     [Webhook("On entry created", typeof(EntryCreatedHandler), Description = "On entry created")]
     public Task<WebhookResponse<EntryEntity>> EntryCreated(WebhookRequest webhookRequest, [WebhookParameter] OptionalTagListIdentifier tags, [WebhookParameter] OptionalMultipleContentTypeIdentifier types)
-        => HandleEntryWebhookResponse(webhookRequest, tags, types);
+        => HandleEntryWebhookResponse(webhookRequest, tags, types, new OptionalEntryIdentifier());
 
     [Webhook("On entry saved", typeof(EntrySavedHandler), Description = "On entry saved")]
     public Task<WebhookResponse<FieldsChangedResponse>> EntrySaved(WebhookRequest webhookRequest,
+        [WebhookParameter] OptionalEntryIdentifier optionalEntryIdentifier,
         [WebhookParameter] LocaleOptionalIdentifier localeOptionalIdentifier, 
         [WebhookParameter] OptionalTagListIdentifier tags, 
         [WebhookParameter] OptionalMultipleContentTypeIdentifier types)
-        => HandleFieldsChangedResponse(webhookRequest, localeOptionalIdentifier, tags, types);
+        => HandleFieldsChangedResponse(webhookRequest, localeOptionalIdentifier, tags, types, optionalEntryIdentifier);
 
     [Webhook("On entry auto saved", typeof(EntryAutoSavedHandler), Description = "On entry auto saved")]
     public Task<WebhookResponse<FieldsChangedResponse>> EntryAutoSaved(WebhookRequest webhookRequest,
+        [WebhookParameter] OptionalEntryIdentifier optionalEntryIdentifier,
         [WebhookParameter] LocaleOptionalIdentifier localeOptionalIdentifier, 
         [WebhookParameter] OptionalTagListIdentifier tags, 
         [WebhookParameter] OptionalMultipleContentTypeIdentifier types)
-        => HandleFieldsChangedResponse(webhookRequest, localeOptionalIdentifier, tags, types);
+        => HandleFieldsChangedResponse(webhookRequest, localeOptionalIdentifier, tags, types, optionalEntryIdentifier);
 
     [Webhook("On entry published", typeof(EntryPublishedHandler), Description = "On entry published")]
-    public Task<WebhookResponse<EntryEntity>> EntryPublished(WebhookRequest webhookRequest, 
+    public Task<WebhookResponse<EntryEntity>> EntryPublished(WebhookRequest webhookRequest,
+        [WebhookParameter] OptionalEntryIdentifier optionalEntryIdentifier,
         [WebhookParameter] OptionalTagListIdentifier tags, 
         [WebhookParameter] OptionalMultipleContentTypeIdentifier types)
-        => HandleEntryWebhookResponse(webhookRequest, tags, types);
+        => HandleEntryWebhookResponse(webhookRequest, tags, types, optionalEntryIdentifier);
 
     [Webhook("On entry unpublished", typeof(EntryUnpublishedHandler), Description = "On entry unpublished")]
     public Task<WebhookResponse<EntityWebhookResponse>> EntryUnpublished(WebhookRequest webhookRequest)
@@ -118,7 +121,9 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
     
     private async Task<WebhookResponse<EntryEntity>> HandleEntryWebhookResponse(WebhookRequest webhookRequest, 
         OptionalTagListIdentifier tagsInput, 
-        OptionalMultipleContentTypeIdentifier types)
+        OptionalMultipleContentTypeIdentifier types, 
+        OptionalEntryIdentifier optionalEntryIdentifier
+        )
     {
         var payload = JsonConvert.DeserializeObject<GenericEntryPayload>(webhookRequest.Body.ToString()!);
 
@@ -156,6 +161,16 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
             };
         }
 
+        if (optionalEntryIdentifier.EntryId != null && entry.Id != optionalEntryIdentifier.EntryId)
+        {
+            return new()
+            {
+                HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
+                Result = null,
+                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
+            };
+        }
+
         return new()
         {
             HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
@@ -167,7 +182,9 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
         WebhookRequest webhookRequest,
         LocaleOptionalIdentifier localeOptionalIdentifier,
         OptionalTagListIdentifier tagsInput,
-        OptionalMultipleContentTypeIdentifier types)
+        OptionalMultipleContentTypeIdentifier types,
+        OptionalEntryIdentifier optionalEntryIdentifier
+        )
     {
         var payload = JsonConvert.DeserializeObject<GenericEntryPayload>(webhookRequest.Body.ToString()!);
 
@@ -222,6 +239,16 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
         if (tagsInput.ExcludeTags != null && tagsInput.ExcludeTags.Any(x => entry.TagIds.Contains(x)))
         {
             return new() {
+                HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
+                Result = null,
+                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
+            };
+        }
+
+        if (optionalEntryIdentifier.EntryId != null && entry.Id != optionalEntryIdentifier.EntryId)
+        {
+            return new()
+            {
                 HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
                 Result = null,
                 ReceivedWebhookRequestType = WebhookRequestType.Preflight,
