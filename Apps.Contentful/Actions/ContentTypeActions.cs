@@ -1,6 +1,7 @@
 ﻿using Apps.Contentful.Api;
 using Apps.Contentful.Models.Requests;
 using Apps.Contentful.Models.Responses;
+using Apps.Contentful.Utils;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Authentication;
@@ -22,7 +23,8 @@ public class ContentTypeActions(InvocationContext invocationContext, IFileManage
     {
         var client = new ContentfulClient(Creds, request.Environment);
         var spaceId = Creds.First(p => p.KeyName == "spaceId").Value;
-        var contentTypes = await client.GetContentTypes(spaceId, CancellationToken.None);
+        var contentTypes = await ExceptionWrapper.ExecuteWithErrorHandling(async () => 
+            await client.GetContentTypes(spaceId, CancellationToken.None));
 
         var enumerable = contentTypes as ContentType[] ?? contentTypes.ToArray();
         return new SearchContentTypesResponse
