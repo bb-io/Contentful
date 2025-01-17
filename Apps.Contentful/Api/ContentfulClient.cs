@@ -30,7 +30,14 @@ public class ContentfulClient : ContentfulManagementClient
             .WaitAndRetryAsync(RetryCount, (_) => TimeSpan.Zero, (exception, _) =>
             {
                 if (exception is ContentfulRateLimitException contentfulRateLimitException)
+                {
                     return Task.Delay(TimeSpan.FromSeconds(contentfulRateLimitException.SecondsUntilNextRequest + 5));
+                }
+
+                if (exception.Message.Contains("Version mismatch error"))
+                {
+                    return Task.Delay(TimeSpan.FromSeconds(5));
+                }
 
                 return Task.CompletedTask;
             });

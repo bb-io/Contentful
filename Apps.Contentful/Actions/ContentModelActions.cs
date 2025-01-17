@@ -8,6 +8,8 @@ using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using RestSharp;
 using Apps.Contentful.Dtos.Raw;
+using Apps.Contentful.Utils;
+
 namespace Apps.Contentful.Actions;
 
 [ActionList]
@@ -32,7 +34,8 @@ public class ContentModelActions(InvocationContext invocationContext) : Contentf
     {
         var client = new ContentfulClient(InvocationContext.AuthenticationCredentialsProviders, input.Environment);
 
-        var contentType = await client.GetContentType(input.ContentModelId);
+        var contentType = await ExceptionWrapper.ExecuteWithErrorHandling(async () => 
+            await client.GetContentType(input.ContentModelId));
         return new(contentType);
     }
 }

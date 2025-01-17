@@ -24,6 +24,7 @@ using Newtonsoft.Json.Serialization;
 using System.Web;
 using Apps.Contentful.Models.Dtos;
 using Apps.Contentful.Utils;
+using Blackbird.Applications.Sdk.Common.Exceptions;
 using RestSharp;
 
 namespace Apps.Contentful.Actions;
@@ -70,7 +71,8 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         [ActionParameter] FieldIdentifier fieldIdentifier)
     {
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
-        var entry = await client.GetEntry(entryIdentifier.EntryId);
+        var entry = await ExceptionWrapper.ExecuteWithErrorHandling(async () =>
+            await client.GetEntry(entryIdentifier.EntryId));
         var field = ((JObject)entry.Fields)[fieldIdentifier.FieldId]?[entryIdentifier.Locale];
 
         if (field is null)
@@ -80,7 +82,8 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             };
 
         var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
-        var contentType = await client.GetContentType(contentTypeId);
+        var contentType =
+            await ExceptionWrapper.ExecuteWithErrorHandling(async () => await client.GetContentType(contentTypeId));
         var fieldType = contentType.Fields.First(f => f.Id == fieldIdentifier.FieldId).Type;
         string textContent;
 
@@ -97,9 +100,14 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             textContent = result.ToString();
         }
         else if (fieldType == "Text" || fieldType == "Symbol")
+        {
             textContent = field.ToString();
+        }
         else
-            throw new Exception("The specified field must be of the short text, long text or rich text type.");
+        {
+            throw new PluginMisconfigurationException(
+                "The specified field must be of the short text, long text or rich text type.");
+        }
 
         return new GetTextContentResponse { TextContent = textContent };
     }
@@ -112,10 +120,12 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         [ActionParameter] FieldIdentifier fieldIdentifier)
     {
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
-        var entry = await client.GetEntry(entryIdentifier.EntryId);
+        var entry = await ExceptionWrapper.ExecuteWithErrorHandling(async () =>
+            await client.GetEntry(entryIdentifier.EntryId));
         var field = ((JObject)entry.Fields)[fieldIdentifier.FieldId][entryIdentifier.Locale];
         var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
-        var contentType = await client.GetContentType(contentTypeId);
+        var contentType =
+            await ExceptionWrapper.ExecuteWithErrorHandling(async () => await client.GetContentType(contentTypeId));
         var fieldType = contentType.Fields.First(f => f.Id == fieldIdentifier.FieldId).Type;
         string htmlContent;
 
@@ -127,9 +137,14 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             htmlContent = richTextToHtmlConverter.ToHtml();
         }
         else if (fieldType == "Text" || fieldType == "Symbol")
+        {
             htmlContent = $"<p>{field}</p>";
+        }
         else
-            throw new Exception("The specified field must be of the short text, long text or rich text type.");
+        {
+            throw new PluginMisconfigurationException(
+                "The specified field must be of the short text, long text or rich text type.");
+        }
 
         string html = $@"
         <html>
@@ -159,10 +174,12 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         [ActionParameter] [Display("Text")] string text)
     {
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
-        var entry = await client.GetEntry(entryIdentifier.EntryId);
+        var entry = await ExceptionWrapper.ExecuteWithErrorHandling(async () =>
+            await client.GetEntry(entryIdentifier.EntryId));
         var fields = (JObject)entry.Fields;
         var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
-        var contentType = await client.GetContentType(contentTypeId);
+        var contentType =
+            await ExceptionWrapper.ExecuteWithErrorHandling(async () => await client.GetContentType(contentTypeId));
         var fieldType = contentType.Fields.First(f => f.Id == fieldIdentifier.FieldId).Type;
 
         if (fieldType == "RichText")
@@ -177,11 +194,17 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                 JObject.Parse(JsonConvert.SerializeObject(richText, serializerSettings));
         }
         else if (fieldType == "Text" || fieldType == "Symbol")
+        {
             fields[fieldIdentifier.FieldId][entryIdentifier.Locale] = text;
+        }
         else
-            throw new Exception("The specified field must be of the short text, long text or rich text type.");
+        {
+            throw new PluginMisconfigurationException(
+                "The specified field must be of the short text, long text or rich text type.");
+        }
 
-        await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version);
+        await ExceptionWrapper.ExecuteWithErrorHandling(async () =>
+            await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version));
     }
 
     [Action("Get IDs from HTML file", Description = "Extract entry and field IDs from HTML file.")]
@@ -221,14 +244,17 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
         var (extractedEntryId, extractedFieldId, locale) = ExtractIdsFromHtml(html);
 
-        var entryId = entryIdentifier.EntryId ?? extractedEntryId ?? throw new Exception("Entry ID is required.");
-        var fieldId = fieldIdentifier.FieldId ?? extractedFieldId ?? throw new Exception("Field ID is required.");
+        var entryId = entryIdentifier.EntryId ?? extractedEntryId
+            ?? throw new PluginMisconfigurationException("Entry ID is empty. Please provide a valid ID");
+        var fieldId = fieldIdentifier.FieldId ?? extractedFieldId
+            ?? throw new PluginMisconfigurationException("Field ID is empty. Please provide a valid ID");
 
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
-        var entry = await client.GetEntry(entryId);
+        var entry = await ExceptionWrapper.ExecuteWithErrorHandling(async () => await client.GetEntry(entryId));
         var fields = (JObject)entry.Fields;
         var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
-        var contentType = await client.GetContentType(contentTypeId);
+        var contentType =
+            await ExceptionWrapper.ExecuteWithErrorHandling(async () => await client.GetContentType(contentTypeId));
         var fieldType = contentType.Fields.First(f => f.Id == fieldId).Type;
 
         if (fieldType == "RichText")
@@ -253,10 +279,12 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         }
         else
         {
-            throw new Exception("The specified field must be of the short text, long text or rich text type.");
+            throw new PluginMisconfigurationException(
+                "The specified field must be of the short text, long text or rich text type.");
         }
 
-        await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version);
+        await ExceptionWrapper.ExecuteWithErrorHandling(async () =>
+            await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version));
     }
 
     #endregion
@@ -269,7 +297,8 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         [ActionParameter] FieldIdentifier fieldIdentifier)
     {
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
-        var entry = await client.GetEntry(entryIdentifier.EntryId);
+        var entry = await ExceptionWrapper.ExecuteWithErrorHandling(async () =>
+            await client.GetEntry(entryIdentifier.EntryId));
         var fields = (JObject)entry.Fields;
         return new GetNumberContentResponse
         {
@@ -284,10 +313,12 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         [ActionParameter] [Display("Number")] int number)
     {
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
-        var entry = await client.GetEntry(entryIdentifier.EntryId);
+        var entry = await ExceptionWrapper.ExecuteWithErrorHandling(async () =>
+            await client.GetEntry(entryIdentifier.EntryId));
         var fields = (JObject)entry.Fields;
         fields[fieldIdentifier.FieldId][entryIdentifier.Locale] = number;
-        await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version);
+        await ExceptionWrapper.ExecuteWithErrorHandling(async () =>
+            await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version));
     }
 
     #endregion
@@ -300,7 +331,8 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         [ActionParameter] FieldIdentifier fieldIdentifier)
     {
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
-        var entry = await client.GetEntry(entryIdentifier.EntryId);
+        var entry = await ExceptionWrapper.ExecuteWithErrorHandling(async () =>
+            await client.GetEntry(entryIdentifier.EntryId));
         var fields = (JObject)entry.Fields;
         return new GetBoolContentResponse
         {
@@ -315,10 +347,12 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         [ActionParameter] [Display("Boolean")] bool boolean)
     {
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
-        var entry = await client.GetEntry(entryIdentifier.EntryId);
+        var entry = await ExceptionWrapper.ExecuteWithErrorHandling(async () =>
+            await client.GetEntry(entryIdentifier.EntryId));
         var fields = (JObject)entry.Fields;
         fields[fieldIdentifier.FieldId][entryIdentifier.Locale] = boolean;
-        await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version);
+        await ExceptionWrapper.ExecuteWithErrorHandling(async () =>
+            await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version));
     }
 
     #endregion
@@ -331,15 +365,16 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         [ActionParameter] FieldIdentifier fieldIdentifier)
     {
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
-        var entry = await client.GetEntry(entryIdentifier.EntryId);
+        var entry = await ExceptionWrapper.ExecuteWithErrorHandling(async () =>
+            await client.GetEntry(entryIdentifier.EntryId));
         var fields = (JObject)entry.Fields;
 
         var assetId = fields[fieldIdentifier.FieldId][entryIdentifier.Locale]["sys"]["id"].ToString();
-        var asset = await client.GetAsset(assetId);
+        var asset = await ExceptionWrapper.ExecuteWithErrorHandling(async () => await client.GetAsset(assetId));
 
         if (!asset.Files.TryGetValue(entryIdentifier.Locale, out var fileData))
         {
-            throw new("No asset with the provided locale found");
+            throw new PluginMisconfigurationException("No asset with the provided locale found.");
         }
 
         return new()
@@ -365,13 +400,15 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                 id = assetEntryIdentifier.AssetId
             }
         };
-        var entry = await client.GetEntry(assetEntryIdentifier.EntryId);
+        var entry = await ExceptionWrapper.ExecuteWithErrorHandling(async () =>
+            await client.GetEntry(assetEntryIdentifier.EntryId));
         var fields = (JObject)entry.Fields;
 
         fields[fieldIdentifier.FieldId] ??= new JObject();
         fields[fieldIdentifier.FieldId][assetEntryIdentifier.Locale] =
             JObject.Parse(JsonConvert.SerializeObject(payload));
-        await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version);
+        await ExceptionWrapper.ExecuteWithErrorHandling(async () =>
+            await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version));
     }
 
     #endregion
@@ -385,11 +422,20 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
         var queryString = HttpUtility.ParseQueryString(string.Empty);
 
-        if (request.ContentModelId != null) queryString.Add("content_type", request.ContentModelId);
+        if (request.ContentModelId != null)
+        {
+            queryString.Add("content_type", request.ContentModelId);
+        }
+
         if (request.UpdatedFrom.HasValue)
+        {
             queryString.Add("sys.updatedAt[gte]", request.UpdatedFrom.Value.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'"));
+        }
+
         if (request.UpdatedTo.HasValue)
+        {
             queryString.Add("sys.updatedAt[lte]", request.UpdatedTo.Value.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'"));
+        }
 
         IEnumerable<Entry<object>> entries;
         if (request.Published.HasValue && request.Published.Value)
@@ -431,7 +477,6 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     public async Task<EntryEntity> GetEntry([ActionParameter] EntryIdentifier input)
     {
         var client = new ContentfulClient(Creds, input.Environment);
-
         var entry = await ExceptionWrapper.ExecuteWithErrorHandling(async () => await client.GetEntry(input.EntryId));
         return new(entry);
     }
@@ -440,7 +485,8 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     public async Task<EntryIdentifier> AddNewEntry([ActionParameter] ContentModelIdentifier contentModelIdentifier)
     {
         var client = new ContentfulClient(Creds, contentModelIdentifier.Environment);
-        var result = await client.CreateEntry(new Entry<dynamic>(), contentModelIdentifier.ContentModelId);
+        var result = await ExceptionWrapper.ExecuteWithErrorHandling(async () =>
+            await client.CreateEntry(new Entry<dynamic>(), contentModelIdentifier.ContentModelId));
         return new EntryIdentifier
         {
             EntryId = result.SystemProperties.Id
@@ -451,31 +497,38 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     public async Task DeleteEntry([ActionParameter] EntryIdentifier entryIdentifier)
     {
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
-        var entry = await client.GetEntry(entryIdentifier.EntryId);
-        await client.DeleteEntry(entryIdentifier.EntryId, version: (int)entry.SystemProperties.Version);
+        var entry = await ExceptionWrapper.ExecuteWithErrorHandling(async () =>
+            await client.GetEntry(entryIdentifier.EntryId));
+        await ExceptionWrapper.ExecuteWithErrorHandling(async () =>
+            await client.DeleteEntry(entryIdentifier.EntryId, version: (int)entry.SystemProperties.Version));
     }
 
     [Action("Publish entry", Description = "Publish specified entry.")]
     public async Task PublishEntry([ActionParameter] EntryIdentifier entryIdentifier)
     {
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
-        var entry = await client.GetEntry(entryIdentifier.EntryId);
-        await client.PublishEntry(entryIdentifier.EntryId, version: (int)entry.SystemProperties.Version);
+        var entry = await ExceptionWrapper.ExecuteWithErrorHandling(async () =>
+            await client.GetEntry(entryIdentifier.EntryId));
+        await ExceptionWrapper.ExecuteWithErrorHandling(async () =>
+            await client.PublishEntry(entryIdentifier.EntryId, version: (int)entry.SystemProperties.Version));
     }
 
     [Action("Unpublish entry", Description = "Unpublish specified entry.")]
     public async Task UnpublishEntry([ActionParameter] EntryIdentifier entryIdentifier)
     {
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
-        var entry = await client.GetEntry(entryIdentifier.EntryId);
-        await client.UnpublishEntry(entryIdentifier.EntryId, version: (int)entry.SystemProperties.Version);
+        var entry = await ExceptionWrapper.ExecuteWithErrorHandling(async () =>
+            await client.GetEntry(entryIdentifier.EntryId));
+        await ExceptionWrapper.ExecuteWithErrorHandling(async () =>
+            await client.UnpublishEntry(entryIdentifier.EntryId, version: (int)entry.SystemProperties.Version));
     }
 
     [Action("Get locales", Description = "Get the default locale and all other locales in convenient codes form.")]
     public async Task<GetLocalesResponse> GetLocales([ActionParameter] EnvironmentIdentifier environment)
     {
         var client = new ContentfulClient(Creds, environment.Environment);
-        var locales = await client.GetLocalesCollection();
+        var locales = await ExceptionWrapper.ExecuteWithErrorHandling(async () => 
+            await client.GetLocalesCollection());
         var defaultLocale = locales.FirstOrDefault(x => x.Default)?.Code;
         var otherLocales = locales.Where(x => !x.Default).Select(x => x.Code).ToList();
 
@@ -493,8 +546,10 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     {
         var client = new ContentfulClient(InvocationContext.AuthenticationCredentialsProviders,
             entryIdentifier.Environment);
-        var entry = await client.GetEntry(entryIdentifier.EntryId);
-        var availableLocales = (await client.GetLocalesCollection()).Select(l => l.Code);
+        var entry = await ExceptionWrapper.ExecuteWithErrorHandling(async () => await client.GetEntry(entryIdentifier.EntryId));
+
+        var locales = await ExceptionWrapper.ExecuteWithErrorHandling(async () => await client.GetLocalesCollection());
+        var availableLocales = locales.Select(l => l.Code);
         var field = ((JObject)entry.Fields)[fieldIdentifier.FieldId];
         IEnumerable<string> missingLocales;
 
@@ -518,8 +573,10 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         var client = new ContentfulClient(InvocationContext.AuthenticationCredentialsProviders,
             entryIdentifier.Environment);
         var availableLocales = (await client.GetLocalesCollection()).Select(l => l.Code).ToArray();
-        var entry = await client.GetEntry(entryIdentifier.EntryId);
-        var contentModel = await client.GetContentType(entry.SystemProperties.ContentType.SystemProperties.Id);
+        var entry = await ExceptionWrapper.ExecuteWithErrorHandling(async () => 
+            await client.GetEntry(entryIdentifier.EntryId));
+        var contentModel = await ExceptionWrapper.ExecuteWithErrorHandling(async () => 
+            await client.GetContentType(entry.SystemProperties.ContentType.SystemProperties.Id));
         var contentModelLocalizableFields = contentModel.Fields.Where(f => f.Localized);
         var entryFields = (JObject)entry.Fields;
         var missingLocales = new HashSet<string>();
@@ -548,14 +605,14 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     {
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var spaceId = Creds.Get("spaceId").Value;
-        
+
         var locales = await client.GetLocalesCollection();
         if (locales.All(x => x.Code != entryIdentifier.Locale))
         {
             var allLocales = string.Join(", ", locales.Select(x => x.Code));
             throw new Exception($"Locale {entryIdentifier.Locale} not found. Available locales: {allLocales}");
         }
-        
+
         var entriesContent = await GetLinkedEntriesContent(
             entryIdentifier.EntryId,
             entryIdentifier.Locale,
@@ -590,14 +647,16 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         [ActionParameter] FileRequest input)
     {
         var client = new ContentfulClient(Creds, localeIdentifier.Environment);
-        
+
         var locales = await client.GetLocalesCollection();
         if (locales.All(x => x.Code != localeIdentifier.Locale))
         {
             var allLocales = string.Join(", ", locales.Select(x => x.Code));
-            throw new Exception($"Locale {localeIdentifier.Locale} not found. Available locales: {allLocales}");
+            throw new PluginMisconfigurationException(
+                $"Locale {localeIdentifier.Locale} not found. Please specify a valid locale. " +
+                $"Available locales: {allLocales}");
         }
-        
+
         var file = await fileManagementClient.DownloadAsync(input.File);
         var html = Encoding.UTF8.GetString(await file.GetByteData());
 
@@ -615,8 +674,11 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                 if (JToken.DeepEquals(oldEntryFields.Escape(), (entry.Fields as JObject)!.Escape()))
                     continue;
 
-                await client.ExecuteWithErrorHandling(() =>
-                    client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version));
+                await client.ExecuteWithErrorHandling(async () =>
+                {
+                    var entryVersion = await client.GetEntry(entryToUpdate.EntryId);
+                    return await client.CreateOrUpdateEntry(entry, version: entryVersion.SystemProperties.Version);
+                });
             }
             catch (Exception ex)
             {
@@ -625,8 +687,17 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                     continue;
                 }
 
+                if (ex.Message.Contains("Version mismatch error") 
+                    || ex.Message.Contains("Internal server") 
+                    || ex.Message.Contains("Validation error"))
+                {
+                    throw new PluginApplicationException($"Converting entry to JSON failed. " +
+                                                         $"Entry ID: {entry.SystemProperties.Id}; " +
+                                                         $"Error: {ex.Message}");
+                }
+
                 throw new(
-                    $"Converting entry to HTML failed. Entry ID: {entry.SystemProperties.Id};  Exception: {ex}; Locale: {localeIdentifier.Locale}; Entry: {JsonConvert.SerializeObject(entry)}; HTML: {entryToUpdate.HtmlNode.OuterHtml};");
+                    $"Converting entry to JSON failed. Entry ID: {entry.SystemProperties.Id};  Exception: {ex}; Locale: {localeIdentifier.Locale}; Entry: {JsonConvert.SerializeObject(entry)}; HTML: {entryToUpdate.HtmlNode.OuterHtml};");
             }
         }
     }
@@ -638,7 +709,8 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     private async Task<List<EntryContentDto>> GetLinkedEntriesContent(string entryId, string locale,
         ContentfulClient client,
         List<EntryContentDto> resultList, bool references, bool ignoreReferenceLocalization, bool hyperlinks,
-        bool inline, bool blocks, IEnumerable<string> ignoredFieldIds, List<string> ignoredContentTypeIds, string rootEntryId, int? maxDepth =null, int currentDepth=0)
+        bool inline, bool blocks, IEnumerable<string> ignoredFieldIds, List<string> ignoredContentTypeIds,
+        string rootEntryId, int? maxDepth = null, int currentDepth = 0)
     {
         if (maxDepth.HasValue && currentDepth >= maxDepth.Value)
             return resultList;
@@ -647,8 +719,9 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             return resultList;
 
         var entryContent = await client.ExecuteWithErrorHandling(() =>
-            GetEntryContent(entryId, client, ignoredFieldIds, ignoredContentTypeIds, rootEntryId, ignoreReferenceLocalization));
-        
+            GetEntryContent(entryId, client, ignoredFieldIds, ignoredContentTypeIds, rootEntryId,
+                ignoreReferenceLocalization));
+
         if (entryContent != null)
         {
             var linkedIds = GetLinkedEntryIds(entryContent, locale, references, hyperlinks, inline, blocks).Distinct()
@@ -657,11 +730,12 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             resultList.Add(entryContent);
             foreach (var linkedEntryId in linkedIds)
                 await GetLinkedEntriesContent(linkedEntryId, locale, client, resultList, references,
-                    ignoreReferenceLocalization, hyperlinks, inline, blocks, ignoredFieldIds, ignoredContentTypeIds, rootEntryId, maxDepth, currentDepth+1);
+                    ignoreReferenceLocalization, hyperlinks, inline, blocks, ignoredFieldIds, ignoredContentTypeIds,
+                    rootEntryId, maxDepth, currentDepth + 1);
 
             return resultList;
         }
-        
+
         return resultList;
     }
 
@@ -791,8 +865,9 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         bool ignoreLocalizationFields = false)
     {
         var entry = await client.GetEntryWithErrorHandling(entryId);
-        
-        if(rootEntryId != entry.SystemProperties.Id && ignoredContentTypeIds.Contains(entry.SystemProperties.ContentType.SystemProperties.Id))
+
+        if (rootEntryId != entry.SystemProperties.Id &&
+            ignoredContentTypeIds.Contains(entry.SystemProperties.ContentType.SystemProperties.Id))
         {
             return null;
         }
