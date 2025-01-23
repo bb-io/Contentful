@@ -606,7 +606,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var spaceId = Creds.Get("spaceId").Value;
 
-        var locales = await client.GetLocalesCollection();
+        var locales = await ExceptionWrapper.ExecuteWithErrorHandling(async () =>await client.GetLocalesCollection());
         if (locales.All(x => x.Code != entryIdentifier.Locale))
         {
             var allLocales = string.Join(", ", locales.Select(x => x.Code));
@@ -649,7 +649,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     {
         var client = new ContentfulClient(Creds, localeIdentifier.Environment);
 
-        var locales = await client.GetLocalesCollection();
+        var locales = await ExceptionWrapper.ExecuteWithErrorHandling(async () =>await client.GetLocalesCollection());
         if (locales.All(x => x.Code != localeIdentifier.Locale))
         {
             var allLocales = string.Join(", ", locales.Select(x => x.Code));
@@ -689,6 +689,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                 }
 
                 if (ex.Message.Contains("Version mismatch error") 
+                    || ex.Message.Contains("The resource could not be found")
                     || ex.Message.Contains("Internal server") 
                     || ex.Message.Contains("Validation error"))
                 {
@@ -881,7 +882,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         }
 
         var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
-        var contentType = await client.GetContentType(contentTypeId);
+        var contentType = await ExceptionWrapper.ExecuteWithErrorHandling(async () =>await client.GetContentType(contentTypeId));
 
         if (ignoreLocalizationForLinks)
         {
