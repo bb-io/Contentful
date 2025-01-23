@@ -1,4 +1,5 @@
 using Apps.Contentful.DataSourceHandlers;
+using Apps.Contentful.DataSourceHandlers.Tags;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 
@@ -29,4 +30,7 @@ public class GetEntryAsHtmlRequest
 
     [Display("Max depth for referenced entries", Description = "Maximum depth of nested reference entries to include")]
     public int? MaxDepth { get; set; }
+    
+    [Display("Exclude tags"), DataSource(typeof(ListEntriesTagDataHandler))]
+    public IEnumerable<string>? ExcludeTags { get; set; }
 }

@@ -4,12 +4,8 @@ using Blackbird.Applications.Sdk.Common.Invocation;
 
 namespace Apps.Contentful.DataSourceHandlers.Tags;
 
-public class ListEntriesTagDataHandler : TagDataHandler
-{
-    public ListEntriesTagDataHandler(InvocationContext invocationContext, [ActionParameter] ListEntriesRequest input) : base(invocationContext, new()
+public class ListEntriesTagDataHandler(InvocationContext invocationContext, [ActionParameter] ListEntriesRequest input)
+    : TagDataHandler(invocationContext, new()
     {
         Environment = input.Environment
-    })
-    {
-    }
-}
+    });

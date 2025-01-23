@@ -12,8 +12,7 @@ namespace Apps.Contentful.Models.Identifiers
         public IEnumerable<string>? TagIds { get; set; }
 
         [Display("Exclude tag IDs",
-            Description = "Filter the incoming events to only trigger when all of the following tags are not present")]
-        [DataSource(typeof(OptionalTagDataHandler))]
+            Description = "Filter the incoming events to only trigger when all of the following tags are not present"), DataSource(typeof(OptionalTagDataHandler))]
         public IEnumerable<string>? ExcludeTags { get; set; }
     }
 }

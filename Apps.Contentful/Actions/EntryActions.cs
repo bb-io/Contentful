@@ -606,11 +606,11 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var spaceId = Creds.Get("spaceId").Value;
 
-        var locales = await client.GetLocalesCollection();
+        var locales = await ExceptionWrapper.ExecuteWithErrorHandling(async () =>await client.GetLocalesCollection());
         if (locales.All(x => x.Code != entryIdentifier.Locale))
         {
             var allLocales = string.Join(", ", locales.Select(x => x.Code));
-            throw new Exception($"Locale {entryIdentifier.Locale} not found. Available locales: {allLocales}");
+            throw new PluginMisconfigurationException($"Locale {entryIdentifier.Locale} not found. Available locales: {allLocales}");
         }
 
         var entriesContent = await GetLinkedEntriesContent(
@@ -625,6 +625,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             input.GetEmbeddedBlockContent ?? false,
             input.IgnoredFieldIds ?? new List<string>(),
             input.IgnoredContentTypeIds?.ToList() ?? new List<string>(),
+            input.ExcludeTags?.ToList(),
             entryIdentifier.EntryId,
             input.MaxDepth);
 
@@ -648,7 +649,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     {
         var client = new ContentfulClient(Creds, localeIdentifier.Environment);
 
-        var locales = await client.GetLocalesCollection();
+        var locales = await ExceptionWrapper.ExecuteWithErrorHandling(async () =>await client.GetLocalesCollection());
         if (locales.All(x => x.Code != localeIdentifier.Locale))
         {
             var allLocales = string.Join(", ", locales.Select(x => x.Code));
@@ -688,6 +689,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                 }
 
                 if (ex.Message.Contains("Version mismatch error") 
+                    || ex.Message.Contains("The resource could not be found")
                     || ex.Message.Contains("Internal server") 
                     || ex.Message.Contains("Validation error"))
                 {
@@ -710,7 +712,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         ContentfulClient client,
         List<EntryContentDto> resultList, bool references, bool ignoreReferenceLocalization, bool hyperlinks,
         bool inline, bool blocks, IEnumerable<string> ignoredFieldIds, List<string> ignoredContentTypeIds,
-        string rootEntryId, int? maxDepth = null, int currentDepth = 0)
+        List<string>? excludeTags, string rootEntryId, int? maxDepth = null, int currentDepth = 0)
     {
         if (maxDepth.HasValue && currentDepth >= maxDepth.Value)
             return resultList;
@@ -719,7 +721,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             return resultList;
 
         var entryContent = await client.ExecuteWithErrorHandling(() =>
-            GetEntryContent(entryId, client, ignoredFieldIds, ignoredContentTypeIds, rootEntryId,
+            GetEntryContent(entryId, client, ignoredFieldIds, ignoredContentTypeIds, excludeTags, rootEntryId, 
                 ignoreReferenceLocalization));
 
         if (entryContent != null)
@@ -731,7 +733,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             foreach (var linkedEntryId in linkedIds)
                 await GetLinkedEntriesContent(linkedEntryId, locale, client, resultList, references,
                     ignoreReferenceLocalization, hyperlinks, inline, blocks, ignoredFieldIds, ignoredContentTypeIds,
-                    rootEntryId, maxDepth, currentDepth + 1);
+                    excludeTags, rootEntryId, maxDepth, currentDepth + 1);
 
             return resultList;
         }
@@ -860,6 +862,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         ContentfulClient client,
         IEnumerable<string> ignoredFieldIds,
         IEnumerable<string> ignoredContentTypeIds,
+        IEnumerable<string>? excludeTags,
         string rootEntryId,
         bool ignoreLocalizationForLinks = false,
         bool ignoreLocalizationFields = false)
@@ -872,8 +875,14 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             return null;
         }
 
+        if (excludeTags is not null && excludeTags.Any(excludedTag => 
+                entry.Metadata.Tags.Any(entryTag => entryTag.Sys.Id == excludedTag)))
+        {
+            return null;
+        }
+
         var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
-        var contentType = await client.GetContentType(contentTypeId);
+        var contentType = await ExceptionWrapper.ExecuteWithErrorHandling(async () =>await client.GetContentType(contentTypeId));
 
         if (ignoreLocalizationForLinks)
         {
