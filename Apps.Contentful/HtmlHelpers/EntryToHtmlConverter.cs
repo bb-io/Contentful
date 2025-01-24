@@ -1,3 +1,4 @@
+using System.Text;
 using Apps.Contentful.Api;
 using Apps.Contentful.HtmlHelpers.Constants;
 using Apps.Contentful.Models;
@@ -338,7 +339,29 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
             foreach (var attr in additionalAttributes)
                 node.SetAttributeValue(attr.Key, attr.Value);
 
-        node.InnerHtml = fieldContent;
+        if (fieldContent.Contains("\n"))
+        {
+            var paragraphs = fieldContent.Split("\n");
+            var stringBuilder = new StringBuilder();
+            foreach (var paragraph in paragraphs)
+            {
+                if (string.IsNullOrEmpty(paragraph))
+                {
+                    stringBuilder.AppendLine("<br>");
+                }
+                else
+                {
+                    stringBuilder.AppendLine($"<p>{paragraph}</p>");
+                }
+            }
+            
+            node.InnerHtml = stringBuilder.ToString();
+        }
+        else
+        {
+            node.InnerHtml = fieldContent;
+        }
+        
         return node;
     }
 
