@@ -21,4 +21,10 @@ public class ListEntriesRequest : ContentModelOptionalIdentifier
     
     [Display("Published", Description = "Filter by published entries. If not set, all entries are returned.")]
     public bool? Published { get; set; }
+    
+    [Display("Changed", Description = "Filter by changed entries. If not set, all entries are returned.")]
+    public bool? Changed { get; set; }
+    
+    [Display("Draft", Description = "Filter by draft entries. If not set, all entries are returned.")]
+    public bool? Draft { get; set; }
 }
