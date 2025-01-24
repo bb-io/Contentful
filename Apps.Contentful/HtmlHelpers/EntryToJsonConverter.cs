@@ -77,7 +77,10 @@ public static class EntryToJsonConverter
                 SetEntryFieldValue(fieldId,
                     decimalValue == Decimal.Floor(decimalValue) ? Decimal.ToInt64(decimalValue) : decimalValue);
                 break;
-            case "Symbol" or "Text":
+            case "Symbol":
+                SetEntryFieldValue(fieldId, HttpUtility.HtmlDecode(htmlNode.InnerText));
+                break;
+            case "Text":
                 SetEntryFieldValue(fieldId, HttpUtility.HtmlDecode(htmlNode.InnerText));
                 break;
             case "Object":
