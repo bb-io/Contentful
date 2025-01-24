@@ -31,6 +31,6 @@ public class GetEntryAsHtmlRequest
     [Display("Max depth for referenced entries", Description = "Maximum depth of nested reference entries to include")]
     public int? MaxDepth { get; set; }
     
-    [Display("Exclude tags"), DataSource(typeof(ListEntriesTagDataHandler))]
+    [Display("Exclude tags for referenced entries"), DataSource(typeof(ListEntriesTagDataHandler))]
     public IEnumerable<string>? ExcludeTags { get; set; }
 }
