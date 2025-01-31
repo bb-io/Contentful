@@ -479,6 +479,11 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     [Action("Get entry", Description = "Get details of a specific entry")]
     public async Task<EntryEntity> GetEntry([ActionParameter] EntryIdentifier input)
     {
+        if (string.IsNullOrEmpty(input.EntryId))
+        {
+            throw new PluginMisconfigurationException("Entry ID is null or empty. Please add a valid entry ID");
+        }
+        
         var client = new ContentfulClient(Creds, input.Environment);
         var entry = await ExceptionWrapper.ExecuteWithErrorHandling(async () => await client.GetEntry(input.EntryId));
         return new(entry);
@@ -627,6 +632,11 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         [ActionParameter] EntryLocaleIdentifier entryIdentifier,
         [ActionParameter] GetEntryAsHtmlRequest input)
     {
+        if (string.IsNullOrEmpty(entryIdentifier.EntryId))
+        {
+            throw new PluginMisconfigurationException("Entry ID is null or empty. Please add a valid entry ID");
+        }
+        
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var spaceId = Creds.Get("spaceId").Value;
 
@@ -815,8 +825,23 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             if (references)
             {
                 var linkFieldIds = contentTypeFields
-                    .Where(f => f.LinkType == "Entry")
-                    .Select(x => entryContent.EntryFields[x.Id]?[locale]?["sys"]?["id"]?.ToString()!)
+                    .Where(f => f.LinkType is "Entry")
+                    .Select(f => 
+                    {
+                        var fieldToken = entryContent.EntryFields[f.Id];
+                        if (fieldToken == null) 
+                            return null;
+
+                        var localeToken = fieldToken[locale];
+                        if (localeToken == null || localeToken.Type != JTokenType.Object)
+                            return null;
+
+                        var sys = localeToken["sys"];
+                        if (sys == null) 
+                            return null;
+
+                        return sys["id"]?.ToString();
+                    })
                     .Where(x => !string.IsNullOrEmpty(x))
                     .ToList();
 
