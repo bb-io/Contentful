@@ -484,6 +484,27 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         return new(entry);
     }
 
+    [Action("Find entry by field value", Description = "Search for first matching entry.")]
+    public async Task<EntryEntity> FindEntry([ActionParameter] FindEntryRequest input)
+    {
+        var client = new ContentfulClient(Creds, input.Environment);
+
+        var queryString = HttpUtility.ParseQueryString(string.Empty);
+
+        queryString.Add("content_type", input.ContentModelId);
+
+        queryString.Add($"fields.{input.Field}", input.Value);
+
+        
+        IEnumerable<Entry<object>> entries =
+            await client.Paginate<Entry<object>>(
+                async (query) => await client.GetEntriesCollection<Entry<object>>(query), "?" + queryString);
+
+        var entriesResponse = entries.Select(e => new EntryEntity(e)).ToArray();
+
+        return entriesResponse.FirstOrDefault();
+    }
+
     [Action("Add new entry", Description = "Add new entry with specified content model.")]
     public async Task<EntryIdentifier> AddNewEntry([ActionParameter] ContentModelIdentifier contentModelIdentifier)
     {
