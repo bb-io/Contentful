@@ -60,6 +60,7 @@ Follow [this guide](https://www.contentful.com/help/working-with-translations/) 
 - **Search entries** returns a list of entries. Optionally filter by content model, environment, tags and the last updated date.
 - **Get entry** Get details of a specific entry
 - **Add new entry** creates a new entry with the specified content model.
+- **Find entry by field value** Given a field and a desired value for the field, the first matching entry will be returned.
 - **Delete entry**.
 - **Publish entry**.
 - **Unpublish entry**.
