@@ -211,7 +211,9 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
                         imgNode.SetAttributeValue("data-contentful-link-type", linkType);
                         imgNode.SetAttributeValue("data-contentful-link-id", linkId);
 
-                        var altText = asset.Title.ContainsKey(fileLocale) ? asset.Title[fileLocale] : "";
+                        var altText = asset.Title?.ContainsKey(fileLocale) ?? false
+                            ? asset.Title[fileLocale]
+                            : "";
                         if (!string.IsNullOrWhiteSpace(altText))
                         {
                             imgNode.SetAttributeValue("alt", altText);
@@ -354,14 +356,14 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
                     stringBuilder.AppendLine($"<p>{paragraph}</p>");
                 }
             }
-            
+
             node.InnerHtml = stringBuilder.ToString();
         }
         else
         {
             node.InnerHtml = fieldContent;
         }
-        
+
         return node;
     }
 
