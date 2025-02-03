@@ -168,69 +168,79 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
 
     private HtmlNode? ConvertLinkToHtml(HtmlDocument doc, Field field, JToken entryField, string locale)
     {
-        var linkData = entryField[locale]?["sys"];
-
-        if (linkData is null)
-            return default;
-
-        var linkId = linkData["id"]?.ToString();
-        var linkType = linkData["linkType"]?.ToString();
-
-        if (linkType == "Asset")
+        try
         {
-            var client = new ContentfulClient(invocationContext.AuthenticationCredentialsProviders, environment);
-            var assetTask = client.GetAsset(linkId!);
-            assetTask.Wait();
+            var linkData = entryField[locale]?["sys"];
 
-            var asset = assetTask.Result;
+            if (linkData is null)
+                return default;
 
-            if (asset.Files != null)
+            var linkId = linkData["id"]?.ToString();
+            var linkType = linkData["linkType"]?.ToString();
+
+            if (linkType == "Asset")
             {
-                foreach (var fileEntry in asset.Files)
+                var client = new ContentfulClient(invocationContext.AuthenticationCredentialsProviders, environment);
+                var assetTask = client.GetAsset(linkId!);
+                assetTask.Wait();
+
+                var asset = assetTask.Result;
+
+                if (asset.Files != null)
                 {
-                    var fileLocale = fileEntry.Key;
-                    var file = fileEntry.Value;
-
-                    if (file.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+                    foreach (var fileEntry in asset.Files)
                     {
-                        var imageUrl = file.Url;
+                        var fileLocale = fileEntry.Key;
+                        var file = fileEntry.Value;
 
-                        if (imageUrl.StartsWith("//"))
+                        if (file.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
                         {
-                            imageUrl = "https:" + imageUrl;
-                        }
-                        else if (imageUrl.StartsWith("/"))
-                        {
-                            imageUrl = "https://images.ctfassets.net" + imageUrl;
-                        }
+                            var imageUrl = file.Url;
 
-                        var imgNode = doc.CreateElement("img");
-                        imgNode.SetAttributeValue("src", imageUrl);
-                        imgNode.SetAttributeValue(ConvertConstants.FieldTypeAttribute, field.Type);
-                        imgNode.SetAttributeValue(ConvertConstants.FieldIdAttribute, field.Id);
-                        imgNode.SetAttributeValue("data-contentful-link-type", linkType);
-                        imgNode.SetAttributeValue("data-contentful-link-id", linkId);
+                            if (imageUrl.StartsWith("//"))
+                            {
+                                imageUrl = "https:" + imageUrl;
+                            }
+                            else if (imageUrl.StartsWith("/"))
+                            {
+                                imageUrl = "https://images.ctfassets.net" + imageUrl;
+                            }
 
-                        var altText = asset.Title.ContainsKey(fileLocale) ? asset.Title[fileLocale] : "";
-                        if (!string.IsNullOrWhiteSpace(altText))
-                        {
-                            imgNode.SetAttributeValue("alt", altText);
+                            var imgNode = doc.CreateElement("img");
+                            imgNode.SetAttributeValue("src", imageUrl);
+                            imgNode.SetAttributeValue(ConvertConstants.FieldTypeAttribute, field.Type);
+                            imgNode.SetAttributeValue(ConvertConstants.FieldIdAttribute, field.Id);
+                            imgNode.SetAttributeValue("data-contentful-link-type", linkType);
+                            imgNode.SetAttributeValue("data-contentful-link-id", linkId);
+
+                            var altText = asset.Title?.ContainsKey(fileLocale) ?? false 
+                                ? asset.Title[fileLocale] 
+                                : "";
+                            if (!string.IsNullOrWhiteSpace(altText))
+                            {
+                                imgNode.SetAttributeValue("alt", altText);
+                            }
+
+                            return imgNode;
                         }
-
-                        return imgNode;
                     }
                 }
             }
+
+            var additionalAttributes = new Dictionary<string, string>
+            {
+                { "data-contentful-link-type", linkType! },
+                { "data-contentful-link-id", linkId! },
+                { "data-contentful-localized", field.Localized.ToString() }
+            };
+
+            return WrapFieldInDiv(doc, field.Type, field.Id, additionalAttributes: additionalAttributes);
         }
-
-        var additionalAttributes = new Dictionary<string, string>
+        catch (Exception e)
         {
-            { "data-contentful-link-type", linkType! },
-            { "data-contentful-link-id", linkId! },
-            { "data-contentful-localized", field.Localized.ToString() }
-        };
-
-        return WrapFieldInDiv(doc, field.Type, field.Id, additionalAttributes: additionalAttributes);
+            Console.WriteLine(e);
+            throw;
+        }
     }
 
     private HtmlNode? ConvertArrayToHtml(HtmlDocument doc, Field field, JToken entryField,
