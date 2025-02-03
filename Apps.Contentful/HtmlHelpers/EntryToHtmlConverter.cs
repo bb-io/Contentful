@@ -168,9 +168,7 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
 
     private HtmlNode? ConvertLinkToHtml(HtmlDocument doc, Field field, JToken entryField, string locale)
     {
-        try
-        {
-            var linkData = entryField[locale]?["sys"];
+        var linkData = entryField[locale]?["sys"];
 
             if (linkData is null)
                 return default;
@@ -235,12 +233,6 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
             };
 
             return WrapFieldInDiv(doc, field.Type, field.Id, additionalAttributes: additionalAttributes);
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-            throw;
-        }
     }
 
     private HtmlNode? ConvertArrayToHtml(HtmlDocument doc, Field field, JToken entryField,
