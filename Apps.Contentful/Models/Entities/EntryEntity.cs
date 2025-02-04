@@ -34,6 +34,6 @@ public class EntryEntity
         CreatedAt = entry.SystemProperties.CreatedAt;
         UpdatedAt = entry.SystemProperties.UpdatedAt;
         Version = entry.SystemProperties.Version ?? default;
-        UpdatedBy = entry.SystemProperties.UpdatedBy.SystemProperties.Id;
+        UpdatedBy = entry.SystemProperties.UpdatedBy.FirstName + " "+ entry.SystemProperties.UpdatedBy.LastName;
     }
 }
