@@ -21,7 +21,7 @@ public class EntryEntity
     [Display("Updated at")]
     public DateTime? UpdatedAt { get; set; }
 
-    [Display("Updated by")]
+    [Display("Updated by (user ID)")]
     public string? UpdatedBy { get; set; }
 
     public int Version { get; set; }
