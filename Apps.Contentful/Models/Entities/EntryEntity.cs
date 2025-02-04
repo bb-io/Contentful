@@ -21,15 +21,20 @@ public class EntryEntity
     [Display("Updated at")]
     public DateTime? UpdatedAt { get; set; }
 
+    [Display("Updated by (user ID)")]
+    public string? UpdatedBy { get; set; }
+
     public int Version { get; set; }
 
     public EntryEntity(Entry<object> entry)
     {
+
         Id = entry.SystemProperties.Id;
         TagIds = entry.Metadata?.Tags.Select(x => x.Sys.Id) ?? Enumerable.Empty<string>();
         ContentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
         CreatedAt = entry.SystemProperties.CreatedAt;
         UpdatedAt = entry.SystemProperties.UpdatedAt;
         Version = entry.SystemProperties.Version ?? default;
+        UpdatedBy = entry.SystemProperties.UpdatedBy.SystemProperties.Id;
     }
 }
