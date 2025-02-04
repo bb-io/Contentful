@@ -28,12 +28,13 @@ public class EntryEntity
 
     public EntryEntity(Entry<object> entry)
     {
+
         Id = entry.SystemProperties.Id;
         TagIds = entry.Metadata?.Tags.Select(x => x.Sys.Id) ?? Enumerable.Empty<string>();
         ContentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
         CreatedAt = entry.SystemProperties.CreatedAt;
         UpdatedAt = entry.SystemProperties.UpdatedAt;
         Version = entry.SystemProperties.Version ?? default;
-        UpdatedBy = entry.SystemProperties.UpdatedBy.FirstName + " "+ entry.SystemProperties.UpdatedBy.LastName;
+        UpdatedBy = entry.SystemProperties.UpdatedBy.SystemProperties.Id;
     }
 }
