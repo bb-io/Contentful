@@ -21,7 +21,7 @@ public class EntryEntity
     [Display("Updated at")]
     public DateTime? UpdatedAt { get; set; }
 
-    [Display("Updated by (email)")]
+    [Display("Updated by")]
     public string? UpdatedBy { get; set; }
 
     public int Version { get; set; }
@@ -34,6 +34,6 @@ public class EntryEntity
         CreatedAt = entry.SystemProperties.CreatedAt;
         UpdatedAt = entry.SystemProperties.UpdatedAt;
         Version = entry.SystemProperties.Version ?? default;
-        UpdatedBy = entry.SystemProperties.UpdatedBy.Email;
+        UpdatedBy = entry.SystemProperties.UpdatedBy.SystemProperties.Id;
     }
 }
