@@ -810,6 +810,23 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                 }
             }
         }
+        var inlineLinkNodes = doc.DocumentNode.SelectNodes("//a[starts-with(@id, 'embedded-entry-inline_')]");
+        if (inlineLinkNodes != null)
+        {
+            const string prefix = "embedded-entry-inline_";
+            foreach (var node in inlineLinkNodes)
+            {
+                var idAttr = node.GetAttributeValue("id", string.Empty);
+                if (!string.IsNullOrEmpty(idAttr) && idAttr.StartsWith(prefix))
+                {
+                    var extractedId = idAttr.Substring(prefix.Length);
+                    if (!string.IsNullOrEmpty(extractedId))
+                    {
+                        entryIds.Add(extractedId);
+                    }
+                }
+            }
+        }
 
         return entryIds.Distinct();
     }
