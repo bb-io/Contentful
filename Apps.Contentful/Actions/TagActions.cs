@@ -9,6 +9,7 @@ using Apps.Contentful.Models.Responses.Tags;
 using Apps.Contentful.Utils;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
+using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Utils.Extensions.Http;
 using RestSharp;
@@ -66,6 +67,16 @@ public class TagActions(InvocationContext invocationContext) : ContentfulInvocab
     [Action("Add tag to entry", Description = "Add specific tag to an entry")]
     public async Task AddEntryTag([ActionParameter] EntryTagIdentifier input)
     {
+        if (string.IsNullOrEmpty(input.TagId))
+        {
+            throw new PluginMisconfigurationException("Tag ID is null or empty. Please input a valid ID");
+        }
+        
+        if (string.IsNullOrEmpty(input.EntryId))
+        {
+            throw new PluginMisconfigurationException("Entry ID is null or empty. Please input a valid ID");
+        }
+        
         var client = new ContentfulClient(Creds, input.Environment);
         var entry = await ExceptionWrapper.ExecuteWithErrorHandling(async () => await client.GetEntry(input.EntryId));
 
@@ -79,7 +90,7 @@ public class TagActions(InvocationContext invocationContext) : ContentfulInvocab
         var tags = entry.Metadata.Tags
             .Select(x => x.Sys.Id)
             .Append(input.TagId)
-            .Select(x => new PropertiesRequest()
+            .Select(x => new PropertiesRequest
             {
                 Sys = new()
                 {
