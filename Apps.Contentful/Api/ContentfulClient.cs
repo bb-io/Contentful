@@ -1,5 +1,6 @@
 ﻿using Apps.Contentful.Constants;
 using Blackbird.Applications.Sdk.Common.Authentication;
+using Blackbird.Applications.Sdk.Common.Exceptions;
 using Contentful.Core;
 using Contentful.Core.Configuration;
 using Contentful.Core.Errors;
@@ -59,8 +60,15 @@ public class ContentfulClient : ContentfulManagementClient
         return result;        
     }
 
-    public Task<T> ExecuteWithErrorHandling<T>(Func<Task<T>> func)
+    public async Task<T> ExecuteWithErrorHandling<T>(Func<Task<T>> func)
     {
-        return _retryPolicy.ExecuteAsync(func);
+        try
+        {
+            return await _retryPolicy.ExecuteAsync(func);
+        }
+        catch (ContentfulException ex)
+        {
+            throw new PluginApplicationException($"Contentful error occurred: {ex.Message} Please check you input and try again" );
+        }
     }
 }
