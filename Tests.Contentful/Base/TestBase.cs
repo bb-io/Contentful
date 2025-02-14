@@ -2,33 +2,32 @@
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Microsoft.Extensions.Configuration;
 
-namespace ContentfulTests.Base
+namespace Tests.Contentful.Base;
+
+public abstract class TestBase
 {
-    public class TestBase
+    protected IEnumerable<AuthenticationCredentialsProvider> Credentials { get; set; }
+
+    protected InvocationContext InvocationContext { get; set; }
+
+    protected FileManager FileManager { get; set; }
+
+    protected TestBase()
     {
-        public IEnumerable<AuthenticationCredentialsProvider> Creds { get; set; }
+        var config = new ConfigurationBuilder()
+            .AddJsonFile("appsettings.json")
+            .Build();
+        
+        Credentials = config.GetSection("ConnectionDefinition")
+            .GetChildren()
+            .Select(x => new AuthenticationCredentialsProvider(x.Key, x.Value))
+            .ToList();
 
-        public InvocationContext InvocationContext { get; set; }
-
-        public FileManager FileManager { get; set; }
-
-        public TestBase()
+        InvocationContext = new InvocationContext
         {
-            var config = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
-            Creds = config.GetSection("ConnectionDefinition").GetChildren()
-                .Select(x => new AuthenticationCredentialsProvider(x.Key, x.Value)).ToList();
+            AuthenticationCredentialsProviders = Credentials,
+        };
 
-
-            var relativePath = config.GetSection("TestFolder").Value;
-            var projectDirectory = Directory.GetParent(AppDomain.CurrentDomain.BaseDirectory).Parent.Parent.Parent.FullName;
-            var folderLocation = Path.Combine(projectDirectory, relativePath);
-
-            InvocationContext = new InvocationContext
-            {
-                AuthenticationCredentialsProviders = Creds,
-            };
-
-            FileManager = new FileManager();
-        }
+        FileManager = new FileManager();
     }
 }
