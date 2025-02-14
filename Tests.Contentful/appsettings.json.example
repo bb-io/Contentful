@@ -2,8 +2,7 @@
     "ConnectionDefinition": {
         "spaceId": "",
         "Authorization": "",
-        "base_url": "https://api.contentful.com",
-        "client_id": ""
+        "base_url": "https://api.contentful.com"
     },
     "TestFolder": "TestFiles"
 }
