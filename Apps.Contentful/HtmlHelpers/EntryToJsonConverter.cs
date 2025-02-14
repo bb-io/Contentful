@@ -1,6 +1,7 @@
 using System.Web;
 using Apps.Contentful.HtmlHelpers.Constants;
 using Apps.Contentful.Models;
+using Apps.Contentful.Models.Exceptions;
 using Contentful.Core.Models;
 using HtmlAgilityPack;
 using Newtonsoft.Json;
@@ -69,13 +70,21 @@ public static class EntryToJsonConverter
         switch (fieldType)
         {
             case "Integer":
-                var intValue = Convert.ToInt32(htmlNode.InnerText);
+                if (!int.TryParse(htmlNode.InnerText, out var intValue))
+                {
+                    throw new FieldConversionException(fieldId, htmlNode.InnerText, "integer");
+                }
                 SetEntryFieldValue(fieldId, intValue);
                 break;
             case "Number":
-                var decimalValue = Convert.ToDecimal(htmlNode.InnerText);
-                SetEntryFieldValue(fieldId,
-                    decimalValue == Decimal.Floor(decimalValue) ? Decimal.ToInt64(decimalValue) : decimalValue);
+                if (!decimal.TryParse(htmlNode.InnerText, out var decimalValue))
+                {
+                    throw new FieldConversionException(fieldId, htmlNode.InnerText, "number");
+                }
+                var finalValue = decimalValue == Decimal.Floor(decimalValue)
+                    ? Decimal.ToInt64(decimalValue)
+                    : decimalValue;
+                SetEntryFieldValue(fieldId, finalValue);
                 break;
             case "Symbol":
                 SetEntryFieldValue(fieldId, HttpUtility.HtmlDecode(htmlNode.InnerText));

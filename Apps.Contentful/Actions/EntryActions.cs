@@ -23,6 +23,7 @@ using HtmlAgilityPack;
 using Newtonsoft.Json.Serialization;
 using System.Web;
 using Apps.Contentful.Models.Dtos;
+using Apps.Contentful.Models.Exceptions;
 using Apps.Contentful.Utils;
 using Blackbird.Applications.Sdk.Common.Exceptions;
 using RestSharp;
@@ -714,6 +715,11 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                     var entryVersion = await client.GetEntry(entryToUpdate.EntryId);
                     return await client.CreateOrUpdateEntry(entry, version: entryVersion.SystemProperties.Version);
                 });
+            }
+            catch (FieldConversionException ex)
+            {
+                throw new PluginMisconfigurationException(
+                    $"Error updating entry '{entry.SystemProperties.Id}': {ex.Message}");
             }
             catch (Exception ex)
             {
