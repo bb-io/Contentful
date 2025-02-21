@@ -49,6 +49,9 @@ public class HtmlToRichTextConverter
                     case "p":
                         content = CreateParagraph(childNode);
                         break;
+                    case "br":
+                        content = CreateEmptyParagraph();
+                        break;
                     case "span":
                         content = new Text()
                         {
@@ -168,6 +171,18 @@ public class HtmlToRichTextConverter
         }
     }
 
+    private Paragraph CreateEmptyParagraph()
+    {
+        var paragraph = new Paragraph
+        {
+            NodeType = "paragraph",
+            Data = new GenericStructureData(),
+            Content = new List<IContent>()
+        };
+
+        return paragraph;
+    }
+    
     private Paragraph CreateParagraph(HtmlNode node)
     {
         var paragraph = new Paragraph

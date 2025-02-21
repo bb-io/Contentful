@@ -12,7 +12,7 @@ public class ConnectionValidator : IConnectionValidator
         try
         {
             var client = new ContentfulClient(authProviders, null);
-            await client.GetContentTypes(cancellationToken: cancellationToken);
+            var result = await client.GetContentTypes(cancellationToken: cancellationToken);
 
             return new()
             {
