@@ -54,4 +54,8 @@
     </EmbeddedResource>
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="TestFiles\Output\" />
+  </ItemGroup>
+
 </Project>
