@@ -4,22 +4,13 @@ using Newtonsoft.Json.Linq;
 
 namespace Apps.Contentful.HtmlHelpers;
 
-public class RichTextToHtmlConverter
+public class RichTextToHtmlConverter(JArray content, string spaceId)
 {
-    private readonly JArray _content;
-    private readonly string _spaceId;
-    
-    public RichTextToHtmlConverter(JArray content, string spaceId)
-    {
-        _content = content;
-        _spaceId = spaceId;
-    }
-    
     public string ToHtml()
     {
         var htmlBuilder = new StringBuilder();
         
-        foreach (var item in _content)
+        foreach (var item in content)
         {
             if (item is JObject jsonObject)
                 htmlBuilder.Append(ConvertJsonObjectToHtml(jsonObject));
@@ -49,7 +40,9 @@ public class RichTextToHtmlConverter
             case "heading-6":
                 return $"<h6>{ConvertContentToHtml(jsonObject["content"])}</h6>";
             case "paragraph":
-                return $"<p>{ConvertContentToHtml(jsonObject["content"])}</p>";
+                var content = ConvertContentToHtml(jsonObject["content"]);
+                content = content.Replace(@"\n", "<br>");
+                return string.IsNullOrWhiteSpace(content) ? "<br>" : $"<p>{content}</p>";
             case "blockquote":
                 return $"<blockquote>{ConvertContentToHtml(jsonObject["content"])}</blockquote>";
             case "table":
@@ -73,19 +66,19 @@ public class RichTextToHtmlConverter
                 return $"<a href=\"{uri}\">{ConvertContentToHtml(jsonObject["content"])}</a>";
             case "asset-hyperlink":
                 var assetId = jsonObject["data"]["target"]["sys"]["id"].ToString();
-                uri = $"https://app.contentful.com/spaces/{_spaceId}/assets/{assetId}";
+                uri = $"https://app.contentful.com/spaces/{spaceId}/assets/{assetId}";
                 return $"<a id=\"{nodeType}_{assetId}\" href=\"{uri}\">{ConvertContentToHtml(jsonObject["content"])}</a>";
             case "entry-hyperlink":
                 var entryId = jsonObject["data"]["target"]["sys"]["id"].ToString();
-                uri = $"https://app.contentful.com/spaces/{_spaceId}/entries/{entryId}";
+                uri = $"https://app.contentful.com/spaces/{spaceId}/entries/{entryId}";
                 return $"<a id=\"{nodeType}_{entryId}\" href=\"{uri}\">{ConvertContentToHtml(jsonObject["content"])}</a>";
             case "embedded-entry-block" or "embedded-entry-inline":
                 entryId = jsonObject["data"]["target"]["sys"]["id"].ToString();
-                uri = $"https://app.contentful.com/spaces/{_spaceId}/entries/{entryId}";
+                uri = $"https://app.contentful.com/spaces/{spaceId}/entries/{entryId}";
                 return $"<a id=\"{nodeType}_{entryId}\" href=\"{uri}\"></a>";
             case "embedded-asset-block":
                 assetId = jsonObject["data"]["target"]["sys"]["id"].ToString();
-                uri = $"https://app.contentful.com/spaces/{_spaceId}/assets/{assetId}";
+                uri = $"https://app.contentful.com/spaces/{spaceId}/assets/{assetId}";
                 return $"<a id=\"{nodeType}_{assetId}\" href=\"{uri}\">Asset {assetId}</a>";
             default:
                 return ConvertContentToHtml(jsonObject["content"]);
@@ -106,12 +99,16 @@ public class RichTextToHtmlConverter
                 var textContent = $"{openingMarks}{value}{closingMarks}";
 
                 if (content.Count() == 1 && string.IsNullOrWhiteSpace(textContent))
+                {
                     return string.Empty;
+                }
                 
                 htmlBuilder.Append(string.IsNullOrWhiteSpace(textContent) ? "<span></span>" : textContent);
             }
             else
+            {
                 htmlBuilder.Append(ConvertJsonObjectToHtml((JObject)item));
+            }
         }
 
         return htmlBuilder.ToString();

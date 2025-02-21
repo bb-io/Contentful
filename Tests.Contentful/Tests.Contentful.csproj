@@ -42,11 +42,9 @@
 	  <None Update="appsettings.json">
 	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </None>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="TestFiles\Input\" />
-    <Folder Include="TestFiles\Output\" />
+	  <None Update="TestFiles\Input\5wFvto8Zhatz451gTDEpvP_en-US.html">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </None>
   </ItemGroup>
 
   <ItemGroup>

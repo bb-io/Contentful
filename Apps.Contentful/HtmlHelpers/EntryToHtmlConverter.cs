@@ -338,8 +338,12 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
         node.SetAttributeValue(ConvertConstants.FieldIdAttribute, fieldId);
 
         if (additionalAttributes != null)
+        {
             foreach (var attr in additionalAttributes)
+            {
                 node.SetAttributeValue(attr.Key, attr.Value);
+            }
+        }
 
         if (fieldContent.Contains("\n"))
         {
@@ -357,6 +361,7 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
                 }
             }
 
+            stringBuilder.Replace("<p></p>", "<br>");
             node.InnerHtml = stringBuilder.ToString();
         }
         else
