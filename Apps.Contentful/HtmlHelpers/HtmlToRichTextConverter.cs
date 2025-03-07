@@ -462,7 +462,7 @@ public class HtmlToRichTextConverter
                 if (child.Name == "a")
                 {
                     var id = child.GetAttributeValue("id", "");
-                    if (id.Contains("embedded-entry-inline") || id.Contains("embedded-asset-inline"))
+                    if (string.IsNullOrEmpty(id) || id.Contains("embedded-entry-inline") || id.Contains("embedded-asset-inline"))
                     {
                         paragraph.Content.Add(CreateHyperlink(child));
                     }
