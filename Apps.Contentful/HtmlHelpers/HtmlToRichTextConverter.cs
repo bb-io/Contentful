@@ -53,7 +53,7 @@ public class HtmlToRichTextConverter
                         content = CreateEmptyParagraph();
                         break;
                     case "span":
-                        content = new Text()
+                        content = new Text
                         {
                             NodeType = "text",
                             Marks = new(),
@@ -446,14 +446,15 @@ public class HtmlToRichTextConverter
     
     private IContent HandleParagraph(HtmlNode childNode)
     {
-        var trimmedInnerHtml = childNode.InnerHtml.Trim();
+        var cleanedHtml = RemoveLeadingAndTrailingBr(childNode);
+        var trimmedInnerHtml = cleanedHtml.InnerHtml.Trim();
 
         if (IsSingleEmbeddedHyperlink(trimmedInnerHtml, childNode))
         {
-            var hyperlinkNode = childNode.FirstChild;
+            var hyperlinkNode = cleanedHtml.FirstChild;
             var id = hyperlinkNode.GetAttributeValue("id", "");
             return id.StartsWith("embedded-entry-block") 
-                ? CreateHyperlink(childNode) 
+                ? BuildEmbeddedEntryBlock(hyperlinkNode)
                 : CreateParagraph(childNode);
         }
 
@@ -470,5 +471,45 @@ public class HtmlToRichTextConverter
         var doc = new HtmlDocument();
         doc.LoadHtml(html);
         return doc.DocumentNode.Descendants().Count();
+    }
+    
+    private static HtmlNode RemoveLeadingAndTrailingBr(HtmlNode node)
+    {
+        var newNode = node.Clone();
+
+        while (newNode.HasChildNodes && newNode.FirstChild.Name == "br")
+        {
+            newNode.RemoveChild(newNode.FirstChild);
+        }
+
+        while (newNode.HasChildNodes && newNode.LastChild.Name == "br")
+        {
+            newNode.RemoveChild(newNode.LastChild);
+        }
+
+        return newNode;
+    }
+
+    private static IContent BuildEmbeddedEntryBlock(HtmlNode htmlNode)
+    {
+        var id = htmlNode.GetAttributeValue("id", "");
+        var entryId = id.Split("_")[^1];
+        return new EntryStructure
+        {
+            NodeType = "embedded-entry-block",
+            Content = new List<IContent>(),
+            Data = new EntryStructureData
+            {
+                Target = new Asset
+                {
+                    SystemProperties = new SystemProperties
+                    {
+                        Id = entryId,
+                        Type = "Link",
+                        LinkType = "Entry"
+                    }
+                }
+            }
+        };
     }
 }
