@@ -708,7 +708,9 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                 EntryToJsonConverter.ToJson(entry, entryToUpdate.HtmlNode, localeIdentifier.Locale);
 
                 if (JToken.DeepEquals(oldEntryFields.Escape(), (entry.Fields as JObject)!.Escape()))
+                {
                     continue;
+                }
 
                 await client.ExecuteWithErrorHandling(async () =>
                 {

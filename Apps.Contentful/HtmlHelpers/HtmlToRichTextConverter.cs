@@ -25,7 +25,7 @@ public class HtmlToRichTextConverter
             if (childNode.NodeType == HtmlNodeType.Element)
             {
                 IContent content = null;
-
+                
                 switch (childNode.Name)
                 {
                     case "h1":
@@ -47,7 +47,7 @@ public class HtmlToRichTextConverter
                         content = CreateHeading(childNode, 6);
                         break;
                     case "p":
-                        content = CreateParagraph(childNode);
+                        content = HandleParagraph(childNode);
                         break;
                     case "br":
                         content = CreateEmptyParagraph();
@@ -442,5 +442,33 @@ public class HtmlToRichTextConverter
             default:
                 return;
         }
+    }
+    
+    private IContent HandleParagraph(HtmlNode childNode)
+    {
+        var trimmedInnerHtml = childNode.InnerHtml.Trim();
+
+        if (IsSingleEmbeddedHyperlink(trimmedInnerHtml, childNode))
+        {
+            var hyperlinkNode = childNode.FirstChild;
+            var id = hyperlinkNode.GetAttributeValue("id", "");
+            return id.StartsWith("embedded-entry-block") 
+                ? CreateHyperlink(childNode) 
+                : CreateParagraph(childNode);
+        }
+
+        return CreateParagraph(childNode);
+    }
+
+    private static bool IsSingleEmbeddedHyperlink(string html, HtmlNode node)
+    {
+        return CountHtmlNodes(html) == 1 && html.StartsWith("<a id=\"embedded-entry-block_") && html.EndsWith("</a>");
+    }
+    
+    static int CountHtmlNodes(string html)
+    {
+        var doc = new HtmlDocument();
+        doc.LoadHtml(html);
+        return doc.DocumentNode.Descendants().Count();
     }
 }
