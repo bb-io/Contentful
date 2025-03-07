@@ -17,7 +17,7 @@ public class HtmlToRichTextConverter
         ParseHtmlToContentful(htmlDocument.DocumentNode, contentfulDocument.Content);
         return contentfulDocument;
     }
-    
+
     private void ParseHtmlToContentful(HtmlNode node, List<IContent> contentList)
     {
         foreach (var childNode in node.ChildNodes)
@@ -25,7 +25,7 @@ public class HtmlToRichTextConverter
             if (childNode.NodeType == HtmlNodeType.Element)
             {
                 IContent content = null;
-                
+
                 switch (childNode.Name)
                 {
                     case "h1":
@@ -47,7 +47,7 @@ public class HtmlToRichTextConverter
                         content = CreateHeading(childNode, 6);
                         break;
                     case "p":
-                        content = HandleParagraph(childNode);
+                        content = ProcessParagraph(childNode, contentList);
                         break;
                     case "br":
                         content = CreateEmptyParagraph();
@@ -90,9 +90,9 @@ public class HtmlToRichTextConverter
             else if (childNode.NodeType == HtmlNodeType.Text)
             {
                 var text = childNode.InnerText;
-                if(string.IsNullOrWhiteSpace(text))
+                if (string.IsNullOrWhiteSpace(text))
                     continue;
-                
+
                 var marks = new List<string>();
                 GetMarksFromHtmlNode(childNode, marks);
 
@@ -182,7 +182,7 @@ public class HtmlToRichTextConverter
 
         return paragraph;
     }
-    
+
     private Paragraph CreateParagraph(HtmlNode node)
     {
         var paragraph = new Paragraph
@@ -194,13 +194,15 @@ public class HtmlToRichTextConverter
 
         ParseHtmlToContentful(node, paragraph.Content);
         if (!node.ChildNodes.Any())
-            paragraph.Content.Add(new Text()
+        {
+            paragraph.Content.Add(new Text
             {
                 NodeType = "text",
                 Marks = new(),
                 Data = new(),
                 Value = string.Empty
             });
+        }
 
         return paragraph;
     }
@@ -232,7 +234,7 @@ public class HtmlToRichTextConverter
 
         return list;
     }
-    
+
     private List CreateUnorderedList(HtmlNode node)
     {
         var list = new List
@@ -274,7 +276,7 @@ public class HtmlToRichTextConverter
         return blockQuote;
     }
 
-    private HorizontalRuler CreateHorizontalRuler() => 
+    private HorizontalRuler CreateHorizontalRuler() =>
         new()
         {
             NodeType = "hr",
@@ -290,7 +292,7 @@ public class HtmlToRichTextConverter
             Data = new GenericStructureData(),
             Content = new List<IContent>()
         };
-        
+
         foreach (var childNode in node.ChildNodes)
         {
             if (childNode.Name == "tr")
@@ -365,12 +367,12 @@ public class HtmlToRichTextConverter
                         }
                     }
                 };
-                
+
                 if (nodeType == "asset-hyperlink")
                     ParseHtmlToContentful(node, assetHyperlink.Content);
-                
+
                 return assetHyperlink;
-            
+
             case var value when value.StartsWith("entry-hyperlink_") || value.StartsWith("embedded-entry-block_")
                                                                      || value.StartsWith("embedded-entry-inline_"):
                 nodeType = value.Split("_")[0];
@@ -392,12 +394,12 @@ public class HtmlToRichTextConverter
                         }
                     }
                 };
-                
+
                 if (nodeType == "entry-hyperlink")
                     ParseHtmlToContentful(node, entryHyperlink.Content);
-                
+
                 return entryHyperlink;
-            
+
             default:
                 var hyperlink = new Hyperlink
                 {
@@ -443,34 +445,69 @@ public class HtmlToRichTextConverter
                 return;
         }
     }
-    
-    private IContent HandleParagraph(HtmlNode childNode)
-    {
-        var cleanedHtml = RemoveLeadingAndTrailingBr(childNode);
-        var trimmedInnerHtml = cleanedHtml.InnerHtml.Trim();
 
-        if (IsSingleEmbeddedHyperlink(trimmedInnerHtml, childNode))
+    private Paragraph ProcessParagraph(HtmlNode node, List<IContent> parentContentList)
+    {
+        var paragraph = new Paragraph
         {
-            var hyperlinkNode = cleanedHtml.FirstChild;
-            var id = hyperlinkNode.GetAttributeValue("id", "");
-            return id.StartsWith("embedded-entry-block") 
-                ? BuildEmbeddedEntryBlock(hyperlinkNode)
-                : CreateParagraph(childNode);
+            NodeType = "paragraph",
+            Data = new GenericStructureData(),
+            Content = new List<IContent>()
+        };
+
+        foreach (var child in node.ChildNodes)
+        {
+            if (child.NodeType == HtmlNodeType.Element)
+            {
+                if (child.Name == "a")
+                {
+                    var id = child.GetAttributeValue("id", "");
+                    if (id.Contains("embedded-entry-inline") || id.Contains("embedded-asset-inline"))
+                    {
+                        paragraph.Content.Add(CreateHyperlink(child));
+                    }
+                    else
+                    {
+                        parentContentList.Add(CreateHyperlink(child));
+                    }
+                }
+                else
+                {
+                    ParseHtmlToContentful(child, paragraph.Content);
+                }
+            }
+            else if (child.NodeType == HtmlNodeType.Text)
+            {
+                var text = child.InnerText;
+                if (string.IsNullOrWhiteSpace(text))
+                    continue;
+
+                var marks = new List<string>();
+                GetMarksFromHtmlNode(child, marks);
+
+                var textNode = new Text
+                {
+                    NodeType = "text",
+                    Value = HttpUtility.HtmlDecode(text),
+                    Data = new GenericStructureData(),
+                    Marks = marks.Select(mark => new Mark { Type = mark }).ToList()
+                };
+                paragraph.Content.Add(textNode);
+            }
         }
 
-        return CreateParagraph(childNode);
-    }
+        if (!paragraph.Content.Any())
+        {
+            paragraph.Content.Add(new Text
+            {
+                NodeType = "text",
+                Marks = new(),
+                Data = new GenericStructureData(),
+                Value = string.Empty
+            });
+        }
 
-    private static bool IsSingleEmbeddedHyperlink(string html, HtmlNode node)
-    {
-        return CountHtmlNodes(html) == 1 && html.StartsWith("<a id=\"embedded-entry-block_") && html.EndsWith("</a>");
-    }
-    
-    static int CountHtmlNodes(string html)
-    {
-        var doc = new HtmlDocument();
-        doc.LoadHtml(html);
-        return doc.DocumentNode.Descendants().Count();
+        return paragraph;
     }
     
     private static HtmlNode RemoveLeadingAndTrailingBr(HtmlNode node)
@@ -490,13 +527,15 @@ public class HtmlToRichTextConverter
         return newNode;
     }
 
-    private static IContent BuildEmbeddedEntryBlock(HtmlNode htmlNode)
+    private static IContent BuildEmbeddedBlock(HtmlNode htmlNode)
     {
         var id = htmlNode.GetAttributeValue("id", "");
-        var entryId = id.Split("_")[^1];
+        var nodeType = id.Split("_")[0];
+        var nodeId = id.Split("_")[^1];
+        var entryBlock = nodeType == "embedded-entry-block";
         return new EntryStructure
         {
-            NodeType = "embedded-entry-block",
+            NodeType = entryBlock ? "embedded-entry-block" : "embedded-asset-block",
             Content = new List<IContent>(),
             Data = new EntryStructureData
             {
@@ -504,9 +543,9 @@ public class HtmlToRichTextConverter
                 {
                     SystemProperties = new SystemProperties
                     {
-                        Id = entryId,
+                        Id = nodeId,
                         Type = "Link",
-                        LinkType = "Entry"
+                        LinkType = entryBlock ? "Entry" : "Asset"
                     }
                 }
             }
