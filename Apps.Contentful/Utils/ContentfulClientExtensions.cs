@@ -17,4 +17,12 @@ public static class ContentfulClientExtensions
             throw new PluginApplicationException($"Couldn't get an entry with ID: {entryId}. Contentful response: {e.Message}");
         }
     }
+
+    public static void ThrowIfNullOrEmpty(this string? value, string paramerName)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            throw new PluginApplicationException($"Parameter '{paramerName}' is null or empty. Please provide a valid value.");
+        }
+    }
 }

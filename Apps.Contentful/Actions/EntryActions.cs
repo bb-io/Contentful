@@ -478,7 +478,8 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     }
 
     [Action("Get entry", Description = "Get details of a specific entry")]
-    public async Task<EntryEntity> GetEntry([ActionParameter] EntryIdentifier input)
+    public async Task<EntryWithTitleEntity> GetEntry([ActionParameter] EntryIdentifier input, 
+        [ActionParameter] LocaleOptionalIdentifier localeOptionalIdentifier)
     {
         if (string.IsNullOrEmpty(input.EntryId))
         {
@@ -487,7 +488,12 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         
         var client = new ContentfulClient(Creds, input.Environment);
         var entry = await ExceptionWrapper.ExecuteWithErrorHandling(async () => await client.GetEntry(input.EntryId));
-        return new(entry);
+        var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
+        var contentType =
+            await ExceptionWrapper.ExecuteWithErrorHandling(async () => await client.GetContentType(contentTypeId));
+        entry.SystemProperties.ContentType = contentType;
+
+        return new(entry, localeOptionalIdentifier.Locale);
     }
 
     [Action("Find entry by field value", Description = "Search for first matching entry.")]
@@ -526,6 +532,8 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     [Action("Delete entry", Description = "Delete specified entry.")]
     public async Task DeleteEntry([ActionParameter] EntryIdentifier entryIdentifier)
     {
+        ContentfulClientExtensions.ThrowIfNullOrEmpty(entryIdentifier.EntryId, nameof(entryIdentifier.EntryId));
+        
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var entry = await ExceptionWrapper.ExecuteWithErrorHandling(async () =>
             await client.GetEntry(entryIdentifier.EntryId));
@@ -536,6 +544,8 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     [Action("Publish entry", Description = "Publish specified entry.")]
     public async Task PublishEntry([ActionParameter] EntryIdentifier entryIdentifier)
     {
+        ContentfulClientExtensions.ThrowIfNullOrEmpty(entryIdentifier.EntryId, nameof(entryIdentifier.EntryId));
+
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var entry = await ExceptionWrapper.ExecuteWithErrorHandling(async () =>
             await client.GetEntry(entryIdentifier.EntryId));
@@ -546,6 +556,8 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     [Action("Unpublish entry", Description = "Unpublish specified entry.")]
     public async Task UnpublishEntry([ActionParameter] EntryIdentifier entryIdentifier)
     {
+        ContentfulClientExtensions.ThrowIfNullOrEmpty(entryIdentifier.EntryId, nameof(entryIdentifier.EntryId));
+
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var entry = await ExceptionWrapper.ExecuteWithErrorHandling(async () =>
             await client.GetEntry(entryIdentifier.EntryId));

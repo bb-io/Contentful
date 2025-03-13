@@ -72,4 +72,44 @@ public class EntryActionsTests : TestBase
         
         await entryActions.SetEntryLocalizableFieldsFromHtmlFile(entryIdentifier, fileRequest);
     }
+
+    [TestMethod]
+    public async Task GetEntry_ValidEntryWithLocale_ShouldReturnEntryWithTitle()
+    {
+        var entryActions = new EntryActions(InvocationContext, FileManager);
+        var entryIdentifier = new EntryIdentifier
+        {
+            Environment = "dev",
+            EntryId = "5wFvto8Zhatz451gTDEpvP"
+        };
+        var localeIdentifier = new LocaleOptionalIdentifier
+        {
+            Locale = "en-US"
+        };
+
+        var entry = await entryActions.GetEntry(entryIdentifier, localeIdentifier);
+
+        IsNotNull(entry);
+        IsNotNull(entry.Title);
+        Console.WriteLine($"Entry title: {entry.Title}");
+    }
+
+    
+    [TestMethod]
+    public async Task GetEntry_ValidEntryWithoutLocale_ShouldReturnEntryWithTitle()
+    {
+        var entryActions = new EntryActions(InvocationContext, FileManager);
+        var entryIdentifier = new EntryIdentifier
+        {
+            Environment = "dev",
+            EntryId = "5wFvto8Zhatz451gTDEpvP"
+        };
+        var localeIdentifier = new LocaleOptionalIdentifier();
+
+        var entry = await entryActions.GetEntry(entryIdentifier, localeIdentifier);
+
+        IsNotNull(entry);
+        IsNotNull(entry.Title);
+        Console.WriteLine($"Entry title: {entry.Title}");
+    }
 }
