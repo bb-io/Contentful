@@ -68,7 +68,7 @@ public class ContentfulClient : ContentfulManagementClient
         }
         catch (ContentfulException ex)
         {
-            throw new PluginApplicationException($"Contentful error occurred: {ex.Message} Please check you input and try again" );
+            throw new PluginApplicationException(ex.Message);
         }
     }
 }
