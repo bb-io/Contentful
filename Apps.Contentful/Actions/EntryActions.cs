@@ -637,7 +637,10 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         {
             throw new PluginMisconfigurationException("Entry ID is null or empty. Please add a valid entry ID");
         }
-        entryIdentifier.EntryId = entryIdentifier.EntryId.Remove(entryIdentifier.EntryId.IndexOf('?'));
+        if (entryIdentifier.EntryId.Contains("?")) 
+        {
+            entryIdentifier.EntryId = entryIdentifier.EntryId.Remove(entryIdentifier.EntryId.IndexOf('?'));
+        }
 
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var spaceId = Creds.Get("spaceId").Value;
