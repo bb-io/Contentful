@@ -131,7 +131,8 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
             throw new InvalidCastException(nameof(webhookRequest.Body));
         
         var entryActions = new EntryActions(invocationContext, null!);
-        var entry = await entryActions.GetEntry(new EntryIdentifier { EntryId = payload.Sys.Id, Environment = tagsInput.Environment });
+        var entry = await entryActions.GetEntry(new EntryIdentifier { EntryId = payload.Sys.Id, Environment = tagsInput.Environment }, 
+            new LocaleOptionalIdentifier());
 
         if (types.ContentModels != null && !types.ContentModels.Contains(entry.ContentTypeId))
         {
@@ -215,7 +216,8 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
         }
         
         var entryActions = new EntryActions(invocationContext, null!);
-        var entry = await entryActions.GetEntry(new EntryIdentifier { EntryId = payload.Sys.Id, Environment = tagsInput.Environment });
+        var entry = await entryActions.GetEntry(new EntryIdentifier { EntryId = payload.Sys.Id, Environment = tagsInput.Environment }, 
+            new LocaleOptionalIdentifier());
         
         if (types.ContentModels != null && !types.ContentModels.Contains(entry.ContentTypeId))
         {
