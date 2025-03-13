@@ -683,8 +683,12 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         var htmlConverter = new EntryToHtmlConverter(InvocationContext, entryIdentifier.Environment);
         var resultHtml = htmlConverter.ToHtml(entriesContent, entryIdentifier.Locale, spaceId);
 
+        var originalEntry = await GetEntry(new() { EntryId = entryIdentifier.EntryId, Environment = entryIdentifier.Environment}, 
+            new LocaleOptionalIdentifier { Locale = entryIdentifier.Locale });
+        
+        var fileNameFirstPart = string.IsNullOrEmpty(originalEntry.Title) ? entryIdentifier.EntryId : originalEntry.Title;
         var file = await fileManagementClient.UploadAsync(new MemoryStream(Encoding.UTF8.GetBytes(resultHtml)),
-            MediaTypeNames.Text.Html, $"{entriesContent?.FirstOrDefault()?.Id}_{entryIdentifier.Locale}.html");
+            MediaTypeNames.Text.Html, $"{fileNameFirstPart}_{entryIdentifier.Locale}.html");
         return new()
         {
             File = file
