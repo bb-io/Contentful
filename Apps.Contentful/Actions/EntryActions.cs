@@ -637,7 +637,8 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         {
             throw new PluginMisconfigurationException("Entry ID is null or empty. Please add a valid entry ID");
         }
-        
+        entryIdentifier.EntryId = entryIdentifier.EntryId.Remove(entryIdentifier.EntryId.IndexOf('?'));
+
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var spaceId = Creds.Get("spaceId").Value;
 
@@ -668,7 +669,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         var resultHtml = htmlConverter.ToHtml(entriesContent, entryIdentifier.Locale, spaceId);
 
         var file = await fileManagementClient.UploadAsync(new MemoryStream(Encoding.UTF8.GetBytes(resultHtml)),
-            MediaTypeNames.Text.Html, $"{entryIdentifier.EntryId}_{entryIdentifier.Locale}.html");
+            MediaTypeNames.Text.Html, $"{entriesContent?.FirstOrDefault()?.Id}_{entryIdentifier.Locale}.html");
         return new()
         {
             File = file
