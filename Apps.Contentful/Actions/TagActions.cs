@@ -109,7 +109,7 @@ public class TagActions(InvocationContext invocationContext) : ContentfulInvocab
     {
         var client = new ContentfulClient(Creds, input.Environment);
         var entry = await client.ExecuteWithErrorHandling(async () => 
-                await client.GetEntry(input.EntryId)));
+                await client.GetEntry(input.EntryId));
         
         var existingTags = entry.Metadata.Tags
             .Select(x => x.Sys.Id).ToArray();
