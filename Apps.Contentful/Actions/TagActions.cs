@@ -25,7 +25,7 @@ public class TagActions(InvocationContext invocationContext) : ContentfulInvocab
     public async Task<ListTagsResponse> ListTags([ActionParameter] EnvironmentIdentifier environment)
     {
         var client = new ContentfulClient(Creds, environment.Environment);
-        var response = await ExceptionWrapper.ExecuteWithErrorHandling(async () => 
+        var response = await client.ExecuteWithErrorHandling(async () => 
             await client.GetContentTagsCollection());
         
         var tags = response.Select(x => new TagEntity(x)).ToArray();
@@ -38,7 +38,7 @@ public class TagActions(InvocationContext invocationContext) : ContentfulInvocab
         [ActionParameter] EnvironmentIdentifier environment)
     {
         var client = new ContentfulClient(Creds, environment.Environment);
-        var tag = await ExceptionWrapper.ExecuteWithErrorHandling(async () => 
+        var tag = await client.ExecuteWithErrorHandling(async () => 
             await client.CreateContentTag(input.Name, input.TagId, input.IsPublic));
         return new(tag);
     }
@@ -47,7 +47,7 @@ public class TagActions(InvocationContext invocationContext) : ContentfulInvocab
     public async Task<TagEntity> GetTag([ActionParameter] TagRequest input)
     {
         var client = new ContentfulClient(Creds, input.Environment);
-        var tag = await ExceptionWrapper.ExecuteWithErrorHandling(async () => 
+        var tag = await client.ExecuteWithErrorHandling(async () => 
             await client.GetContentTag(input.TagId));
         
         return new(tag);
@@ -57,10 +57,10 @@ public class TagActions(InvocationContext invocationContext) : ContentfulInvocab
     public async Task DeleteTag([ActionParameter] TagRequest input)
     {
         var client = new ContentfulClient(Creds, input.Environment);
-        var tag = await ExceptionWrapper.ExecuteWithErrorHandling(async () => 
+        var tag = await client.ExecuteWithErrorHandling(async () => 
             await client.GetContentTag(input.TagId));
         
-        await ExceptionWrapper.ExecuteWithErrorHandling(async () => 
+        await client.ExecuteWithErrorHandling(async () => 
             await client.DeleteContentTag(input.TagId, tag.SystemProperties.Version));
     }
 
@@ -78,7 +78,7 @@ public class TagActions(InvocationContext invocationContext) : ContentfulInvocab
         }
         
         var client = new ContentfulClient(Creds, input.Environment);
-        var entry = await ExceptionWrapper.ExecuteWithErrorHandling(async () => await client.GetEntry(input.EntryId));
+        var entry = await client.ExecuteWithErrorHandling(async () => await client.GetEntry(input.EntryId));
 
         var existingTags = entry.Metadata.Tags
             .Select(x => x.Sys.Id).ToArray();
@@ -108,8 +108,7 @@ public class TagActions(InvocationContext invocationContext) : ContentfulInvocab
     public async Task RemoveEntryTag([ActionParameter] EntryTagIdentifier input)
     {
         var client = new ContentfulClient(Creds, input.Environment);
-        var entry = await ExceptionWrapper.ExecuteWithErrorHandling(async () =>
-            await client.ExecuteWithErrorHandling(async () => 
+        var entry = await client.ExecuteWithErrorHandling(async () => 
                 await client.GetEntry(input.EntryId)));
         
         var existingTags = entry.Metadata.Tags

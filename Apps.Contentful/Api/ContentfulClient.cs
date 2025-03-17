@@ -71,4 +71,16 @@ public class ContentfulClient : ContentfulManagementClient
             throw new PluginApplicationException(ex.Message);
         }
     }
+
+    public async Task ExecuteWithErrorHandling(Func<Task> func)
+    {
+        try
+        {
+            await func.Invoke();
+        }
+        catch (ContentfulException e)
+        {
+            throw new PluginApplicationException(e.Message);
+        }
+    }
 }
