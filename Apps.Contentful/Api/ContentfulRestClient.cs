@@ -90,7 +90,7 @@ public class ContentfulRestClient(AuthenticationCredentialsProvider[] creds, str
             }
         }
 
-        var fullMessage = error["message"]?.ToString() ?? "Unknown error";
+        var fullMessage = error["message"]?.ToString() ?? error.ToString();
         var errors = string.Join("; ", errorMessages);
         return new PluginApplicationException($"{fullMessage} - {errors}");
     }
