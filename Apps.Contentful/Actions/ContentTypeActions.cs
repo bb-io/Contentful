@@ -23,7 +23,7 @@ public class ContentTypeActions(InvocationContext invocationContext, IFileManage
     {
         var client = new ContentfulClient(Creds, request.Environment);
         var spaceId = Creds.First(p => p.KeyName == "spaceId").Value;
-        var contentTypes = await ExceptionWrapper.ExecuteWithErrorHandling(async () => 
+        var contentTypes = await client.ExecuteWithErrorHandling(async () => 
             await client.GetContentTypes(spaceId, CancellationToken.None));
 
         var enumerable = contentTypes as ContentType[] ?? contentTypes.ToArray();
