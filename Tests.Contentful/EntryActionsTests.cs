@@ -80,7 +80,7 @@ public class EntryActionsTests : TestBase
         var entryIdentifier = new EntryIdentifier
         {
             Environment = "dev",
-            EntryId = "5wFvto8Zhatz451gTDEpvP"
+            EntryId = "5KihlBu1ZhlrETw4UJpIXb"
         };
         var localeIdentifier = new LocaleOptionalIdentifier
         {
@@ -91,6 +91,8 @@ public class EntryActionsTests : TestBase
 
         IsNotNull(entry);
         IsNotNull(entry.Title);
+        IsNotNull(entry.TagIds);
+        
         Console.WriteLine($"Entry title: {entry.Title}");
     }
 
@@ -111,5 +113,22 @@ public class EntryActionsTests : TestBase
         IsNotNull(entry);
         IsNotNull(entry.Title);
         Console.WriteLine($"Entry title: {entry.Title}");
+    }
+
+
+    [TestMethod]
+    public async Task AddTagEntry_ShouldReturnEntryWithTag()
+    {
+        var entryActions = new TagActions(InvocationContext);
+        var entryIdentifier = new EntryTagIdentifier
+        {
+            TagId = "23232",
+            EntryId = "2kgmrDpJKTSqk3prI14WjX"
+        };
+
+        await entryActions.AddEntryTag(entryIdentifier);
+
+
+        Assert.IsTrue(true);
     }
 }
