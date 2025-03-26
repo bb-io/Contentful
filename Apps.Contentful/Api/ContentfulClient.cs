@@ -4,6 +4,7 @@ using Blackbird.Applications.Sdk.Common.Exceptions;
 using Contentful.Core;
 using Contentful.Core.Configuration;
 using Contentful.Core.Errors;
+using Newtonsoft.Json;
 using Polly;
 using Polly.Retry;
 
@@ -70,6 +71,10 @@ public class ContentfulClient : ContentfulManagementClient
         {
             throw new PluginApplicationException(ex.Message);
         }
+        catch (JsonReaderException jex)
+        {
+            throw new PluginApplicationException("Error parsing JSON response: " + jex.Message);
+        }
     }
 
     public async Task ExecuteWithErrorHandling(Func<Task> func)
@@ -81,6 +86,10 @@ public class ContentfulClient : ContentfulManagementClient
         catch (ContentfulException e)
         {
             throw new PluginApplicationException(e.Message);
+        }
+        catch (JsonReaderException jex)
+        {
+            throw new PluginApplicationException("Error parsing JSON response: " + jex.Message);
         }
     }
 }
