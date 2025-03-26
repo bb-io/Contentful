@@ -136,8 +136,8 @@ public static class EntryToJsonConverter
                 else
                 {
                     if (localized != null && localized.Equals("true", StringComparison.OrdinalIgnoreCase))
-                    {
-                        entryFields[fieldId]![locale] = JObject.Parse(JsonConvert.SerializeObject(linkData));
+                    {                        
+                        SetEntryFieldValue(fieldId, JObject.Parse(JsonConvert.SerializeObject(linkData)));
                     }
                     else
                     {
