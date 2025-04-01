@@ -95,8 +95,10 @@ Finally, you can specify a list of Field IDs which will always be ignored and no
 ### Assets
 
 - **Get asset** returns title, description and a file attached to the asset.
+- **Get asset as HTML** returns HTML file with the asset's title and description.
 - **Create and upload asset**.
 - **Update asset file**.
+- **Update asset from HTML file** updates the asset's title and description from the HTML file.
 - **Delete asset** Delete specified asset.
 - **Publish asset**.
 - **Unpublish asset**.

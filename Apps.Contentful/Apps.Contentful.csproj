@@ -6,7 +6,7 @@
         <Nullable>enable</Nullable>
         <Product>Contentful</Product>
         <Description>The headless content management system</Description>
-        <Version>1.6.27</Version>
+        <Version>1.6.28</Version>
         <AssemblyName>Apps.Contentful</AssemblyName>
     </PropertyGroup>
 
@@ -20,10 +20,5 @@
     </ItemGroup>
 	<ItemGroup>
 		<EmbeddedResource CopyToOutputDirectory="Always" Include="image\icon.png"></EmbeddedResource>
-	</ItemGroup>
-	<ItemGroup>
-	  <Content Include="..\README.md">
-	    <Link>README.md</Link>
-	  </Content>
 	</ItemGroup>
 </Project>

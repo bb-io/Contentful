@@ -14,6 +14,10 @@ using RestSharp;
 using Contentful.Core.Models;
 using Contentful.Core.Models.Management;
 using File = Contentful.Core.Models.File;
+using Apps.Contentful.HtmlHelpers;
+using System.Text;
+using Blackbird.Applications.Sdk.Utils.Extensions.Sdk;
+using Apps.Contentful.Constants;
 
 namespace Apps.Contentful.Actions;
 
@@ -46,6 +50,26 @@ public class AssetActions(InvocationContext invocationContext, IFileManagementCl
             Tags = asset.Metadata.Tags.Select(x => x.Sys.Id),
             Locale = assetIdentifier.Locale
         };
+    }
+
+    [Action("Get asset as HTML", Description = "Get specified asset as HTML.")]
+    public async Task<FileResponse> GetAssetAsHtml(
+        [ActionParameter] AssetLocaleIdentifier assetIdentifier)
+    {
+        var client = new ContentfulClient(Creds, assetIdentifier.Environment);
+        var spaceId = Creds.GetSpaceId();
+        var asset = await client.ExecuteWithErrorHandling(async () =>
+            await client.GetAsset(assetIdentifier.AssetId, spaceId));
+
+        var assetToHtmlConverter = new AssetToHtmlConverter(assetIdentifier.Environment);
+        var html = assetToHtmlConverter.ConvertToHtml(asset, assetIdentifier.Locale);
+
+        var memoryStream = new MemoryStream(Encoding.UTF8.GetBytes(html));
+
+        string fileName = assetToHtmlConverter.GetFileName(asset, assetIdentifier.Locale);
+
+        var file = await fileManagementClient.UploadAsync(memoryStream, "text/html", fileName);
+        return new(file);
     }
 
     [Action("Create and upload asset", Description = "Create and upload an asset.")]
@@ -110,6 +134,28 @@ public class AssetActions(InvocationContext invocationContext, IFileManagementCl
         await client.ExecuteWithErrorHandling(async () => await client.ProcessAsset(assetIdentifier.AssetId,
             (int)oldAsset.SystemProperties.Version,
             assetIdentifier.Locale));
+    }
+
+    [Action("Update asset from HTML", Description = "Update asset from HTML.")]
+    public async Task UpdateAssetFromHtml([ActionParameter] UpdateAssetFromHtmlRequest input)
+    {
+        var file = await fileManagementClient.DownloadAsync(input.File);
+        var memoryStream = new MemoryStream();
+        await file.CopyToAsync(memoryStream);
+        memoryStream.Position = 0;
+
+        var html = Encoding.UTF8.GetString(memoryStream.ToArray());
+        var variables = AssetToHtmlConverter.GetVariablesFromHtml(html);
+
+        var client = new ContentfulClient(Creds, variables.Environment);
+        var asset = await client.ExecuteWithErrorHandling(async () =>
+            await client.GetAsset(variables.AssetId, Creds.GetSpaceId()));
+
+        var assetToJsonConverter = new AssetToJsonConverter(asset, input.Locale);
+        assetToJsonConverter.LocalizeAsset(html);
+
+        await client.ExecuteWithErrorHandling(async () =>
+            await client.CreateOrUpdateAsset(asset, version: asset.SystemProperties.Version));
     }
 
     [Action("Delete asset", Description = "Delete specified asset.")]
