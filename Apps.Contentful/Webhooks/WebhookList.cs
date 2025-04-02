@@ -6,6 +6,7 @@ using Apps.Contentful.Models.Identifiers;
 using Apps.Contentful.Models.Responses;
 using Apps.Contentful.Webhooks.Handlers.AssetHandlers;
 using Apps.Contentful.Webhooks.Handlers.EntryHandlers;
+using Apps.Contentful.Webhooks.Models.Inputs;
 using Apps.Contentful.Webhooks.Models.Payload;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Common.Webhooks;
@@ -21,8 +22,12 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
     #region EntryWebhooks
 
     [Webhook("On entry created", typeof(EntryCreatedHandler), Description = "On entry created")]
-    public Task<WebhookResponse<EntryEntity>> EntryCreated(WebhookRequest webhookRequest, [WebhookParameter] OptionalTagListIdentifier tags, [WebhookParameter] OptionalMultipleContentTypeIdentifier types)
-        => HandleEntryWebhookResponse(webhookRequest, tags, types, new OptionalEntryIdentifier());
+    public Task<WebhookResponse<EntryEntity>> EntryCreated(WebhookRequest webhookRequest, 
+        [WebhookParameter] OptionalTagListIdentifier tags, 
+        [WebhookParameter] OptionalMultipleContentTypeIdentifier types,
+        [WebhookParameter] OptionalFilterUsersIdentifier users
+        )
+        => HandleEntryWebhookResponse(webhookRequest, tags, types, new OptionalEntryIdentifier(), users);
 
     [Webhook("On entry saved", typeof(EntrySavedHandler), Description = "On entry saved")]
     public Task<WebhookResponse<FieldsChangedResponse>> EntrySaved(WebhookRequest webhookRequest,
@@ -44,8 +49,9 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
     public Task<WebhookResponse<EntryEntity>> EntryPublished(WebhookRequest webhookRequest,
         [WebhookParameter] OptionalEntryIdentifier optionalEntryIdentifier,
         [WebhookParameter] OptionalTagListIdentifier tags, 
-        [WebhookParameter] OptionalMultipleContentTypeIdentifier types)
-        => HandleEntryWebhookResponse(webhookRequest, tags, types, optionalEntryIdentifier);
+        [WebhookParameter] OptionalMultipleContentTypeIdentifier types,
+        [WebhookParameter] OptionalFilterUsersIdentifier users)
+        => HandleEntryWebhookResponse(webhookRequest, tags, types, optionalEntryIdentifier, users);
 
     [Webhook("On entry unpublished", typeof(EntryUnpublishedHandler), Description = "On entry unpublished")]
     public Task<WebhookResponse<EntityWebhookResponse>> EntryUnpublished(WebhookRequest webhookRequest)
@@ -122,7 +128,8 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
     private async Task<WebhookResponse<EntryEntity>> HandleEntryWebhookResponse(WebhookRequest webhookRequest, 
         OptionalTagListIdentifier tagsInput, 
         OptionalMultipleContentTypeIdentifier types, 
-        OptionalEntryIdentifier optionalEntryIdentifier
+        OptionalEntryIdentifier optionalEntryIdentifier,
+        OptionalFilterUsersIdentifier users
         )
     {
         var payload = JsonConvert.DeserializeObject<GenericEntryPayload>(webhookRequest.Body.ToString()!);
@@ -163,6 +170,16 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
         }
 
         if (optionalEntryIdentifier.EntryId != null && entry.Id != optionalEntryIdentifier.EntryId)
+        {
+            return new()
+            {
+                HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
+                Result = null,
+                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
+            };
+        }
+
+        if (users.UserIds != null && users.UserIds.Contains(entry.UpdatedBy))
         {
             return new()
             {
