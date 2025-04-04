@@ -14,7 +14,7 @@ public class ContentfulClient : ContentfulManagementClient
 {
     private const int Limit = 100;
     private const int RetryCount = 5;
-    
+
     private readonly AsyncRetryPolicy _retryPolicy;
 
     public ContentfulClient(IEnumerable<AuthenticationCredentialsProvider> creds, string? environment)
@@ -29,6 +29,7 @@ public class ContentfulClient : ContentfulManagementClient
     {
         _retryPolicy = Policy
             .Handle<ContentfulRateLimitException>()
+            .Or<ObjectDisposedException>()
             .WaitAndRetryAsync(RetryCount, (_) => TimeSpan.Zero, (exception, _) =>
             {
                 if (exception is ContentfulRateLimitException contentfulRateLimitException)
@@ -48,8 +49,8 @@ public class ContentfulClient : ContentfulManagementClient
     public async Task<IEnumerable<T>> Paginate<T>(Func<string, Task<IEnumerable<T>>> method, string? initialQueryString)
     {
         var result = new List<T>();
-        
-        while(true)
+
+        while (true)
         {
             var query = string.IsNullOrEmpty(initialQueryString) ? "?" : initialQueryString;
             var items = await ExecuteWithErrorHandling(() => method(query + $"&skip={result.Count}&limit={Limit}"));
@@ -58,7 +59,7 @@ public class ContentfulClient : ContentfulManagementClient
                 break;
         }
 
-        return result;        
+        return result;
     }
 
     public async Task<T> ExecuteWithErrorHandling<T>(Func<Task<T>> func)
@@ -74,6 +75,10 @@ public class ContentfulClient : ContentfulManagementClient
         catch (JsonReaderException jex)
         {
             throw new PluginApplicationException("Error parsing JSON response: " + jex.Message);
+        }
+        catch (ObjectDisposedException ex) when (ex.ObjectName?.Contains("StreamContent") == true)
+        {
+            throw new PluginApplicationException("Connection error while communicating with Contentful. Please try again and add retries to this action.");
         }
     }
 
