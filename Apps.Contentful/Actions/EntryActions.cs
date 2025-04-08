@@ -731,7 +731,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                 {
                     continue;
                 }
-
+                
                 await client.ExecuteWithErrorHandling(async () =>
                 {
                     var entryVersion = await client.GetEntry(entryToUpdate.EntryId);
