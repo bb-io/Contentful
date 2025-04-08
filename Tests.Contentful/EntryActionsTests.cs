@@ -51,7 +51,6 @@ public class EntryActionsTests : TestBase
         IsFalse(string.IsNullOrEmpty(fileResponse.File.ToString()));
     }
     
-    
     [TestMethod]
     public async Task SetEntryLocalizableFieldsFromHtmlFile_WithoutReferenceEntries_ShouldNotFail()
     {
@@ -66,6 +65,27 @@ public class EntryActionsTests : TestBase
             File = new()
             {
                 Name = "5wFvto8Zhatz451gTDEpvP_en-US.html",
+                ContentType = "text/html"
+            }
+        };
+        
+        await entryActions.SetEntryLocalizableFieldsFromHtmlFile(entryIdentifier, fileRequest);
+    }
+
+    [TestMethod]
+    public async Task SetEntryLocalizableFieldsFromHtmlFile_WithHyperlinkEntries_ShouldNotFail()
+    {
+        var entryActions = new EntryActions(InvocationContext, FileManager);
+        var entryIdentifier = new LocaleIdentifier()
+        {
+            Environment = "dev",
+            Locale = "nl"
+        };
+        var fileRequest = new FileRequest
+        {
+            File = new()
+            {
+                Name = "Example_en-US.html",
                 ContentType = "text/html"
             }
         };
