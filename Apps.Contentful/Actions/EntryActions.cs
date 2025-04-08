@@ -700,7 +700,8 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         "from an HTML file.")]
     public async Task SetEntryLocalizableFieldsFromHtmlFile(
         [ActionParameter] LocaleIdentifier localeIdentifier,
-        [ActionParameter] FileRequest input)
+        [ActionParameter] FileRequest input,
+        [ActionParameter] UpdateEntryFromHtmlRequest updateEntryFromHtmlRequest)
     {
         var client = new ContentfulClient(Creds, localeIdentifier.Environment);
 
@@ -721,11 +722,13 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         foreach (var entryToUpdate in entriesToUpdate)
         {
             var entry = await client.ExecuteWithErrorHandling(() => client.GetEntry(entryToUpdate.EntryId));
+            var contentType = await client.ExecuteWithErrorHandling(() =>
+                client.GetContentType(entry.SystemProperties.ContentType.SystemProperties.Id));
 
             try
             {
                 var oldEntryFields = (entry.Fields as JToken)!.DeepClone();
-                EntryToJsonConverter.ToJson(entry, entryToUpdate.HtmlNode, localeIdentifier.Locale);
+                EntryToJsonConverter.ToJson(entry, entryToUpdate.HtmlNode, localeIdentifier.Locale, contentType, updateEntryFromHtmlRequest.DontUpdateReferenceFields ?? false);
 
                 if (JToken.DeepEquals(oldEntryFields.Escape(), (entry.Fields as JObject)!.Escape()))
                 {
