@@ -140,6 +140,10 @@ public class WorkflowActions(InvocationContext invocationContext) : ContentfulIn
         var client = new ContentfulRestClient(Creds, updateRequest.Environment);
 
         var workflowResponse = await GetWorkflowAsync(updateRequest);
+        if(workflowResponse.StepId == updateRequest.StepId)
+        {
+            return workflowResponse;
+        }
 
         var request = new ContentfulRestRequest($"/workflows/{updateRequest.WorkflowId}", Method.Put, Creds)
             .WithJsonBody(new { stepId = updateRequest.StepId })
