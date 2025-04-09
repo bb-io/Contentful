@@ -41,7 +41,7 @@ public class EntryActionsTests : TestBase
         var entryIdentifier = new EntryLocaleIdentifier()
         {
             Environment = "dev",
-            EntryId = "5wFvto8Zhatz451gTDEpvP",
+            EntryId = "3Y4pOwtBOf3g47dh55LcyO",
             Locale = "en-US"
         };
         var request = new GetEntryAsHtmlRequest();
@@ -69,7 +69,7 @@ public class EntryActionsTests : TestBase
             }
         };
         
-        await entryActions.SetEntryLocalizableFieldsFromHtmlFile(entryIdentifier, fileRequest);
+        await entryActions.SetEntryLocalizableFieldsFromHtmlFile(entryIdentifier, fileRequest, new());
     }
 
     [TestMethod]
@@ -90,7 +90,31 @@ public class EntryActionsTests : TestBase
             }
         };
         
-        await entryActions.SetEntryLocalizableFieldsFromHtmlFile(entryIdentifier, fileRequest);
+        await entryActions.SetEntryLocalizableFieldsFromHtmlFile(entryIdentifier, fileRequest, new());
+    }
+    
+    [TestMethod]
+    public async Task SetEntryLocalizableFieldsFromHtmlFile_WithReferenceEntry_ShouldNotFail()
+    {
+        var entryActions = new EntryActions(InvocationContext, FileManager);
+        var entryIdentifier = new LocaleIdentifier()
+        {
+            Environment = "dev",
+            Locale = "nl"
+        };
+        var fileRequest = new FileRequest
+        {
+            File = new()
+            {
+                Name = "First reference entry_en-US.html",
+                ContentType = "text/html"
+            }
+        };
+        
+        await entryActions.SetEntryLocalizableFieldsFromHtmlFile(entryIdentifier, fileRequest, new() 
+        {
+            DontUpdateReferenceFields = true
+        });
     }
 
     [TestMethod]

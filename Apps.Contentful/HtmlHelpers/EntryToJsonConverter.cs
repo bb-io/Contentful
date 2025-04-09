@@ -23,18 +23,27 @@ public static class EntryToJsonConverter
             .ToList();
     }
 
-    public static void ToJson(Entry<object> entry, HtmlNode html, string locale)
+    public static void ToJson(Entry<object> entry, HtmlNode html, string locale, ContentType contentType, bool doNotUpdateReferenceFields)
     {
         var entryFields = (JObject)entry.Fields;
 
         var elements = html.ChildNodes.Where(n => n.NodeType == HtmlNodeType.Element).ToList();
-        elements.ForEach(x => UpdateEntryFieldFromHtml(x, entryFields, locale));
+        elements.ForEach(x => UpdateEntryFieldFromHtml(x, entryFields, locale, contentType, doNotUpdateReferenceFields));
     }
 
-    private static void UpdateEntryFieldFromHtml(HtmlNode htmlNode, JObject entryFields, string locale)
+    private static void UpdateEntryFieldFromHtml(HtmlNode htmlNode, JObject entryFields, string locale, ContentType contentType, bool doNotUpdateReferenceFields)
     {
         var fieldId = htmlNode.Attributes[ConvertConstants.FieldIdAttribute].Value;
         var fieldType = htmlNode.Attributes[ConvertConstants.FieldTypeAttribute].Value;
+
+        if(doNotUpdateReferenceFields == true)
+        {
+            var field = contentType.Fields.FirstOrDefault(x => x.Id == fieldId);
+            if (field != null && (field.Type == "Link" || (field.Type == "Array" && field.Items.LinkType == "Entry")))
+            {
+                return;
+            }
+        }
 
         void SetEntryFieldValue(string id, object newValue)
         {
