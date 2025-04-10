@@ -9,6 +9,8 @@ public class ConnectionValidator : IConnectionValidator
     public async ValueTask<ConnectionValidationResponse> ValidateConnection(
         IEnumerable<AuthenticationCredentialsProvider> authProviders, CancellationToken cancellationToken)
     {
+        throw new Exception("Test");
+
         try
         {
             var client = new ContentfulClient(authProviders, null);
