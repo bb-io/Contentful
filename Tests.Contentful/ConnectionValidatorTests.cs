@@ -10,7 +10,7 @@ public class ConnectionValidatorTests : TestBase
     [TestMethod]
     public async Task ValidateConnection_ValidCredentials_ShouldNotFail()
     {
-        var validator = new ConnectionValidator();
+        var validator = new ConnectionValidator(InvocationContext);
 
         var result = await validator.ValidateConnection(Credentials, CancellationToken.None);
         Assert.IsTrue(result.IsValid);
@@ -19,7 +19,7 @@ public class ConnectionValidatorTests : TestBase
     [TestMethod]
     public async Task ValidateConnection_InvalidCredentials_ShouldFail()
     {
-        var validator = new ConnectionValidator();
+        var validator = new ConnectionValidator(InvocationContext);
 
         var newCredentials = Credentials.Select(x => new AuthenticationCredentialsProvider(x.KeyName, x.Value + "_incorrect"));
         var result = await validator.ValidateConnection(newCredentials, CancellationToken.None);
