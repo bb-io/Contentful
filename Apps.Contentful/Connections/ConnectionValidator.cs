@@ -1,18 +1,20 @@
 ﻿using Apps.Contentful.Api;
+using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Connections;
+using Blackbird.Applications.Sdk.Common.Invocation;
 
 namespace Apps.Contentful.Connections;
 
-public class ConnectionValidator : IConnectionValidator
+public class ConnectionValidator(InvocationContext invocationContext) : BaseInvocable(invocationContext), IConnectionValidator
 {
     public async ValueTask<ConnectionValidationResponse> ValidateConnection(
         IEnumerable<AuthenticationCredentialsProvider> authProviders, CancellationToken cancellationToken)
     {
-        throw new Exception("Test");
-
         try
         {
+            throw new Exception("Test exception");
+
             var client = new ContentfulClient(authProviders, null);
             var result = await client.GetContentTypes(cancellationToken: cancellationToken);
 
@@ -23,6 +25,7 @@ public class ConnectionValidator : IConnectionValidator
         }
         catch (Exception ex)
         {
+            invocationContext.Logger?.LogError($"[ContentfulValidator] Error validating connection: {ex.Message}", []);
             return new()
             {
                 IsValid = false,
