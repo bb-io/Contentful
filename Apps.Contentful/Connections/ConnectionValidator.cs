@@ -13,8 +13,6 @@ public class ConnectionValidator(InvocationContext invocationContext) : BaseInvo
     {
         try
         {
-            throw new Exception("Test exception");
-
             var client = new ContentfulClient(authProviders, null);
             var result = await client.GetContentTypes(cancellationToken: cancellationToken);
 
@@ -25,7 +23,11 @@ public class ConnectionValidator(InvocationContext invocationContext) : BaseInvo
         }
         catch (Exception ex)
         {
-            invocationContext.Logger?.LogError($"[ContentfulValidator] Error validating connection: {ex.Message}", []);
+            var managementApiKey = authProviders.FirstOrDefault(p => p.KeyName == "Authorization")?.Value ?? string.Empty;
+            var spaceId = authProviders.FirstOrDefault(p => p.KeyName == "spaceId")?.Value ?? string.Empty;
+
+            invocationContext.Logger?.LogError($"[ContentfulValidator] Error validating connection: {ex.Message}; Management API key: {managementApiKey}; Space ID: {spaceId}", []);
+
             return new()
             {
                 IsValid = false,
