@@ -1,8 +1,10 @@
 ﻿using Apps.Contentful.Api;
+using Apps.Contentful.Constants;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Connections;
 using Blackbird.Applications.Sdk.Common.Invocation;
+using Blackbird.Applications.Sdk.Utils.Extensions.Sdk;
 
 namespace Apps.Contentful.Connections;
 
@@ -14,8 +16,9 @@ public class ConnectionValidator(InvocationContext invocationContext) : BaseInvo
         try
         {
             var client = new ContentfulClient(authProviders, null);
-            var result = await client.GetContentTypes(cancellationToken: cancellationToken);
+            var spaceId = authProviders.Get(CredNames.SpaceId)?.Value ?? throw new Exception("Space ID is missing");
 
+            var result = await client.GetEnvironments(spaceId, cancellationToken: cancellationToken);
             return new()
             {
                 IsValid = true
