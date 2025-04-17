@@ -27,4 +27,7 @@ public class ListEntriesRequest : ContentModelOptionalIdentifier
     
     [Display("Draft", Description = "Filter by draft entries. If not set, all entries are returned.")]
     public bool? Draft { get; set; }
+
+    [Display("Search term", Description = "Full‑text search across all text and symbol fields")]
+    public string? SearchTerm { get; set; }
 }

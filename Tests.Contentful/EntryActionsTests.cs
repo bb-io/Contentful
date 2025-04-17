@@ -24,7 +24,7 @@ public class EntryActionsTests : TestBase
     public async Task ListEntries_ValidEnvironment_ShouldReturnAllEntries()
     {
         var entryActions = new EntryActions(InvocationContext, FileManager);
-        var listEntriesRequest = new ListEntriesRequest { Environment = "dev" };
+        var listEntriesRequest = new ListEntriesRequest { Environment = "dev", SearchTerm= "The perfect partner" };
         
         var entriesResponse = await entryActions.ListEntries(listEntriesRequest);
 
@@ -124,7 +124,7 @@ public class EntryActionsTests : TestBase
         var entryIdentifier = new EntryIdentifier
         {
             Environment = "dev",
-            EntryId = "5KihlBu1ZhlrETw4UJpIXb"
+            EntryId = "3Y4pOwtBOf3g47dh55LcyO"
         };
         var localeIdentifier = new LocaleOptionalIdentifier
         {
