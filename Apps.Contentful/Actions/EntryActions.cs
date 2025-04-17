@@ -442,6 +442,13 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             queryString.Add("sys.updatedAt[lte]", request.UpdatedTo.Value.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'"));
         }
 
+        if (!string.IsNullOrWhiteSpace(request.SearchTerm))
+        {
+            queryString.Add("query", request.SearchTerm);
+        }
+            
+
+
         IEnumerable<Entry<object>> entries =
             await client.Paginate<Entry<object>>(
                 async (query) => await client.GetEntriesCollection<Entry<object>>(query), "?" + queryString);
