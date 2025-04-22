@@ -24,7 +24,7 @@ public class HtmlToRichTextConverter
         {
             if (childNode.NodeType == HtmlNodeType.Element)
             {
-                IContent content = null;
+                IContent? content = null;
 
                 switch (childNode.Name)
                 {
@@ -446,7 +446,7 @@ public class HtmlToRichTextConverter
         }
     }
 
-    private Paragraph ProcessParagraph(HtmlNode node, List<IContent> parentContentList)
+    private Paragraph? ProcessParagraph(HtmlNode node, List<IContent> parentContentList)
     {
         var paragraph = new Paragraph
         {
@@ -501,13 +501,7 @@ public class HtmlToRichTextConverter
 
         if (!paragraph.Content.Any())
         {
-            paragraph.Content.Add(new Text
-            {
-                NodeType = "text",
-                Marks = new(),
-                Data = new GenericStructureData(),
-                Value = string.Empty
-            });
+            return null;
         }
 
         return paragraph;
@@ -528,30 +522,5 @@ public class HtmlToRichTextConverter
         }
 
         return newNode;
-    }
-
-    private static IContent BuildEmbeddedBlock(HtmlNode htmlNode)
-    {
-        var id = htmlNode.GetAttributeValue("id", "");
-        var nodeType = id.Split("_")[0];
-        var nodeId = id.Split("_")[^1];
-        var entryBlock = nodeType == "embedded-entry-block";
-        return new EntryStructure
-        {
-            NodeType = entryBlock ? "embedded-entry-block" : "embedded-asset-block",
-            Content = new List<IContent>(),
-            Data = new EntryStructureData
-            {
-                Target = new Asset
-                {
-                    SystemProperties = new SystemProperties
-                    {
-                        Id = nodeId,
-                        Type = "Link",
-                        LinkType = entryBlock ? "Entry" : "Asset"
-                    }
-                }
-            }
-        };
     }
 }
