@@ -131,7 +131,7 @@ public class EntryActionsTests : TestBase
             File = new()
             {
                 Name = "Markdown entry #1_en-US.html",
-                ContentType = "text/html"
+                ContentType = "text/html" 
             }
         };
         
