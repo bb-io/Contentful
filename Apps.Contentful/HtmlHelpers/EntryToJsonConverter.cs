@@ -243,8 +243,16 @@ public static class EntryToJsonConverter
         foreach (var dd in ddNodes)
         {
             var key = dd.GetAttributeValue("data-json-key", "");
-            var valueToken = ParseValueFromNode(dd);
-            obj[key] = valueToken;
+            var value = dd.GetAttributeValue("data-json-value", "");
+            if(string.IsNullOrEmpty(value))
+            {
+                var valueToken = ParseValueFromNode(dd);
+                obj[key] = valueToken;
+            }
+            else
+            {
+                obj[key] = System.Net.WebUtility.HtmlDecode(value);
+            }
         }
 
         return obj;
