@@ -54,7 +54,7 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
         {
             "Integer" or "Number" or "Symbol" or "Text" => ConvertPrimitivesToHtml(bodyNode, doc, field,
                 entryField, locale),
-            "Object" => ConvertJsonObjectToHtml(doc, field, entryField, locale),
+            "Object" => ConvertJsonObjectToHtml(doc, field, entryField, locale, spaceId),
             "Location" => ConvertLocationObjectToHtml(doc, field, entryField, locale),
             "Boolean" => ConvertBooleanToHtml(doc, field, entryField, locale),
             "RichText" => ConvertRichTextToHtml(doc, field, entryField, locale, spaceId),
@@ -67,9 +67,15 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
             bodyNode.AppendChild(node);
     }
 
-    private HtmlNode? ConvertJsonObjectToHtml(HtmlDocument doc, Field field, JToken entryField, string locale)
+    private HtmlNode? ConvertJsonObjectToHtml(HtmlDocument doc, Field field, JToken entryField, string locale, string spaceId)
     {
-
+        if(entryField[locale]?["nodeType"]?.ToString() == "document")
+        {
+            var htmlNode = ConvertRichTextToHtml(doc, field, entryField, locale, spaceId);
+            htmlNode?.SetAttributeValue("data-rich-text", "true");
+            return htmlNode;
+        }
+        
         var jsonToken = entryField[locale];
         if (jsonToken == null || jsonToken.Type != JTokenType.Object)
         {
@@ -83,10 +89,6 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
 
         var dlNode = doc.CreateElement("dl");
         containerNode.AppendChild(dlNode);
-
-        var excludeKeys = new[] { "id", "type", "linkType", "contentType", "nodeType", "assetName", "assetUrl",
-            "assetType", "assetFileSize", "assetTypeCoverImg", "assetFileExtension", "jobTitle", "salutation",
-            "attributedTo", "organization", "assetFileSize", "assetTypeDetails", "assetFileExtension" };
 
         HtmlNode? RenderToken(JToken token)
         {
@@ -103,22 +105,12 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
 
                         if (prop.Value.Type == JTokenType.String)
                         {
-                            if(prop.Name == "value")
-                            {
-                                ddNode.InnerHtml = System.Net.WebUtility.HtmlEncode(prop.Value.ToString());
-                            }
-                            else 
-                            {
-                                ddNode.SetAttributeValue("data-json-value", System.Net.WebUtility.HtmlEncode(prop.Value.ToString() ?? ""));
-                            }
+                            ddNode.InnerHtml = System.Net.WebUtility.HtmlEncode(prop.Value.ToString());
                         }
                         else 
                         {
                             var childNode = RenderToken(prop.Value);
-                            if(childNode != null)
-                            {
-                                ddNode.AppendChild(childNode);
-                            }
+                            ddNode.AppendChild(childNode);
                         }
 
                         innerDl.AppendChild(ddNode);
@@ -148,18 +140,9 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
                     return ulNode;
 
                 case JTokenType.String:
-                    var name = token.Path.Split('.').LastOrDefault() ?? string.Empty;
-                    if(!excludeKeys.Contains(name))
-                    {
-                        var spanNode = doc.CreateElement("span");
-                        spanNode.SetAttributeValue("data-json-key", name);
-                        spanNode.InnerHtml = System.Net.WebUtility.HtmlEncode(token.ToString() ?? "");
-                        return spanNode;
-                    }
-                    else
-                    {
-                        return null!;
-                    }
+                    var spanNode = doc.CreateElement("span");
+                    spanNode.InnerHtml = System.Net.WebUtility.HtmlEncode(token.ToString() ?? "");
+                    return spanNode;
 
                 default:
                     var defaultNode = doc.CreateElement("span");
@@ -174,21 +157,14 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
             HtmlNode? ddNode = doc.CreateElement("dd");
             ddNode.SetAttributeValue("data-json-key", prop.Name);
 
-            if (prop.Value.Type == JTokenType.String && prop.Name == "value")
+            if (prop.Value.Type == JTokenType.String)
             {
                 ddNode.InnerHtml = System.Net.WebUtility.HtmlEncode(prop.Value.ToString());
             }
             else
             {
                 var childNode = RenderToken(prop.Value);
-                if(childNode != null)
-                {
-                    ddNode.AppendChild(childNode);
-                }
-                else if(prop.Value.Type == JTokenType.String)
-                {
-                    ddNode.SetAttributeValue("data-json-value", System.Net.WebUtility.HtmlEncode(prop.Value.ToString() ?? ""));
-                }
+                ddNode.AppendChild(childNode);
             }
 
             dlNode.AppendChild(ddNode);
