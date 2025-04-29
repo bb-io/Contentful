@@ -73,6 +73,10 @@ public class RichTextToHtmlConverter(JArray content, string spaceId)
                 uri = $"https://app.contentful.com/spaces/{spaceId}/entries/{entryId}";
                 return $"<a id=\"{nodeType}_{entryId}\" href=\"{uri}\">{ConvertContentToHtml(jsonObject["content"])}</a>";
             case "embedded-entry-block" or "embedded-entry-inline":
+                if(jsonObject["data"]?["quote"] != null)
+                {
+                    return $"<blockquote data-custom-quote=\"true\">{ConvertQuoteToHtml(jsonObject)}</blockquote>";
+                }
                 entryId = jsonObject["data"]["target"]["sys"]["id"].ToString();
                 uri = $"https://app.contentful.com/spaces/{spaceId}/entries/{entryId}";
                 return $"<a id=\"{nodeType}_{entryId}\" href=\"{uri}\"></a>";
@@ -83,6 +87,44 @@ public class RichTextToHtmlConverter(JArray content, string spaceId)
             default:
                 return ConvertContentToHtml(jsonObject["content"]);
         }
+    }
+
+    private string ConvertQuoteToHtml(JToken quoteToken)
+    {
+        var htmlBuilder = new StringBuilder();
+        var excludedFieldPathes = new[] { "target.sys", "nodeType" };
+        foreach (var property in quoteToken.Children<JProperty>())
+        {
+            if (property.Value.Type == JTokenType.String)
+            {
+                string value = property.Value.ToString();
+                if (!string.IsNullOrEmpty(value) && !excludedFieldPathes.Any(property.Path.Contains))
+                {
+                    htmlBuilder.Append($"<div data-field=\"{property.Name}\" data-path=\"{property.Path}\">{value}</div>");
+                }
+            }
+            if (property.Value.Type == JTokenType.Object)
+            {
+                var innerHtml = ConvertQuoteToHtml(property.Value);
+                if (!string.IsNullOrEmpty(innerHtml) && !excludedFieldPathes.Any(property.Path.Contains))
+                {
+                    htmlBuilder.Append($"<div data-field=\"{property.Name}\" data-path=\"{property.Path}\">{innerHtml}</div>");
+                }
+            }
+            if(property.Value.Type == JTokenType.Array)
+            {
+                foreach (var item in property.Value.Children())
+                {
+                    var innerHtml = ConvertQuoteToHtml(item);
+                    if (!string.IsNullOrEmpty(innerHtml) && !excludedFieldPathes.Any(property.Path.Contains))
+                    {
+                        htmlBuilder.Append($"<div data-field=\"{property.Name}\" data-path=\"{property.Path}\">{innerHtml}</div>");
+                    }
+                }
+            }
+        }
+        
+        return htmlBuilder.ToString();
     }
 
     private string ConvertContentToHtml(JToken content)

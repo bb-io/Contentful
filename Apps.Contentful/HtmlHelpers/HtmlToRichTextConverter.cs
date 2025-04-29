@@ -1,4 +1,5 @@
 ﻿using System.Web;
+using Apps.Contentful.Models.Entities;
 using Contentful.Core.Models;
 using HtmlAgilityPack;
 
@@ -263,8 +264,14 @@ public class HtmlToRichTextConverter
         return list;
     }
 
-    private Quote CreateBlockQuote(HtmlNode node)
+    private IContent CreateBlockQuote(HtmlNode node)
     {
+        if(node.Attributes["data-custom-quote"]?.Value == "true")
+        {
+            IContent content = GetCustomQuoteContent(node);
+            return content; 
+        }
+
         var blockQuote = new Quote
         {
             NodeType = "blockquote",
@@ -274,6 +281,76 @@ public class HtmlToRichTextConverter
 
         ParseHtmlToContentful(node, blockQuote.Content);
         return blockQuote;
+    }
+
+    private IContent GetCustomQuoteContent(HtmlNode node)
+    {
+        var quote = new Quote
+        {
+            Data = new GenericStructureData(),
+            Content = new List<IContent>(),
+            NodeType = "document"
+        };
+
+        ParseHtmlToContentful(node, quote.Content);
+        quote.Content = quote.Content.Take(1).Select(x => (IContent)new Paragraph
+        {
+            NodeType = "paragraph",
+            Data = new GenericStructureData(),
+            Content = [x]
+        }).ToList();
+        
+        var allContent = GetCustomQuoteProperties(node);
+        var dataDictionary = new Dictionary<string, object>()
+        {
+            { "quote", quote },
+            { "target", new { sys = new { id = "entity.sys.id", type = "Link", linkType = "Entity", contentType = "Quote" } } }
+        };
+
+        foreach (var kvp in allContent)
+        {
+            if (!dataDictionary.ContainsKey(kvp.Key))
+            {
+                dataDictionary[kvp.Key] = kvp.Value;
+            }
+        }
+
+        var blockQuote = new CustomQuoteEntity
+        {
+            Data = dataDictionary,
+            Content = new List<IContent>(),
+            NodeType = "embedded-entry-block"
+        };
+
+        return blockQuote;
+    }
+
+    private Dictionary<string, string> GetCustomQuoteProperties(HtmlNode node)
+    {
+        var properties = new Dictionary<string, string>();
+        
+        var dataDiv = node.SelectSingleNode(".//div[@data-field='data']");
+        if (dataDiv == null)
+            return properties;
+        
+        var propertyDivs = dataDiv.SelectNodes("./div[@data-field]");
+        if (propertyDivs == null)
+            return properties;
+        
+        foreach (var propertyDiv in propertyDivs)
+        {
+            var fieldName = propertyDiv.GetAttributeValue("data-field", "");
+            if (fieldName != "quote") 
+            {
+                var fieldValue = propertyDiv.InnerText.Trim();
+                if (!string.IsNullOrEmpty(fieldName) && !string.IsNullOrEmpty(fieldValue))
+                {
+                    properties[fieldName] = fieldValue;
+                }
+            }
+        }
+        
+        return properties;
     }
 
     private HorizontalRuler CreateHorizontalRuler() =>
