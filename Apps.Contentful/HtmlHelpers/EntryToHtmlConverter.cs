@@ -54,7 +54,7 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
         {
             "Integer" or "Number" or "Symbol" or "Text" => ConvertPrimitivesToHtml(bodyNode, doc, field,
                 entryField, locale),
-            "Object" => ConvertJsonObjectToHtml(doc, field, entryField, locale),
+            "Object" => ConvertJsonObjectToHtml(doc, field, entryField, locale, spaceId),
             "Location" => ConvertLocationObjectToHtml(doc, field, entryField, locale),
             "Boolean" => ConvertBooleanToHtml(doc, field, entryField, locale),
             "RichText" => ConvertRichTextToHtml(doc, field, entryField, locale, spaceId),
@@ -67,11 +67,20 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
             bodyNode.AppendChild(node);
     }
 
-    private HtmlNode? ConvertJsonObjectToHtml(HtmlDocument doc, Field field, JToken entryField, string locale)
+    private HtmlNode? ConvertJsonObjectToHtml(HtmlDocument doc, Field field, JToken entryField, string locale, string spaceId)
     {
+        if(entryField[locale]?["nodeType"]?.ToString() == "document")
+        {
+            var htmlNode = ConvertRichTextToHtml(doc, field, entryField, locale, spaceId);
+            htmlNode?.SetAttributeValue("data-rich-text", "true");
+            return htmlNode;
+        }
+        
         var jsonToken = entryField[locale];
         if (jsonToken == null || jsonToken.Type != JTokenType.Object)
+        {
             return null;
+        }
 
         var containerNode = doc.CreateElement("div");
         containerNode.SetAttributeValue(ConvertConstants.FieldTypeAttribute, field.Type);
@@ -81,7 +90,7 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
         var dlNode = doc.CreateElement("dl");
         containerNode.AppendChild(dlNode);
 
-        HtmlNode RenderToken(JToken token)
+        HtmlNode? RenderToken(JToken token)
         {
             switch (token.Type)
             {
@@ -91,14 +100,14 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
 
                     foreach (var prop in ((JObject)token).Properties())
                     {
-                        var ddNode = doc.CreateElement("dd");
+                        HtmlNode? ddNode = doc.CreateElement("dd");
                         ddNode.SetAttributeValue("data-json-key", prop.Name);
 
                         if (prop.Value.Type == JTokenType.String)
                         {
                             ddNode.InnerHtml = System.Net.WebUtility.HtmlEncode(prop.Value.ToString());
                         }
-                        else
+                        else 
                         {
                             var childNode = RenderToken(prop.Value);
                             ddNode.AppendChild(childNode);
@@ -131,9 +140,9 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
                     return ulNode;
 
                 case JTokenType.String:
-                    var textNode = doc.CreateElement("span");
-                    textNode.InnerHtml = System.Net.WebUtility.HtmlEncode(token.ToString());
-                    return textNode;
+                    var spanNode = doc.CreateElement("span");
+                    spanNode.InnerHtml = System.Net.WebUtility.HtmlEncode(token.ToString() ?? "");
+                    return spanNode;
 
                 default:
                     var defaultNode = doc.CreateElement("span");
@@ -145,9 +154,8 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
         var rootObject = (JObject)jsonToken;
         foreach (var prop in rootObject.Properties())
         {
-            var ddNode = doc.CreateElement("dd");
+            HtmlNode? ddNode = doc.CreateElement("dd");
             ddNode.SetAttributeValue("data-json-key", prop.Name);
-
 
             if (prop.Value.Type == JTokenType.String)
             {

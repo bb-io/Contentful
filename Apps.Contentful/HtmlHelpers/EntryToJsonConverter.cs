@@ -115,14 +115,7 @@ public static class EntryToJsonConverter
                 SetEntryFieldValue(fieldId, boolValue);
                 break;
             case "RichText":
-                var htmlToRichTextConverter = new HtmlToRichTextConverter();
-                var richText = htmlToRichTextConverter.ToRichText(htmlNode.InnerHtml);
-                var serializerSettings = new JsonSerializerSettings
-                {
-                    ContractResolver = new CamelCasePropertyNamesContractResolver(),
-                    NullValueHandling = NullValueHandling.Ignore
-                };
-                var richTextValue = JObject.Parse(JsonConvert.SerializeObject(richText, serializerSettings));
+                var richTextValue = ParseToRichText(htmlNode);
                 SetEntryFieldValue(fieldId, richTextValue);
                 break;
             case "Link":
@@ -216,6 +209,12 @@ public static class EntryToJsonConverter
 
     private static JToken ParseJsonObjectFromHtmlNode(HtmlNode htmlNode)
     {
+        var richTextAttribute = htmlNode.Attributes["data-rich-text"];
+        if(richTextAttribute != null && richTextAttribute.Value.Equals("true", StringComparison.OrdinalIgnoreCase))
+        {
+            return ParseToRichText(htmlNode);
+        }
+        
         var dlNode = htmlNode.SelectSingleNode("./dl[@data-contentful-json-object='true']");
         if (dlNode == null)
         {
@@ -228,6 +227,20 @@ public static class EntryToJsonConverter
         }
 
         return ParseDlAsObject(dlNode);
+    }
+
+    private static JObject ParseToRichText(HtmlNode htmlNode)
+    {
+        var htmlToRichTextConverter = new HtmlToRichTextConverter();
+        var richText = htmlToRichTextConverter.ToRichText(htmlNode.InnerHtml);
+        var serializerSettings = new JsonSerializerSettings
+        {
+            ContractResolver = new CamelCasePropertyNamesContractResolver(),
+            NullValueHandling = NullValueHandling.Ignore
+        };
+
+        var richTextValue = JObject.Parse(JsonConvert.SerializeObject(richText, serializerSettings));
+        return richTextValue;
     }
 
     private static JToken ParseDlAsObject(HtmlNode dlNode)

@@ -1,4 +1,5 @@
 ﻿using System.Web;
+using Apps.Contentful.Models.Entities;
 using Contentful.Core.Models;
 using HtmlAgilityPack;
 
@@ -24,7 +25,7 @@ public class HtmlToRichTextConverter
         {
             if (childNode.NodeType == HtmlNodeType.Element)
             {
-                IContent content = null;
+                IContent? content = null;
 
                 switch (childNode.Name)
                 {
@@ -263,8 +264,14 @@ public class HtmlToRichTextConverter
         return list;
     }
 
-    private Quote CreateBlockQuote(HtmlNode node)
+    private IContent CreateBlockQuote(HtmlNode node)
     {
+        if(node.Attributes["data-custom-quote"]?.Value == "true")
+        {
+            IContent content = GetCustomQuoteContent(node);
+            return content; 
+        }
+
         var blockQuote = new Quote
         {
             NodeType = "blockquote",
@@ -274,6 +281,76 @@ public class HtmlToRichTextConverter
 
         ParseHtmlToContentful(node, blockQuote.Content);
         return blockQuote;
+    }
+
+    private IContent GetCustomQuoteContent(HtmlNode node)
+    {
+        var quote = new Quote
+        {
+            Data = new GenericStructureData(),
+            Content = new List<IContent>(),
+            NodeType = "document"
+        };
+
+        ParseHtmlToContentful(node, quote.Content);
+        quote.Content = quote.Content.Take(1).Select(x => (IContent)new Paragraph
+        {
+            NodeType = "paragraph",
+            Data = new GenericStructureData(),
+            Content = [x]
+        }).ToList();
+        
+        var allContent = GetCustomQuoteProperties(node);
+        var dataDictionary = new Dictionary<string, object>()
+        {
+            { "quote", quote },
+            { "target", new { sys = new { id = "entity.sys.id", type = "Link", linkType = "Entity", contentType = "Quote" } } }
+        };
+
+        foreach (var kvp in allContent)
+        {
+            if (!dataDictionary.ContainsKey(kvp.Key))
+            {
+                dataDictionary[kvp.Key] = kvp.Value;
+            }
+        }
+
+        var blockQuote = new CustomQuoteEntity
+        {
+            Data = dataDictionary,
+            Content = new List<IContent>(),
+            NodeType = "embedded-entry-block"
+        };
+
+        return blockQuote;
+    }
+
+    private Dictionary<string, string> GetCustomQuoteProperties(HtmlNode node)
+    {
+        var properties = new Dictionary<string, string>();
+        
+        var dataDiv = node.SelectSingleNode(".//div[@data-field='data']");
+        if (dataDiv == null)
+            return properties;
+        
+        var propertyDivs = dataDiv.SelectNodes("./div[@data-field]");
+        if (propertyDivs == null)
+            return properties;
+        
+        foreach (var propertyDiv in propertyDivs)
+        {
+            var fieldName = propertyDiv.GetAttributeValue("data-field", "");
+            if (fieldName != "quote") 
+            {
+                var fieldValue = propertyDiv.InnerText.Trim();
+                if (!string.IsNullOrEmpty(fieldName) && !string.IsNullOrEmpty(fieldValue))
+                {
+                    properties[fieldName] = fieldValue;
+                }
+            }
+        }
+        
+        return properties;
     }
 
     private HorizontalRuler CreateHorizontalRuler() =>
@@ -446,7 +523,7 @@ public class HtmlToRichTextConverter
         }
     }
 
-    private Paragraph ProcessParagraph(HtmlNode node, List<IContent> parentContentList)
+    private Paragraph? ProcessParagraph(HtmlNode node, List<IContent> parentContentList)
     {
         var paragraph = new Paragraph
         {
@@ -501,13 +578,7 @@ public class HtmlToRichTextConverter
 
         if (!paragraph.Content.Any())
         {
-            paragraph.Content.Add(new Text
-            {
-                NodeType = "text",
-                Marks = new(),
-                Data = new GenericStructureData(),
-                Value = string.Empty
-            });
+            return null;
         }
 
         return paragraph;
@@ -528,30 +599,5 @@ public class HtmlToRichTextConverter
         }
 
         return newNode;
-    }
-
-    private static IContent BuildEmbeddedBlock(HtmlNode htmlNode)
-    {
-        var id = htmlNode.GetAttributeValue("id", "");
-        var nodeType = id.Split("_")[0];
-        var nodeId = id.Split("_")[^1];
-        var entryBlock = nodeType == "embedded-entry-block";
-        return new EntryStructure
-        {
-            NodeType = entryBlock ? "embedded-entry-block" : "embedded-asset-block",
-            Content = new List<IContent>(),
-            Data = new EntryStructureData
-            {
-                Target = new Asset
-                {
-                    SystemProperties = new SystemProperties
-                    {
-                        Id = nodeId,
-                        Type = "Link",
-                        LinkType = entryBlock ? "Entry" : "Asset"
-                    }
-                }
-            }
-        };
     }
 }
