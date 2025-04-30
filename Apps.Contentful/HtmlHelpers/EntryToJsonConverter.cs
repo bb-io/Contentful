@@ -215,6 +215,59 @@ public static class EntryToJsonConverter
             return ParseToRichText(htmlNode);
         }
         
+        var arrayJsonAttribute = htmlNode.Attributes["data-array-json-object"];
+        if (arrayJsonAttribute != null && arrayJsonAttribute.Value.Equals("true", StringComparison.OrdinalIgnoreCase))
+        {
+            var jsonArray = new JArray();
+            
+            // Find all customField divs
+            var customFieldNodes = htmlNode.SelectNodes(".//div[@data-field='customField']");
+            if (customFieldNodes != null)
+            {
+                foreach (var customFieldNode in customFieldNodes)
+                {
+                    var jsonValue = customFieldNode.Attributes["data-contentful-json-value"]?.Value;
+                    if (jsonValue != null)
+                    {
+                        // Parse the base JSON object from the attribute
+                        var baseJsonObject = JObject.Parse(HttpUtility.HtmlDecode(jsonValue));
+                        
+                        // Process child elements to update values
+                        var childElements = customFieldNode.SelectNodes(".//div[@data-path]");
+                        if (childElements != null)
+                        {
+                            foreach (var childElement in childElements)
+                            {
+                                var path = childElement.Attributes["data-path"]?.Value;
+                                var field = childElement.Attributes["data-field"]?.Value;
+
+                                var spitedPath = path.Split('.');
+                                var skipedFirstTwo = spitedPath.Skip(2).ToList();
+                                var pathSegments = string.Join(".", skipedFirstTwo);
+                                
+                                if (!string.IsNullOrEmpty(path) && !string.IsNullOrEmpty(field))
+                                {   
+                                    var token = baseJsonObject.SelectToken(pathSegments);            
+                                    if (token != null)
+                                    {
+                                        var newValue = childElement.InnerText.Trim();
+                                        if (!string.IsNullOrEmpty(newValue))
+                                        {
+                                            token.Replace(newValue);
+                                        }
+                                    }              
+                                }
+                            }
+                        }
+                        
+                        jsonArray.Add(baseJsonObject);
+                    }
+                }
+            }
+            
+            return jsonArray;
+        }
+        
         var dlNode = htmlNode.SelectSingleNode("./dl[@data-contentful-json-object='true']");
         if (dlNode == null)
         {
@@ -312,5 +365,69 @@ public static class EntryToJsonConverter
         }
 
         return array;
+    }
+
+    // Helper method to build a proper JSON path from data-path attribute
+    private static string BuildJsonPathFromDataPath(string dataPath, string field)
+    {
+        var segments = dataPath.Split('.');
+        if (segments.Length < 2) return null;
+        
+        // Remove the first segment (field name) and array index from path
+        var propertyPath = new List<string>();
+        
+        for (int i = 1; i < segments.Length; i++)
+        {
+            string segment = segments[i];
+            
+            // Handle array notation [index]
+            if (segment.Contains("[") && segment.Contains("]"))
+            {
+                // Skip array index notation as we're dealing with the full object
+                continue;
+            }
+            
+            propertyPath.Add(segment);
+        }
+        
+        // Add the field name to access the correct property
+        propertyPath.Add(field);
+        
+        return string.Join(".", propertyPath);
+    }
+    
+    // Helper method to get a token by path
+    private static bool TryGetTokenByPath(JToken token, string path, out JToken result)
+    {
+        result = null;
+        if (string.IsNullOrEmpty(path)) return false;
+        
+        try
+        {
+            var pathSegments = path.Split('.');
+            JToken current = token;
+            
+            foreach (var segment in pathSegments)
+            {
+                if (current is JObject jObject)
+                {
+                    if (!jObject.TryGetValue(segment, out current))
+                    {
+                        return false;
+                    }
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            
+            result = current;
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 }
