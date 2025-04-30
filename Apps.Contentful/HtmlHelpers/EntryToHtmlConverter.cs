@@ -69,7 +69,7 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
 
     private HtmlNode? ConvertJsonObjectToHtml(HtmlDocument doc, Field field, JToken entryField, string locale, string spaceId)
     {
-        if(entryField[locale]?["nodeType"]?.ToString() == "document")
+        if (entryField[locale] is JObject localeObject && localeObject["nodeType"]?.ToString() == "document")
         {
             var htmlNode = ConvertRichTextToHtml(doc, field, entryField, locale, spaceId);
             htmlNode?.SetAttributeValue("data-rich-text", "true");
