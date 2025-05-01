@@ -77,6 +77,23 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
         }
         
         var jsonToken = entryField[locale];
+        if(jsonToken != null && jsonToken.Type == JTokenType.Array)
+        {
+            var jArray = jsonToken as JArray;
+            var arrayHtml = ConvertArrayCustomFieldToHtml(jArray!);
+            if (string.IsNullOrEmpty(arrayHtml))
+            {
+                return null;
+            }
+            
+            var arrayContainerNode = doc.CreateElement("div");
+            arrayContainerNode.SetAttributeValue(ConvertConstants.FieldTypeAttribute, field.Type);
+            arrayContainerNode.SetAttributeValue(ConvertConstants.FieldIdAttribute, field.Id);
+            arrayContainerNode.SetAttributeValue("data-array-json-object", "true");
+            arrayContainerNode.InnerHtml = arrayHtml;
+            return arrayContainerNode;
+        }
+        
         if (jsonToken == null || jsonToken.Type != JTokenType.Object)
         {
             return null;
@@ -172,7 +189,64 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
 
         return containerNode;
     }
+    
+    private string ConvertArrayCustomFieldToHtml(JArray jArray)
+    {
+        var htmlBuilder = new StringBuilder();
+        foreach (var item in jArray)
+        {
+            var customFieldHtml = ConvertCustomFieldToHtml(item);
+            if (!string.IsNullOrEmpty(customFieldHtml))
+            {
+                var divNode = new HtmlDocument().CreateElement("div");
+                divNode.SetAttributeValue("data-field", "customField");
+                divNode.SetAttributeValue("data-path", item.Path);
+                divNode.SetAttributeValue("data-contentful-json-value", item.ToString(Formatting.None));
+                divNode.InnerHtml = customFieldHtml;
+                htmlBuilder.Append(divNode.OuterHtml);
+            }
+        }
+        
+        return htmlBuilder.ToString();
+    }
 
+    private string ConvertCustomFieldToHtml(JToken quoteToken)
+    {
+        var htmlBuilder = new StringBuilder();
+        var excludedFieldPathes = new[] { "target.sys", "nodeType", "result" };
+        foreach (var property in quoteToken.Children<JProperty>())
+        {
+            if (property.Value.Type == JTokenType.String)
+            {
+                string value = property.Value.ToString();
+                if (!string.IsNullOrEmpty(value) && !excludedFieldPathes.Any(property.Path.Contains))
+                {
+                    htmlBuilder.Append($"<div data-field=\"{property.Name}\" data-path=\"{property.Path}\">{value}</div>");
+                }
+            }
+            if (property.Value.Type == JTokenType.Object)
+            {
+                var innerHtml = ConvertCustomFieldToHtml(property.Value);
+                if (!string.IsNullOrEmpty(innerHtml) && !excludedFieldPathes.Any(property.Path.Contains))
+                {
+                    htmlBuilder.Append(innerHtml);
+                }
+            }
+            if(property.Value.Type == JTokenType.Array)
+            {
+                foreach (var item in property.Value.Children())
+                {
+                    var innerHtml = ConvertCustomFieldToHtml(item);
+                    if (!string.IsNullOrEmpty(innerHtml) && !excludedFieldPathes.Any(property.Path.Contains))
+                    {
+                        htmlBuilder.Append(innerHtml);
+                    }
+                }
+            }
+        }
+        
+        return htmlBuilder.ToString();
+    }
 
     private HtmlNode? ConvertLinkToHtml(HtmlDocument doc, Field field, JToken entryField, string locale)
     {
