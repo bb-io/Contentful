@@ -9,6 +9,6 @@ public class EntryTaskFilterRequest
     [Display("User ID"), DataSource(typeof(UserDataSourceHandler))]
     public string? UserId { get; set; }
     
-    [Display("Body", Description = "The title of the task")]
+    [Display("Task description contains", Description = "Filter tasks by their description.")]
     public string? Body { get; set; }
 }

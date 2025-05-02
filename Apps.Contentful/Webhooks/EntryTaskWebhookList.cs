@@ -37,7 +37,7 @@ public class EntryTaskWebhookList(InvocationContext invocationContext) : Content
             });
         }
         
-        if (request.Body != null && entity.Body != request.Body)
+        if (request.Body != null && entity.Body.Contains(request.Body, StringComparison.OrdinalIgnoreCase) == false)
         {
             return Task.FromResult(new WebhookResponse<EntryTaskEntity>
             {
