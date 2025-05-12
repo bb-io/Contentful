@@ -160,6 +160,16 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
             };
         }
 
+        if (tagsInput.AnyTagIds != null && !tagsInput.AnyTagIds.Any(x => entry.TagIds.Contains(x)))
+        {
+            return new()
+            {
+                HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
+                Result = null,
+                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
+            };
+        }
+
         if (tagsInput.ExcludeTags != null && tagsInput.ExcludeTags.Any(x => entry.TagIds.Contains(x)))
         {
             return new() {
@@ -249,6 +259,16 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
         if (tagsInput.TagIds != null && !tagsInput.TagIds.All(x => entry.TagIds.Contains(x)))
         {
             return new() {
+                HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
+                Result = null,
+                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
+            };
+        }
+
+        if (tagsInput.AnyTagIds != null && !tagsInput.AnyTagIds.Any(x => entry.TagIds.Contains(x)))
+        {
+            return new()
+            {
                 HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
                 Result = null,
                 ReceivedWebhookRequestType = WebhookRequestType.Preflight,
