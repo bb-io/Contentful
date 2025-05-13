@@ -339,10 +339,16 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         var entry = await client.ExecuteWithErrorHandling(async () =>
             await client.GetEntry(entryIdentifier.EntryId));
         var fields = (JObject)entry.Fields;
-        return new GetBoolContentResponse
+
+        if (fields == null
+        || !fields.TryGetValue(fieldIdentifier.FieldId, out JToken fieldToken)
+        || fieldToken[entryIdentifier.Locale] == null)
         {
-            BooleanContent = fields[fieldIdentifier.FieldId][entryIdentifier.Locale].ToObject<bool>()
-        };
+            throw new PluginApplicationException($"Field '{fieldIdentifier.FieldId}' or locale '{entryIdentifier.Locale}' not found in entry {entryIdentifier.EntryId}. Please check your input and try again");
+        }
+
+        bool booleanValue = fieldToken[entryIdentifier.Locale].ToObject<bool>();
+        return new GetBoolContentResponse { BooleanContent = booleanValue };
     }
 
     [Action("Set entry's boolean field", Description = "Set entry's boolean field by field ID.")]
