@@ -27,6 +27,9 @@ using Apps.Contentful.Models.Exceptions;
 using Apps.Contentful.Utils;
 using Blackbird.Applications.Sdk.Common.Exceptions;
 using RestSharp;
+using Blackbird.Xliff.Utils.Serializers.Xliff2;
+using Blackbird.Xliff.Utils.Serializers.Html;
+using Blackbird.Xliff.Utils.Constants;
 
 namespace Apps.Contentful.Actions;
 
@@ -729,6 +732,13 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
         var file = await fileManagementClient.DownloadAsync(input.File);
         var html = Encoding.UTF8.GetString(await file.GetByteData());
+
+        // XLIFF 2 upgrade
+        if (Xliff2Serializer.IsXliff2(html))
+        {
+            html = HtmlSerializer.Serialize(Xliff2Serializer.Deserialize(html)).FirstOrDefault();
+            if (html == null) throw new PluginMisconfigurationException("XLIFF did not contain any files");
+        }
 
         var entriesToUpdate = EntryToJsonConverter.GetEntriesInfo(html);
 
