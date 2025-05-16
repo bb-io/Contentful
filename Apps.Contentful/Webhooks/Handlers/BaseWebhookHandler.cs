@@ -1,26 +1,30 @@
 ﻿using Apps.Contentful.Api;
 using Apps.Contentful.Webhooks.Models.Inputs;
+using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication;
+using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Common.Webhooks;
 using Contentful.Core.Models.Management;
 
 namespace Apps.Contentful.Webhooks.Handlers;
 
-public class BaseWebhookHandler : IWebhookEventHandler
+public class BaseWebhookHandler : BaseInvocable, IWebhookEventHandler
 {
     private readonly string? _entityName;
     private readonly string? _actionName;
     private readonly WebhookInput _webhookInput;
     private readonly List<string>? _topics;
 
-    protected BaseWebhookHandler(string entityName, string actionName, [WebhookParameter(true)] WebhookInput input)
+    protected BaseWebhookHandler(InvocationContext invocationContext, string entityName, string actionName, [WebhookParameter(true)] WebhookInput input)
+        : base(invocationContext)
     {
         _entityName = entityName;
         _actionName = actionName;
         _webhookInput = input;
     }
     
-    protected BaseWebhookHandler(List<string> topics, [WebhookParameter(true)] WebhookInput input)
+    protected BaseWebhookHandler(InvocationContext invocationContext, List<string> topics, [WebhookParameter(true)] WebhookInput input)
+        : base(invocationContext)
     {
         _webhookInput = input;
         _topics = topics;
@@ -40,8 +44,10 @@ public class BaseWebhookHandler : IWebhookEventHandler
                 }
             };
 
-        var client = new ContentfulClient(authenticationCredentialsProvider, null);
-        var name = _topics == null ? $"{_entityName}.{_actionName}" : string.Join(",", _topics);
+        var client = new ContentfulClient(authenticationCredentialsProvider, _webhookInput.Environment);
+        var name = InvocationContext.Tenant?.Name ??
+                   $"{_entityName?.ToUpper()}_{_actionName?.ToUpper()}_{Guid.NewGuid()}";
+        
         await client.CreateWebhook(new Webhook
         {
             Name = name,
@@ -54,10 +60,13 @@ public class BaseWebhookHandler : IWebhookEventHandler
     public async Task UnsubscribeAsync(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProvider,
         Dictionary<string, string> values)
     {
-        var client = new ContentfulClient(authenticationCredentialsProvider, null);
-        var topic = _topics == null ? $"{_entityName}.{_actionName}" : string.Join(",", _topics);
-        var webhooks = client.GetWebhooksCollection().Result;
-        var webhook = webhooks.First(w => w.Name == topic);
-        await client.DeleteWebhook(webhook.SystemProperties.Id);
+        var client = new ContentfulClient(authenticationCredentialsProvider, _webhookInput.Environment);
+        var webhooks = await client.GetWebhooksCollection();
+        
+        var webhook = webhooks.FirstOrDefault(w => w.Url == values["payloadUrl"]);
+        if (webhook != null)
+        {
+            await client.DeleteWebhook(webhook.SystemProperties.Id);
+        }
     }
 }

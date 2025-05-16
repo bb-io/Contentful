@@ -1,11 +1,9 @@
 ﻿using Apps.Contentful.Webhooks.Models.Inputs;
+using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Common.Webhooks;
 
 namespace Apps.Contentful.Webhooks.Handlers.AssetHandlers;
 
-public class AssetDeletedHandler : BaseWebhookHandler
-{
-    public AssetDeletedHandler([WebhookParameter(true)] WebhookInput input) : base("Asset", "delete", input)
-    {
-    }
-}
+public class AssetDeletedHandler(InvocationContext invocationContext, [WebhookParameter(true)] WebhookInput input) 
+    : BaseWebhookHandler(invocationContext, "Asset", "delete", input)
+{ }
