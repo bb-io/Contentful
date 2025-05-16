@@ -1,7 +1,8 @@
 ﻿using Apps.Contentful.Webhooks.Models.Inputs;
+using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Common.Webhooks;
 
 namespace Apps.Contentful.Webhooks.Handlers.WorkflowHandlers;
 
-public class WorkflowUpdatedHandler([WebhookParameter(true)] WebhookInput input)
-    : BaseWebhookHandler(["Workflow.create", "Workflow.save"], input);
+public class WorkflowUpdatedHandler(InvocationContext invocationContext, [WebhookParameter(true)] WebhookInput input)
+    : BaseWebhookHandler(invocationContext, ["Workflow.create", "Workflow.save"], input);

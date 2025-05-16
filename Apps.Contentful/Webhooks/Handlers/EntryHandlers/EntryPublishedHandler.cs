@@ -1,14 +1,10 @@
 ﻿using Apps.Contentful.Models.Identifiers;
+using Apps.Contentful.Webhooks.Models.Inputs;
+using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Common.Webhooks;
 
 namespace Apps.Contentful.Webhooks.Handlers.EntryHandlers;
 
-public class EntryPublishedHandler : BaseWebhookHandler
-{
-    public EntryPublishedHandler([WebhookParameter(true)] OptionalTagListIdentifier input) : base("Entry", "publish", new()
-    {
-        Environment = input.Environment
-    })
-    {
-    }
-}
+public class EntryPublishedHandler(InvocationContext invocationContext, [WebhookParameter(true)] WebhookInput input) 
+    : BaseWebhookHandler(invocationContext, "Entry", "publish", input)
+{ }

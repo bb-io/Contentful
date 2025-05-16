@@ -22,14 +22,11 @@ using Contentful.Core.Extensions;
 using HtmlAgilityPack;
 using Newtonsoft.Json.Serialization;
 using System.Web;
-using Apps.Contentful.Models.Dtos;
 using Apps.Contentful.Models.Exceptions;
 using Apps.Contentful.Utils;
 using Blackbird.Applications.Sdk.Common.Exceptions;
-using RestSharp;
 using Blackbird.Xliff.Utils.Serializers.Xliff2;
 using Blackbird.Xliff.Utils.Serializers.Html;
-using Blackbird.Xliff.Utils.Constants;
 
 namespace Apps.Contentful.Actions;
 
