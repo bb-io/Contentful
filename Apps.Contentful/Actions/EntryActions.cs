@@ -835,7 +835,6 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         var entryIds = new List<string>();
         var assetIds = new List<string>();
 
-        // <div data-contentful-field-type="Link" data-contentful-field-id="media" data-contentful-link-type="Asset" data-contentful-link-id="358bzq5wk70u1gmOFq6geE" data-contentful-localized="True"></div>
         var entryIdNodes = doc.DocumentNode.SelectNodes("//div[@data-contentful-link-id]");
         if (entryIdNodes != null)
         {
