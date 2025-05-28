@@ -228,7 +228,8 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             EntryId = entryId,
             FieldId = fieldId ?? string.Empty,
             Locale = locale ?? string.Empty,
-            LinkedEntryIds = linkedIds.ToList(),
+            LinkedEntryIds = linkedIds.EntryIds,
+            LinkedAssetIds = linkedIds.AssetIds
         };
     }
 
@@ -670,7 +671,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var spaceId = Creds.Get("spaceId").Value;
 
-        var locales = await client.ExecuteWithErrorHandling(async () =>await client.GetLocalesCollection());
+        var locales = await client.ExecuteWithErrorHandling(async () => await client.GetLocalesCollection());
         if (locales.All(x => x.Code != entryIdentifier.Locale))
         {
             var allLocales = string.Join(", ", locales.Select(x => x.Code));
@@ -795,7 +796,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
     private async Task<List<EntryContentDto>> GetLinkedEntriesContent(string entryId, string locale,
         ContentfulClient client,
-        List<EntryContentDto> resultList, bool references, bool ignoreReferenceLocalization, bool hyperlinks,
+        List<EntryContentDto> resultList, bool getReferenceContent, bool ignoreReferenceLocalization, bool hyperlinks,
         bool inline, bool blocks, IEnumerable<string> ignoredFieldIds, List<string> ignoredContentTypeIds,
         List<string>? excludeTags, string rootEntryId, int? maxDepth = null, int currentDepth = 0)
     {
@@ -811,12 +812,12 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
         if (entryContent != null)
         {
-            var linkedIds = GetLinkedEntryIds(entryContent, locale, references, hyperlinks, inline, blocks).Distinct()
+            var linkedIds = GetLinkedEntryIds(entryContent, locale, getReferenceContent, hyperlinks, inline, blocks).Distinct()
                 .ToList();
 
             resultList.Add(entryContent);
             foreach (var linkedEntryId in linkedIds)
-                await GetLinkedEntriesContent(linkedEntryId, locale, client, resultList, references,
+                await GetLinkedEntriesContent(linkedEntryId, locale, client, resultList, getReferenceContent,
                     ignoreReferenceLocalization, hyperlinks, inline, blocks, ignoredFieldIds, ignoredContentTypeIds,
                     excludeTags, rootEntryId, maxDepth, currentDepth + 1);
 
@@ -826,12 +827,13 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         return resultList;
     }
 
-    private IEnumerable<string> GetLinkedEntryIdsFromFile(string html)
+    private LinkedIdsEntity GetLinkedEntryIdsFromFile(string html)
     {
         var doc = new HtmlDocument();
         doc.LoadHtml(html);
 
         var entryIds = new List<string>();
+        var assetIds = new List<string>();
 
         var entryIdNodes = doc.DocumentNode.SelectNodes("//div[@data-contentful-link-id]");
         if (entryIdNodes != null)
@@ -839,7 +841,13 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             foreach (var node in entryIdNodes)
             {
                 var id = node.GetAttributeValue("data-contentful-link-id", string.Empty);
-                if (!string.IsNullOrEmpty(id))
+                var type = node.GetAttributeValue("data-contentful-link-type", string.Empty);
+
+                if (type == "Asset")
+                {
+                    assetIds.Add(id);
+                }
+                else if (!string.IsNullOrEmpty(id))
                 {
                     entryIds.Add(id);
                 }
@@ -856,11 +864,16 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                 {
                     foreach (var id in ids.Split(','))
                     {
+                        if (assetIds.Contains(id.Trim()))
+                            continue;
+
                         entryIds.Add(id.Trim());
                     }
                 }
             }
         }
+
+        // Handle embedded-entry-inline links
         var inlineLinkNodes = doc.DocumentNode.SelectNodes("//a[starts-with(@id, 'embedded-entry-inline_')]");
         if (inlineLinkNodes != null)
         {
@@ -879,10 +892,48 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             }
         }
 
-        return entryIds.Distinct();
+        // Handle entry-hyperlink elements
+        var hyperlinkNodes = doc.DocumentNode.SelectNodes("//a[starts-with(@id, 'entry-hyperlink_')]");
+        if (hyperlinkNodes != null)
+        {
+            const string prefix = "entry-hyperlink_";
+            foreach (var node in hyperlinkNodes)
+            {
+                var idAttr = node.GetAttributeValue("id", string.Empty);
+                if (!string.IsNullOrEmpty(idAttr) && idAttr.StartsWith(prefix))
+                {
+                    var extractedId = idAttr.Substring(prefix.Length);
+                    if (!string.IsNullOrEmpty(extractedId))
+                    {
+                        entryIds.Add(extractedId);
+                    }
+                }
+            }
+        }
+
+        // Handle embedded-entry-block elements
+        var blockLinkNodes = doc.DocumentNode.SelectNodes("//a[starts-with(@id, 'embedded-entry-block_')]");
+        if (blockLinkNodes != null)
+        {
+            const string prefix = "embedded-entry-block_";
+            foreach (var node in blockLinkNodes)
+            {
+                var idAttr = node.GetAttributeValue("id", string.Empty);
+                if (!string.IsNullOrEmpty(idAttr) && idAttr.StartsWith(prefix))
+                {
+                    var extractedId = idAttr.Substring(prefix.Length);
+                    if (!string.IsNullOrEmpty(extractedId))
+                    {
+                        entryIds.Add(extractedId);
+                    }
+                }
+            }
+        }
+
+        return new LinkedIdsEntity(entryIds.Distinct().ToList(), assetIds.Distinct().ToList());
     }
 
-    private IEnumerable<string> GetLinkedEntryIds(EntryContentDto entryContent, string locale, bool references,
+    private IEnumerable<string> GetLinkedEntryIds(EntryContentDto entryContent, string locale, bool getReferenceContent,
         bool hyperlinks, bool inline, bool blocks)
     {
         try
@@ -890,7 +941,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             var result = new List<string>();
             var contentTypeFields = entryContent.ContentTypeFields;
 
-            if (references)
+            if (getReferenceContent)
             {
                 var linkFieldIds = contentTypeFields
                     .Where(f => f.LinkType is "Entry")
