@@ -670,7 +670,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var spaceId = Creds.Get("spaceId").Value;
 
-        var locales = await client.ExecuteWithErrorHandling(async () =>await client.GetLocalesCollection());
+        var locales = await client.ExecuteWithErrorHandling(async () => await client.GetLocalesCollection());
         if (locales.All(x => x.Code != entryIdentifier.Locale))
         {
             var allLocales = string.Join(", ", locales.Select(x => x.Code));
@@ -795,7 +795,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
     private async Task<List<EntryContentDto>> GetLinkedEntriesContent(string entryId, string locale,
         ContentfulClient client,
-        List<EntryContentDto> resultList, bool references, bool ignoreReferenceLocalization, bool hyperlinks,
+        List<EntryContentDto> resultList, bool getReferenceContent, bool ignoreReferenceLocalization, bool hyperlinks,
         bool inline, bool blocks, IEnumerable<string> ignoredFieldIds, List<string> ignoredContentTypeIds,
         List<string>? excludeTags, string rootEntryId, int? maxDepth = null, int currentDepth = 0)
     {
@@ -811,12 +811,12 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
         if (entryContent != null)
         {
-            var linkedIds = GetLinkedEntryIds(entryContent, locale, references, hyperlinks, inline, blocks).Distinct()
+            var linkedIds = GetLinkedEntryIds(entryContent, locale, getReferenceContent, hyperlinks, inline, blocks).Distinct()
                 .ToList();
 
             resultList.Add(entryContent);
             foreach (var linkedEntryId in linkedIds)
-                await GetLinkedEntriesContent(linkedEntryId, locale, client, resultList, references,
+                await GetLinkedEntriesContent(linkedEntryId, locale, client, resultList, getReferenceContent,
                     ignoreReferenceLocalization, hyperlinks, inline, blocks, ignoredFieldIds, ignoredContentTypeIds,
                     excludeTags, rootEntryId, maxDepth, currentDepth + 1);
 
@@ -832,14 +832,22 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         doc.LoadHtml(html);
 
         var entryIds = new List<string>();
+        var assetIds = new List<string>();
 
+        // <div data-contentful-field-type="Link" data-contentful-field-id="media" data-contentful-link-type="Asset" data-contentful-link-id="358bzq5wk70u1gmOFq6geE" data-contentful-localized="True"></div>
         var entryIdNodes = doc.DocumentNode.SelectNodes("//div[@data-contentful-link-id]");
         if (entryIdNodes != null)
         {
             foreach (var node in entryIdNodes)
             {
                 var id = node.GetAttributeValue("data-contentful-link-id", string.Empty);
-                if (!string.IsNullOrEmpty(id))
+                var type = node.GetAttributeValue("data-contentful-link-type", string.Empty);
+
+                if (type == "Asset")
+                {
+                    assetIds.Add(id);
+                }
+                else if (!string.IsNullOrEmpty(id))
                 {
                     entryIds.Add(id);
                 }
@@ -856,6 +864,9 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                 {
                     foreach (var id in ids.Split(','))
                     {
+                        if(assetIds.Contains(id.Trim()))
+                            continue;
+                            
                         entryIds.Add(id.Trim());
                     }
                 }
@@ -882,7 +893,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         return entryIds.Distinct();
     }
 
-    private IEnumerable<string> GetLinkedEntryIds(EntryContentDto entryContent, string locale, bool references,
+    private IEnumerable<string> GetLinkedEntryIds(EntryContentDto entryContent, string locale, bool getReferenceContent,
         bool hyperlinks, bool inline, bool blocks)
     {
         try
@@ -890,7 +901,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             var result = new List<string>();
             var contentTypeFields = entryContent.ContentTypeFields;
 
-            if (references)
+            if (getReferenceContent)
             {
                 var linkFieldIds = contentTypeFields
                     .Where(f => f.LinkType is "Entry")
