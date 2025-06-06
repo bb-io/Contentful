@@ -18,13 +18,14 @@ public class ContentfulClient : ContentfulManagementClient
     private readonly AsyncRetryPolicy _retryPolicy;
 
     public ContentfulClient(IEnumerable<AuthenticationCredentialsProvider> creds, string? environment)
-        : base(new HttpClient(), new ContentfulOptions
+        : base(new HttpClient { Timeout=TimeSpan.FromMinutes(5)}, new ContentfulOptions
         {
             ManagementApiKey = creds.First(p => p.KeyName == "Authorization").Value,
             SpaceId = creds.First(p => p.KeyName == "spaceId").Value,
             Environment = environment,
             ManagementBaseUrl = creds.First(p => p.KeyName == CredNames.BaseUrl).Value + "/spaces/",
-            MaxNumberOfRateLimitRetries = RetryCount
+            MaxNumberOfRateLimitRetries = RetryCount,
+            
         })
     {
         _retryPolicy = Policy

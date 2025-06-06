@@ -19,7 +19,8 @@ public class ContentfulRestClient(AuthenticationCredentialsProvider[] creds, str
     {
         BaseUrl =
             $"{creds.Get(CredNames.BaseUrl).Value}/spaces/{creds.Get(CredNames.SpaceId).Value}{GetEnvironmentSegment(environment)}"
-                .ToUri()
+                .ToUri(),
+        MaxTimeout=180000
     })
 {
     private const int RetryCount = 3;
