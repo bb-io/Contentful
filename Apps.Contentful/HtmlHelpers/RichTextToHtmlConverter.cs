@@ -28,17 +28,12 @@ public class RichTextToHtmlConverter(JArray content, string spaceId)
         switch (nodeType)
         {
             case "heading-1":
-                return $"<h1>{ConvertContentToHtml(jsonObject["content"])}</h1>";
             case "heading-2":
-                return $"<h2>{ConvertContentToHtml(jsonObject["content"])}</h2>";
             case "heading-3":
-                return $"<h3>{ConvertContentToHtml(jsonObject["content"])}</h3>";
             case "heading-4":
-                return $"<h4>{ConvertContentToHtml(jsonObject["content"])}</h4>";
             case "heading-5":
-                return $"<h5>{ConvertContentToHtml(jsonObject["content"])}</h5>";
             case "heading-6":
-                return $"<h6>{ConvertContentToHtml(jsonObject["content"])}</h6>";
+                return ConvertHeadingToHtml(jsonObject, nodeType);
             case "paragraph":
                 var content = ConvertContentToHtml(jsonObject["content"]);
                 content = content.Replace(@"\n", "<br>");
@@ -87,6 +82,35 @@ public class RichTextToHtmlConverter(JArray content, string spaceId)
             default:
                 return ConvertContentToHtml(jsonObject["content"]);
         }
+    }
+
+    private string ConvertHeadingToHtml(JObject jsonObject, string nodeType)
+    {
+        var tagName = nodeType.Replace("heading-", "h");
+        var content = ConvertHeadingContentToHtml(jsonObject["content"]);
+        return $"<{tagName}>{content}</{tagName}>";
+    }
+
+    private string ConvertHeadingContentToHtml(JToken content)
+    {
+        var htmlBuilder = new StringBuilder();
+
+        foreach (var item in content)
+        {
+            if (item["nodeType"].ToString() == "text")
+            {
+                var value = item["value"].ToString();
+                value = value.Replace("\n", " ");
+                GetMarksHtml(item["marks"], out var openingMarks, out var closingMarks);
+                htmlBuilder.Append($"{openingMarks}{value}{closingMarks}");
+            }
+            else
+            {
+                htmlBuilder.Append(ConvertJsonObjectToHtml((JObject)item));
+            }
+        }
+
+        return htmlBuilder.ToString();
     }
 
     private string ConvertQuoteToHtml(JToken quoteToken)
@@ -139,7 +163,6 @@ public class RichTextToHtmlConverter(JArray content, string spaceId)
                 GetMarksHtml(item["marks"], out var openingMarks, out var closingMarks);
 
                 var textContent = $"{openingMarks}{value}{closingMarks}";
-
                 if (content.Count() == 1 && string.IsNullOrWhiteSpace(textContent))
                 {
                     return string.Empty;
