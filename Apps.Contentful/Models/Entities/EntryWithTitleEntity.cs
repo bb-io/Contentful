@@ -9,9 +9,13 @@ public class EntryWithTitleEntity : EntryEntity
     [Display("Entry title")]
     public string Title { get; set; }
 
-    public EntryWithTitleEntity(Entry<object> entry, string? locale = null) : base(entry)
+    [Display("Missing locales")]
+    public List<string> MissingLocales { get; set; }
+
+    public EntryWithTitleEntity(Entry<object> entry, string? locale = null, List<string> missingLocales = null) : base(entry)
     {
         Title = GetEntryTitle(entry, locale);
+        MissingLocales = missingLocales ?? [];
     }
 
     private static string GetEntryTitle(Entry<object> entry, string? locale)

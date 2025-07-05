@@ -12,7 +12,7 @@ using Apps.Contentful.Utils;
 
 namespace Apps.Contentful.Actions;
 
-[ActionList]
+[ActionList("Content models")]
 public class ContentModelActions(InvocationContext invocationContext) : ContentfulInvocable(invocationContext)
 {
     [Action("Search all content models", Description = "Search for all content models in space.")]

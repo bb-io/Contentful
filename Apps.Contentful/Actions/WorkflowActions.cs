@@ -12,7 +12,7 @@ using RestSharp;
 
 namespace Apps.Contentful.Actions;
 
-[ActionList]
+[ActionList("Workflows")]
 public class WorkflowActions(InvocationContext invocationContext) : ContentfulInvocable(invocationContext)
 {
     [Action("Search workflows", Description = "Search for active workflows based on the provided inputs")]

@@ -46,37 +46,24 @@ Follow [this guide](https://www.contentful.com/help/working-with-translations/) 
 
 ### Entries
 
-- **Get locales** returns the default locales and a list of other locales, all in code form to easily use in conjunction with the convert operator.
-- **Get entry's text/rich text field** returns the content of short text, long text or rich text field of the entry as a string.
-- **Get text/rich text field as HTML file** returns the content of short text, long text or rich text field of the entry as an HTML file.
-- **Set entry's text/rich text field** sets the content of short text, long text or rich text field of the entry from a string.
-- **Set text/rich text field from HTML file** sets the content of short text, long text or rich text field of the entry from an HTML file. For short/long text only the text extracted from the file is put in the field. For rich text all HTML structure is preserved.
-- **Get entry's number field** returns the entry's number field value.
-- **Set entry's number field** sets the entry's number field value.
-- **Get entry's boolean field** returns the entry's boolean field value.
-- **Set entry's boolean field** sets the entry's boolean field value.
-- **Get entry's media content** returns the identifier of the asset attached to the entry's media field.
-- **Set entry's media field** sets the entry's media field with the specified asset.
 - **Search entries** returns a list of entries. Optionally filter by content model, environment, tags and the last updated date.
+- **Find entry by field value** Given a field and a desired value for the field, the first matching entry will be returned.
 - **Get entry** Get details of a specific entry
 - **Add new entry** creates a new entry with the specified content model.
-- **Find entry by field value** Given a field and a desired value for the field, the first matching entry will be returned.
-- **Delete entry**.
-- **Publish entry**.
-- **Unpublish entry**.
-- **List missing locales for a field** returns a list of missing translations for the specified field.
-- **List missing locales for entry** returns a list of missing translations for the specified entry.
-- **Get entry as HTML file** returns all localizable fields of the specified entry as HTML file (see more information below).
-- **Update entry from HTML file** updates all localizable fields of specified entry .
+- **Delete entry**
+- **Publish entry**
+- **Unpublish entry** note that publishing/unpublishing entries in contentful affects all locales.
+- **Download entry** returns all localizable fields of the specified entry as a Blackbird interoperable file.
+- **Upload entires** updates all localizable fields of specified entry .
 
-**Get entry as HTML file** and **Update entry from HTML file** are intended to be used together in a typical translation flow: you can retrieve an entry's localizable fields as HTML file, put it into TMS, then retrieve a translated HTML file and put it back into Contentful's entry. **Update entry from HTML file** expects the same HTML structure as the structure of the file retrieved with **Get entry as HTML file**.
+**Download entry** and **Upload entires** are intended to be used together in a typical translation flow: you can retrieve an entry's localizable fields as HTML file, put it into TMS, then retrieve a translated HTML file and put it back into Contentful's entry. **Upload entires** expects the same HTML structure as the structure of the file retrieved with **Download entry**.
 
 **Important note**: make sure your entry has fields with **localization enabled**. You have to explicitly set this property on each field (see images below).
 
 ![1707747998688](image/README/1707747998688.png)
 ![1707748006274](image/README/1707748006274.png)
 
-The **Get entry as HTML file** action also lets you define if you want to recursively embed content (for translation) from linked entries.
+The **Download entry** action also lets you define if you want to recursively embed content (for translation) from linked entries.
 
 There are 4 types of linked entries:
 - Reference field types from the content model
@@ -91,6 +78,21 @@ In the action you are able to select exactly which type of linked entry you want
 Finally, you can specify a list of Field IDs which will always be ignored and not added to the produced HTML file.
 
 > For more information about CMS localization. Check out [this guide](https://docs.blackbird.io/guides/cms-contentful/).
+
+### Entry fields
+
+- **Get entry's text field** returns the content of short text, long text or rich text field of the entry as a string.
+- **Set entry's text field** sets the content of short text, long text or rich text field of the entry from a string.
+- **Get entry's number field** returns the entry's number field value.
+- **Set entry's number field** sets the entry's number field value.
+- **Get entry's boolean field** returns the entry's boolean field value.
+- **Set entry's boolean field** sets the entry's boolean field value.
+- **Get entry's media field** returns the identifier of the asset attached to the entry's media field.
+- **Set entry's media field** sets the entry's media field with the specified asset.
+
+### Locales
+
+- **Get locales** returns the default locales and a list of other locales, all in code form to easily use in conjunction with the convert operator.
 
 ### Assets
 
@@ -109,11 +111,15 @@ Finally, you can specify a list of Field IDs which will always be ignored and no
 
 ### Content models
 
-- **List all content models** returns all content models available in space.
+- **Search all content models** returns all content models available in space.
 - **Get content model** Get details of a specific content model.
 
-### Tag
-- **List tags** List all content tags in a space
+### Content types
+
+- **Search content types** returns all available content types in a space.
+
+### Tags
+- **Seargs tags** Search for all content tags in a space
 - **Create tag** Create a new content tag
 - **Get tag** Get details of a specific tag
 - **Delete tag** Delete specific content tag
@@ -139,15 +145,15 @@ Note, to use the **Entry tasks** actions, you need to install the `Workflows` ap
 - **Complete workflow** completes a workflow.
 - **Cancel workflow** cancels a workflow.
 
+### Users
+
+- **Get user** returns the details of a specific user
+
 ## Events
 
-- **On entry published** and **On asset published** are the most useful events. They are triggered when any entry/asset is published and could be the perfect trigger for sending the entry/asset for translation based on the missing translations (see example). You can optionally also filter these events by tags. If you do so, the event will only be triggered if all of the tags you input are present on the entry.
+### Entries
+- **On entry published** is the most useful event. It's triggered when any entry is published and could be the perfect trigger for sending the entry for translation based on the missing translations (see example). You can optionally also filter these events by tags. If you do so, the event will only be triggered if all of the tags you input are present on the entry.
 - **On entry task created** and **On entry task saved** are useful if you prefer to work using the 'Workflows' extension of Blackbird. You can use the extension to assign an entry to a workflow, creating a task. these events can even filter based on assigned User ID and task description. See the example below.
-- **On workflow updated** triggers when a workflow updated or created. Also triggers when a workflow changes its step.
-- **On workflow completed** triggers when a workflow is completed.
-
-### Other events:
-
 - **On entry created**
 - **On entry saved**
 - **On entry auto saved**
@@ -155,6 +161,15 @@ Note, to use the **Entry tasks** actions, you need to install the `Workflows` ap
 - **On entry archived**
 - **On entry unarchived**
 - **On entry deleted**
+
+### Workflows
+
+- **On workflow updated** triggers when a workflow updated or created. Also triggers when a workflow changes its step.
+- **On workflow completed** triggers when a workflow is completed.
+
+### Assets
+
+- **On asset published**
 - **On asset created**
 - **On asset saved**
 - **On asset auto saved**
@@ -181,11 +196,11 @@ In this example we are using the 'Workflows' feature in Contentful. When a new t
 
 In this example we are also using the 'Workflows' feature in Contentful, but in this case we don't work with tasks. Instead, we are using the workflow itself. When a workflow changes its step we are checking if the step is 'Ready for translation'. If it is, we are pulling the entry as an HTML file, translating it with DeepL and updating the translation in Contentful. Then we are moving the workflow to the next step or if there is no next step, we are completing the workflow.
 
-## HTML features
+## Content features
 
-We add metadata to the HTML file to include `Entry ID` and `Field ID`. This metadata is used to update the entry content from the HTML file. These tags are used to identify the content in the `Contentful`, eliminating the need to store IDs elsewhere.
+We add metadata to the generated file to include `Entry ID` and `Field ID`. This metadata is used to update the entry content from the HTML file. These tags are used to identify the content in the `Contentful`, eliminating the need to store IDs elsewhere.
 
-Example of how we include metadata in the HTML file:
+Example of how we include metadata in the generated HTML file:
 
 ```html
 <html>

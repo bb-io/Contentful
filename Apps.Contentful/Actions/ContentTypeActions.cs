@@ -11,7 +11,7 @@ using Contentful.Core.Models;
 
 namespace Apps.Contentful.Actions;
 
-[ActionList]
+[ActionList("Content types")]
 public class ContentTypeActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient)
     : BaseInvocable(invocationContext)
 {

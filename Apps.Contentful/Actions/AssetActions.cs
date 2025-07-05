@@ -16,12 +16,10 @@ using Contentful.Core.Models.Management;
 using File = Contentful.Core.Models.File;
 using Apps.Contentful.HtmlHelpers;
 using System.Text;
-using Blackbird.Applications.Sdk.Utils.Extensions.Sdk;
-using Apps.Contentful.Constants;
 
 namespace Apps.Contentful.Actions;
 
-[ActionList]
+[ActionList("Assets")]
 public class AssetActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient)
     : BaseInvocable(invocationContext)
 {
