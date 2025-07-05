@@ -5,7 +5,7 @@ using Blackbird.Applications.Sdk.Common.Invocation;
 
 namespace Apps.Contentful.Actions;
 
-[ActionList]
+[ActionList("Debug")]
 public class DebugActions(InvocationContext invocationContext)
     : BaseInvocable(invocationContext)
 {

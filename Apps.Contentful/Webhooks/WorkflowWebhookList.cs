@@ -12,7 +12,7 @@ using RestSharp;
 
 namespace Apps.Contentful.Webhooks;
 
-[WebhookList]
+[WebhookList("Workflows")]
 public class WorkflowWebhookList(InvocationContext invocationContext) : ContentfulInvocable(invocationContext)
 {
     [Webhook("On workflow updated", typeof(WorkflowUpdatedHandler), Description = "Triggers when a workflow updated or created. Also triggers when a workflow changes its step.")]

@@ -16,7 +16,7 @@ using RestSharp;
 
 namespace Apps.Contentful.Actions;
 
-[ActionList]
+[ActionList("Tags")]
 public class TagActions(InvocationContext invocationContext) : ContentfulInvocable(invocationContext)
 {
     #region Actions

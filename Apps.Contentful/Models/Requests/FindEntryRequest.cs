@@ -11,6 +11,8 @@ public class FindEntryRequest : EnvironmentIdentifier
     [Display("Content model")]
     [DataSource(typeof(ContentModelDataSourceHandler))]
     public string ContentModelId { get; set; }
-    public string Field { get; set; }
+
+    [Display("Field ID")]
+    public string FieldID { get; set; }
     public string Value { get; set; }
 }

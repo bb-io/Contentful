@@ -13,7 +13,7 @@ using RestSharp;
 
 namespace Apps.Contentful.Actions;
 
-[ActionList]
+[ActionList("Entry tasks")]
 public class EntryTaskActions(InvocationContext invocationContext) : ContentfulInvocable(invocationContext)
 {
     [Action("Search entry tasks", Description = "Search for entry tasks by specific criteria")]

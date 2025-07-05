@@ -1,12 +1,14 @@
 ﻿using Blackbird.Applications.Sdk.Common;
+using Blackbird.Applications.SDK.Blueprints.Interfaces.CMS;
 using Contentful.Core.Models;
+using Newtonsoft.Json;
 
 namespace Apps.Contentful.Models.Entities;
 
-public class EntryEntity
+public class EntryEntity : IDownloadContentInput
 {
     [Display("Entry ID")]
-    public string Id { get; set; }
+    public string ContentId { get; set; }
 
     [Display("Tag IDs")]
     public IEnumerable<string> TagIds { get; set; }
@@ -27,7 +29,7 @@ public class EntryEntity
 
     public EntryEntity(Entry<object> entry)
     {
-        Id = entry.SystemProperties.Id;
+        ContentId = entry.SystemProperties.Id;
         TagIds = entry.Metadata?.Tags.Select(x => x.Sys.Id) ?? Enumerable.Empty<string>();
         ContentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
         CreatedAt = entry.SystemProperties.CreatedAt;
