@@ -9,6 +9,7 @@ using Apps.Contentful.Webhooks.Models.Inputs;
 using Apps.Contentful.Webhooks.Models.Payload;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Common.Webhooks;
+using Blackbird.Applications.SDK.Blueprints;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using WebhookRequest = Blackbird.Applications.Sdk.Common.Webhooks.WebhookRequest;
@@ -27,13 +28,14 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
         )
         => HandleEntryWebhookResponse(webhookRequest, tags, types, new OptionalEntryIdentifier(), users);
 
-    [Webhook("On entry saved", typeof(EntrySavedHandler), Description = "On entry saved")]
-    public Task<WebhookResponse<FieldsChangedResponse>> EntrySaved(WebhookRequest webhookRequest,
-        [WebhookParameter] OptionalEntryIdentifier optionalEntryIdentifier,
-        [WebhookParameter] LocaleOptionalIdentifier localeOptionalIdentifier, 
-        [WebhookParameter] OptionalTagListIdentifier tags, 
-        [WebhookParameter] OptionalMultipleContentTypeIdentifier types)
-        => HandleFieldsChangedResponse(webhookRequest, localeOptionalIdentifier, tags, types, optionalEntryIdentifier);
+    // It looks like this doesn't trigger anymore after a contentful update removing the save button. Needs to be verified.
+    //[Webhook("On entry saved", typeof(EntrySavedHandler), Description = "On entry saved")]
+    //public Task<WebhookResponse<FieldsChangedResponse>> EntrySaved(WebhookRequest webhookRequest,
+    //    [WebhookParameter] OptionalEntryIdentifier optionalEntryIdentifier,
+    //    [WebhookParameter] LocaleOptionalIdentifier localeOptionalIdentifier, 
+    //    [WebhookParameter] OptionalTagListIdentifier tags, 
+    //    [WebhookParameter] OptionalMultipleContentTypeIdentifier types)
+    //    => HandleFieldsChangedResponse(webhookRequest, localeOptionalIdentifier, tags, types, optionalEntryIdentifier);
 
     [Webhook("On entry auto saved", typeof(EntryAutoSavedHandler), Description = "On entry auto saved")]
     public Task<WebhookResponse<FieldsChangedResponse>> EntryAutoSaved(WebhookRequest webhookRequest,
@@ -43,6 +45,7 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
         [WebhookParameter] OptionalMultipleContentTypeIdentifier types)
         => HandleFieldsChangedResponse(webhookRequest, localeOptionalIdentifier, tags, types, optionalEntryIdentifier);
 
+    [BlueprintEventDefinition(BlueprintEvent.ContentCreatedOrUpdated)]
     [Webhook("On entry published", typeof(EntryPublishedHandler), Description = "On entry published")]
     public Task<WebhookResponse<EntryEntity>> EntryPublished(WebhookRequest webhookRequest,
         [WebhookParameter] OptionalEntryIdentifier optionalEntryIdentifier,
