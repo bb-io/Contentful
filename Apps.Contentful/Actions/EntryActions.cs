@@ -300,7 +300,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         };
     }
 
-    [BlueprintActionDefinition(BlueprintAction.UploadFile)]
+    [BlueprintActionDefinition(BlueprintAction.UploadContent)]
     [Action("Upload entry", Description = "Update all localizable fields of specified entry, and its child entries, from a translated file.")]
     public async Task SetEntryLocalizableFieldsFromHtmlFile(
         [ActionParameter] UploadEntryRequest input)
