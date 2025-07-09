@@ -1,6 +1,7 @@
 ﻿using Apps.Contentful.Actions;
 using Apps.Contentful.Models.Identifiers;
 using Apps.Contentful.Models.Requests;
+using Apps.Contentful.Models.Requests.Tags;
 using Blackbird.Applications.Sdk.Common.Exceptions;
 using Tests.Contentful.Base;
 using static Microsoft.VisualStudio.TestTools.UnitTesting.Assert;
@@ -30,7 +31,7 @@ public class EntryActionsTests : TestBase
 
         foreach (var entry in entriesResponse.Entries)
         {
-            Console.WriteLine($"{entry.Id}");
+            Console.WriteLine($"{entry.ContentId}");
         }
     }
 
@@ -38,107 +39,91 @@ public class EntryActionsTests : TestBase
     public async Task GetEntryLocalizableFieldsAsHtmlFile_WithoutReferenceEntries_ShouldGenerateHtmlFile()
     {
         var entryActions = new EntryActions(InvocationContext, FileManager);
-        var entryIdentifier = new EntryLocaleIdentifier()
+        var entryIdentifier = new DownloadContentInput()
         {
             Environment = "dev",
-            EntryId = "1lcz5tFE8v5JqylInsPvPW",
+            ContentId = "1lcz5tFE8v5JqylInsPvPW",
             Locale = "en-US"
         };
         var request = new GetEntryAsHtmlRequest();
         
         var fileResponse = await entryActions.GetEntryLocalizableFieldsAsHtmlFile(entryIdentifier, request);
         
-        IsFalse(string.IsNullOrEmpty(fileResponse.File.ToString()));
+        IsFalse(string.IsNullOrEmpty(fileResponse.Content.ToString()));
     }
     
     [TestMethod]
     public async Task SetEntryLocalizableFieldsFromHtmlFile_WithoutReferenceEntries_ShouldNotFail()
     {
         var entryActions = new EntryActions(InvocationContext, FileManager);
-        var entryIdentifier = new LocaleIdentifier()
+        var entryIdentifier = new UploadEntryRequest()
         {
             Environment = "dev",
-            Locale = "nl"
-        };
-        var fileRequest = new FileRequest
-        {
-            File = new()
+            Locale = "nl",
+            Content = new()
             {
                 Name = "5wFvto8Zhatz451gTDEpvP_en-US.html",
                 ContentType = "text/html"
             }
         };
         
-        await entryActions.SetEntryLocalizableFieldsFromHtmlFile(entryIdentifier, fileRequest, new());
+        await entryActions.SetEntryLocalizableFieldsFromHtmlFile(entryIdentifier);
     }
 
     [TestMethod]
     public async Task SetEntryLocalizableFieldsFromHtmlFile_WithHyperlinkEntries_ShouldNotFail()
     {
         var entryActions = new EntryActions(InvocationContext, FileManager);
-        var entryIdentifier = new LocaleIdentifier()
+        var entryIdentifier = new UploadEntryRequest()
         {
             Environment = "dev",
-            Locale = "nl"
-        };
-        var fileRequest = new FileRequest
-        {
-            File = new()
+            Locale = "nl",
+            Content = new()
             {
                 Name = "Example_en-US.html",
                 ContentType = "text/html"
             }
         };
         
-        await entryActions.SetEntryLocalizableFieldsFromHtmlFile(entryIdentifier, fileRequest, new());
+        await entryActions.SetEntryLocalizableFieldsFromHtmlFile(entryIdentifier);
     }
     
     [TestMethod]
     public async Task SetEntryLocalizableFieldsFromHtmlFile_WithReferenceEntry_ShouldNotFail()
     {
         var entryActions = new EntryActions(InvocationContext, FileManager);
-        var entryIdentifier = new LocaleIdentifier()
+        var entryIdentifier = new UploadEntryRequest()
         {
             Environment = "dev",
-            Locale = "nl"
-        };
-        var fileRequest = new FileRequest
-        {
-            File = new()
+            Locale = "nl",
+            Content = new()
             {
                 Name = "First reference entry_en-US.html",
                 ContentType = "text/html"
-            }
+            },
+            DontUpdateReferenceFields = true
         };
         
-        await entryActions.SetEntryLocalizableFieldsFromHtmlFile(entryIdentifier, fileRequest, new() 
-        {
-            DontUpdateReferenceFields = true
-        });
+        await entryActions.SetEntryLocalizableFieldsFromHtmlFile(entryIdentifier);
     }
 
     [TestMethod]
     public async Task SetEntryLocalizableFieldsFromHtmlFile_WithMarkdownEntry_ShouldNotFail()
     {
         var entryActions = new EntryActions(InvocationContext, FileManager);
-        var entryIdentifier = new LocaleIdentifier()
+        var entryIdentifier = new UploadEntryRequest()
         {
             Environment = "dev",
-            Locale = "nl"
-        };
-        var fileRequest = new FileRequest
-        {
-            File = new()
+            Locale = "nl",
+            Content = new()
             {
                 Name = "Markdown entry #1_en-US.html",
-                ContentType = "text/html" 
-            }
+                ContentType = "text/html"
+            },
+            DontUpdateReferenceFields = true
         };
         
-        await entryActions.SetEntryLocalizableFieldsFromHtmlFile(entryIdentifier, fileRequest, new() 
-        {
-            DontUpdateReferenceFields = true
-        });
+        await entryActions.SetEntryLocalizableFieldsFromHtmlFile(entryIdentifier);
     }
 
     [TestMethod]
