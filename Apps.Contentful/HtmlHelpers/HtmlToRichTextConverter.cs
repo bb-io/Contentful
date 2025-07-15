@@ -1,4 +1,5 @@
-﻿using System.Web;
+﻿using System.Text;
+using System.Web;
 using Apps.Contentful.Models.Entities;
 using Contentful.Core.Models;
 using HtmlAgilityPack;
@@ -481,12 +482,51 @@ public class HtmlToRichTextConverter
                 var hyperlink = new Hyperlink
                 {
                     NodeType = "hyperlink",
-                    Content = new List<IContent>(),
+                    Content = [],
                     Data = new HyperlinkData { Uri = uri }
                 };
-                ParseHtmlToContentful(node, hyperlink.Content);
+
+                if (node.InnerHtml.Contains("<br>"))
+                {
+                    var fullText = GetHyperlinkTextWithNewlines(node);
+                    hyperlink.Content.Add(new Text
+                    {
+                        NodeType = "text",
+                        Value = fullText,
+                        Data = new GenericStructureData(),
+                        Marks = []
+                    });
+                }
+                else
+                {
+                    ParseHtmlToContentful(node, hyperlink.Content);
+                }
+                
                 return hyperlink;
         }
+    }
+
+    private string GetHyperlinkTextWithNewlines(HtmlNode node)
+    {
+        var text = new StringBuilder();
+        
+        foreach (var child in node.ChildNodes)
+        {
+            if (child.NodeType == HtmlNodeType.Text)
+            {
+                text.Append(HttpUtility.HtmlDecode(child.InnerText));
+            }
+            else if (child.Name == "br")
+            {
+                text.Append("\n");
+            }
+            else
+            {
+                text.Append(GetHyperlinkTextWithNewlines(child));
+            }
+        }
+        
+        return text.ToString();
     }
 
     private void GetMarksFromHtmlNode(HtmlNode node, List<string> marks)

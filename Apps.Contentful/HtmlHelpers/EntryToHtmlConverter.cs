@@ -2,7 +2,6 @@ using System.Text;
 using Apps.Contentful.Api;
 using Apps.Contentful.HtmlHelpers.Constants;
 using Apps.Contentful.Models;
-using Apps.Contentful.Models.Identifiers;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Contentful.Core.Models;
 using HtmlAgilityPack;
