@@ -42,7 +42,7 @@ public class EntryActionsTests : TestBase
         var entryIdentifier = new DownloadContentInput()
         {
             Environment = "dev",
-            ContentId = "1lcz5tFE8v5JqylInsPvPW",
+            ContentId = "70rcIvfhhD9VjLlMTA3YPz",
             Locale = "en-US"
         };
         var request = new GetEntryAsHtmlRequest();
@@ -62,7 +62,7 @@ public class EntryActionsTests : TestBase
             Locale = "nl",
             Content = new()
             {
-                Name = "5wFvto8Zhatz451gTDEpvP_en-US.html",
+                Name = "Mr. Coffee Mug Warmer_en-US.html",
                 ContentType = "text/html"
             }
         };

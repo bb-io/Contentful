@@ -486,7 +486,14 @@ public class HtmlToRichTextConverter
                     Data = new HyperlinkData { Uri = uri }
                 };
 
-                if (node.InnerHtml.Contains("<br>"))
+                var hasFormattedContent = HasFormattedContent(node);
+                var hasBrTags = node.InnerHtml.Contains("<br>");
+
+                if (hasBrTags && hasFormattedContent)
+                {
+                    ProcessFormattedHyperlinkWithLineBreaks(node, hyperlink.Content);
+                }
+                else if (hasBrTags)
                 {
                     var fullText = GetHyperlinkTextWithNewlines(node);
                     hyperlink.Content.Add(new Text
@@ -527,6 +534,59 @@ public class HtmlToRichTextConverter
         }
         
         return text.ToString();
+    }
+
+    private bool HasFormattedContent(HtmlNode node)
+    {
+        return node.Descendants().Any(n => 
+            n.Name == "strong" || 
+            n.Name == "i" || 
+            n.Name == "u" || 
+            n.Name == "code" || 
+            n.Name == "sup" || 
+            n.Name == "sub");
+    }
+
+    private void ProcessFormattedHyperlinkWithLineBreaks(HtmlNode node, List<IContent> contentList)
+    {
+        foreach (var child in node.ChildNodes)
+        {
+            if (child.NodeType == HtmlNodeType.Element)
+            {
+                if (child.Name == "br")
+                {
+                    contentList.Add(new Text
+                    {
+                        NodeType = "text",
+                        Value = "\n",
+                        Data = new GenericStructureData(),
+                        Marks = []
+                    });
+                }
+                else
+                {
+                    ParseHtmlToContentful(child, contentList);
+                }
+            }
+            else if (child.NodeType == HtmlNodeType.Text)
+            {
+                var text = child.InnerText;
+                if (string.IsNullOrWhiteSpace(text))
+                    continue;
+
+                var marks = new List<string>();
+                GetMarksFromHtmlNode(child, marks);
+
+                var textNode = new Text
+                {
+                    NodeType = "text",
+                    Value = HttpUtility.HtmlDecode(text),
+                    Data = new GenericStructureData(),
+                    Marks = marks.Select(mark => new Mark { Type = mark }).ToList()
+                };
+                contentList.Add(textNode);
+            }
+        }
     }
 
     private void GetMarksFromHtmlNode(HtmlNode node, List<string> marks)
@@ -622,22 +682,5 @@ public class HtmlToRichTextConverter
         }
 
         return paragraph;
-    }
-    
-    private static HtmlNode RemoveLeadingAndTrailingBr(HtmlNode node)
-    {
-        var newNode = node.Clone();
-
-        while (newNode.HasChildNodes && newNode.FirstChild.Name == "br")
-        {
-            newNode.RemoveChild(newNode.FirstChild);
-        }
-
-        while (newNode.HasChildNodes && newNode.LastChild.Name == "br")
-        {
-            newNode.RemoveChild(newNode.LastChild);
-        }
-
-        return newNode;
     }
 }
