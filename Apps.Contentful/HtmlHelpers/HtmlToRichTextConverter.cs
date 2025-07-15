@@ -1,4 +1,5 @@
-﻿using System.Web;
+﻿using System.Text;
+using System.Web;
 using Apps.Contentful.Models.Entities;
 using Contentful.Core.Models;
 using HtmlAgilityPack;
@@ -481,11 +482,110 @@ public class HtmlToRichTextConverter
                 var hyperlink = new Hyperlink
                 {
                     NodeType = "hyperlink",
-                    Content = new List<IContent>(),
+                    Content = [],
                     Data = new HyperlinkData { Uri = uri }
                 };
-                ParseHtmlToContentful(node, hyperlink.Content);
+
+                var hasFormattedContent = HasFormattedContent(node);
+                var hasBrTags = node.InnerHtml.Contains("<br>");
+
+                if (hasBrTags && hasFormattedContent)
+                {
+                    ProcessFormattedHyperlinkWithLineBreaks(node, hyperlink.Content);
+                }
+                else if (hasBrTags)
+                {
+                    var fullText = GetHyperlinkTextWithNewlines(node);
+                    hyperlink.Content.Add(new Text
+                    {
+                        NodeType = "text",
+                        Value = fullText,
+                        Data = new GenericStructureData(),
+                        Marks = []
+                    });
+                }
+                else
+                {
+                    ParseHtmlToContentful(node, hyperlink.Content);
+                }
+                
                 return hyperlink;
+        }
+    }
+
+    private string GetHyperlinkTextWithNewlines(HtmlNode node)
+    {
+        var text = new StringBuilder();
+        
+        foreach (var child in node.ChildNodes)
+        {
+            if (child.NodeType == HtmlNodeType.Text)
+            {
+                text.Append(HttpUtility.HtmlDecode(child.InnerText));
+            }
+            else if (child.Name == "br")
+            {
+                text.Append("\n");
+            }
+            else
+            {
+                text.Append(GetHyperlinkTextWithNewlines(child));
+            }
+        }
+        
+        return text.ToString();
+    }
+
+    private bool HasFormattedContent(HtmlNode node)
+    {
+        return node.Descendants().Any(n => 
+            n.Name == "strong" || 
+            n.Name == "i" || 
+            n.Name == "u" || 
+            n.Name == "code" || 
+            n.Name == "sup" || 
+            n.Name == "sub");
+    }
+
+    private void ProcessFormattedHyperlinkWithLineBreaks(HtmlNode node, List<IContent> contentList)
+    {
+        foreach (var child in node.ChildNodes)
+        {
+            if (child.NodeType == HtmlNodeType.Element)
+            {
+                if (child.Name == "br")
+                {
+                    contentList.Add(new Text
+                    {
+                        NodeType = "text",
+                        Value = "\n",
+                        Data = new GenericStructureData(),
+                        Marks = []
+                    });
+                }
+                else
+                {
+                    ParseHtmlToContentful(child, contentList);
+                }
+            }
+            else if (child.NodeType == HtmlNodeType.Text)
+            {
+                var text = child.InnerText;
+                if (string.IsNullOrWhiteSpace(text))
+                    continue;
+
+                var marks = new List<string>();
+                GetMarksFromHtmlNode(child, marks);
+
+                var textNode = new Text
+                {
+                    NodeType = "text",
+                    Value = HttpUtility.HtmlDecode(text),
+                    Data = new GenericStructureData(),
+                    Marks = marks.Select(mark => new Mark { Type = mark }).ToList()
+                };
+                contentList.Add(textNode);
+            }
         }
     }
 
@@ -582,22 +682,5 @@ public class HtmlToRichTextConverter
         }
 
         return paragraph;
-    }
-    
-    private static HtmlNode RemoveLeadingAndTrailingBr(HtmlNode node)
-    {
-        var newNode = node.Clone();
-
-        while (newNode.HasChildNodes && newNode.FirstChild.Name == "br")
-        {
-            newNode.RemoveChild(newNode.FirstChild);
-        }
-
-        while (newNode.HasChildNodes && newNode.LastChild.Name == "br")
-        {
-            newNode.RemoveChild(newNode.LastChild);
-        }
-
-        return newNode;
     }
 }

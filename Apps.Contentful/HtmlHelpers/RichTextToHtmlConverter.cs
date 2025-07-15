@@ -58,7 +58,9 @@ public class RichTextToHtmlConverter(JArray content, string spaceId)
                 return "<hr />";
             case "hyperlink":
                 var uri = jsonObject["data"]["uri"].ToString();
-                return $"<a href=\"{uri}\">{ConvertContentToHtml(jsonObject["content"])}</a>";
+                var hyperlinkContent = ConvertContentToHtml(jsonObject["content"]);
+                content = hyperlinkContent.Replace("\n", "<br>");
+                return $"<a href=\"{uri}\">{content}</a>";
             case "asset-hyperlink":
                 var assetId = jsonObject["data"]["target"]["sys"]["id"].ToString();
                 uri = $"https://app.contentful.com/spaces/{spaceId}/assets/{assetId}";

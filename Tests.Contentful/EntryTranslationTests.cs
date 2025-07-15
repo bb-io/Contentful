@@ -19,10 +19,7 @@ public class EntryTranslationTests : TestBase
     public async Task Translate_standard_html_file()
     {
         var actions = new EntryActions(InvocationContext, FileManager);
-        await actions.SetEntryLocalizableFieldsFromHtmlFile(
-            new LocaleIdentifier { Locale = "de" },
-            new FileRequest { File = new FileReference { Name = "contentful-pseudo.html"} },
-            new UpdateEntryFromHtmlRequest { });
+        await actions.SetEntryLocalizableFieldsFromHtmlFile(new Apps.Contentful.Models.Requests.Tags.UploadEntryRequest { Content = new FileReference { Name = "contentful-pseudo.html" }, Locale = "de" });
 
     }
 
@@ -30,10 +27,7 @@ public class EntryTranslationTests : TestBase
     public async Task Translate_from_xliff_file()
     {
         var actions = new EntryActions(InvocationContext, FileManager);
-        await actions.SetEntryLocalizableFieldsFromHtmlFile(
-            new LocaleIdentifier { Locale = "de" },
-            new FileRequest { File = new FileReference { Name = "contentful-pseudo.xliff" } },
-            new UpdateEntryFromHtmlRequest { });
+        await actions.SetEntryLocalizableFieldsFromHtmlFile(new Apps.Contentful.Models.Requests.Tags.UploadEntryRequest { Content = new FileReference { Name = "contentful-pseudo.xliff" }, Locale = "de" });
 
     }
 }
