@@ -184,4 +184,25 @@ public class EntryActionsTests : TestBase
 
         Assert.IsTrue(true);
     }
+
+
+    [TestMethod]
+    public async Task SetEntryTextField_WithReferenceEntry_ShouldNotFail()
+    {
+        var entryActions = new EntryFieldActions(InvocationContext);
+        var entryIdentifier = new EntryLocaleIdentifier()
+        {
+            Locale= "en-US",
+            EntryId= "5FBuCuJwXpF5UhW3N9oYve",
+            Environment = "master"
+        };
+
+        var fieldIdentifier = new FieldIdentifier()
+        {
+            FieldId= "text_sanitized",
+            
+        };
+
+        await entryActions.SetTextFieldContent(entryIdentifier, fieldIdentifier, "a {Open ‹a href=\"{url}\" data-q=\"x & y\"›{label}‹/a› — {when, time, short}}");
+    }
 }

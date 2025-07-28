@@ -108,11 +108,29 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var entry = await client.ExecuteWithErrorHandling(async () =>
             await client.GetEntry(entryIdentifier.EntryId));
+
+        if (entry.Fields == null)
+        {
+            throw new PluginApplicationException($"Entry with ID {entryIdentifier.EntryId} has no fields.");
+        }
+
         var fields = (JObject)entry.Fields;
         var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
         var contentType =
             await client.ExecuteWithErrorHandling(async () => await client.GetContentType(contentTypeId));
-        var fieldType = contentType.Fields.First(f => f.Id == fieldIdentifier.FieldId).Type;
+
+        if (contentType.Fields == null)
+        {
+            throw new PluginApplicationException($"Content type {contentTypeId} has no fields.");
+        }
+
+        var field = contentType.Fields.FirstOrDefault(f => f.Id == fieldIdentifier.FieldId);
+
+        if (field == null)
+        {
+            throw new PluginApplicationException($"Field with ID {fieldIdentifier.FieldId} not found in content type {contentTypeId}.");
+        }
+        var fieldType = field.Type;
 
         if (fieldType == "RichText")
         {
@@ -127,6 +145,14 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
         }
         else if (fieldType == "Text" || fieldType == "Symbol")
         {
+            if (fields[fieldIdentifier.FieldId] == null)
+            {
+                throw new PluginApplicationException($"Field with ID {fieldIdentifier.FieldId} not found in entry {entryIdentifier.EntryId}.");
+            }
+            if (fields[fieldIdentifier.FieldId][entryIdentifier.Locale] == null)
+            {
+                throw new PluginApplicationException($"Field {fieldIdentifier.FieldId} does not support locale {entryIdentifier.Locale} in entry {entryIdentifier.EntryId}.");
+            }
             fields[fieldIdentifier.FieldId][entryIdentifier.Locale] = text;
         }
         else
