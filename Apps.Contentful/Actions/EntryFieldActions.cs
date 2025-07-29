@@ -132,6 +132,11 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
         }
         var fieldType = field.Type;
 
+        if (fields[fieldIdentifier.FieldId] == null)
+        {
+            fields[fieldIdentifier.FieldId] = new JObject();
+        }        
+
         if (fieldType == "RichText")
         {
             var html = $"<p>{text}</p>";
@@ -145,14 +150,6 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
         }
         else if (fieldType == "Text" || fieldType == "Symbol")
         {
-            if (fields[fieldIdentifier.FieldId] == null)
-            {
-                throw new PluginApplicationException($"Field with ID {fieldIdentifier.FieldId} not found in entry {entryIdentifier.EntryId}.");
-            }
-            if (fields[fieldIdentifier.FieldId][entryIdentifier.Locale] == null)
-            {
-                throw new PluginApplicationException($"Field {fieldIdentifier.FieldId} does not support locale {entryIdentifier.Locale} in entry {entryIdentifier.EntryId}.");
-            }
             fields[fieldIdentifier.FieldId][entryIdentifier.Locale] = text;
         }
         else
