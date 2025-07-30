@@ -3,6 +3,7 @@ using Apps.Contentful.Models.Identifiers;
 using Apps.Contentful.Models.Requests;
 using Apps.Contentful.Models.Requests.Tags;
 using Blackbird.Applications.Sdk.Common.Exceptions;
+using Newtonsoft.Json;
 using Tests.Contentful.Base;
 using static Microsoft.VisualStudio.TestTools.UnitTesting.Assert;
 
@@ -183,5 +184,61 @@ public class EntryActionsTests : TestBase
 
 
         Assert.IsTrue(true);
+    }
+
+
+    [TestMethod]
+    public async Task SetEntryTextField_WithReferenceEntry_ShouldNotFail()
+    {
+        var entryActions = new EntryFieldActions(InvocationContext);
+        var entryIdentifier = new EntryLocaleIdentifier()
+        {
+            Locale= "en-US",
+            EntryId= "5FBuCuJwXpF5UhW3N9oYve",
+            Environment = "master"
+        };
+
+        var fieldIdentifier = new FieldIdentifier()
+        {
+            FieldId= "text_sanitized",
+            
+        };
+
+        await entryActions.SetTextFieldContent(entryIdentifier, fieldIdentifier, "a {Open ‹a href=\"{url}\" data-q=\"x & y\"›{label}‹/a› — {when, time, short}}");
+    }
+
+
+    [TestMethod]
+    public async Task DownloadEntry_ShouldNotFail()
+    {
+        var entryActions = new EntryActions(InvocationContext, FileManager);
+        var entryIdentifier = new DownloadContentInput
+        {
+            Locale = "de-DE",
+            ContentId= "1k2iExRQPNlNhXTYvZsjRE",
+            Environment= "staging",
+            
+        };
+        var entry = new GetEntryAsHtmlRequest
+        {
+            IgnoredFieldIds = new List<string>
+           {
+                "slug"
+           },
+            GetHyperlinkContent = true,
+            IgnoredContentTypeIds = new List<string>
+            {
+                "page"
+            },
+            GetEmbeddedBlockContent = true,
+            GetEmbeddedInlineContent = true,
+            GetNonLocalizationReferenceContent = true
+        };
+
+        var response = await entryActions.GetEntryLocalizableFieldsAsHtmlFile(entryIdentifier, entry);
+
+        var json = JsonConvert.SerializeObject(response, Formatting.Indented);
+        Console.WriteLine(json);
+        Assert.IsNotNull(response);
     }
 }
