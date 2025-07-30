@@ -4,6 +4,7 @@ using Apps.Contentful.HtmlHelpers.Constants;
 using Apps.Contentful.Models;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Contentful.Core.Models;
+using Contentful.Core.Models.Management;
 using HtmlAgilityPack;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -260,12 +261,21 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
         if (linkType == "Asset")
         {
             var client = new ContentfulClient(invocationContext.AuthenticationCredentialsProviders, environment);
-            var assetTask = client.GetAsset(linkId!);
-            assetTask.Wait();
+            ManagementAsset? asset = null;
 
-            var asset = assetTask.Result;
+            try
+            {
+                var assetTask = client.GetAsset(linkId!);
+                assetTask.Wait();
 
-            if (asset.Files != null)
+                asset = assetTask.Result;
+            }
+            catch (Exception)
+            {
+                // ignored
+            }
+
+            if (asset?.Files != null)
             {
                 foreach (var fileEntry in asset.Files)
                 {
