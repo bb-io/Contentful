@@ -343,12 +343,13 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                 {
                     continue;
                 }
-
-                await client.ExecuteWithErrorHandling(async () =>
-                {
-                    var entryVersion = await client.GetEntry(entryToUpdate.EntryId);
-                    return await client.CreateOrUpdateEntry(entry, version: entryVersion.SystemProperties.Version);
-                });
+                
+                var partialObject = PartialObjectBuilder.Build(entry, input.Locale);
+                await client.ExecuteWithErrorHandling(async () => await client.UpdateEntryForLocale(
+                    entry: partialObject,             
+                    id: entryToUpdate.EntryId,
+                    locale: input.Locale
+                ));
             }
             catch (FieldConversionException ex)
             {
