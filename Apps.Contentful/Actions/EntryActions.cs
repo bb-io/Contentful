@@ -32,6 +32,7 @@ using System;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.SDK.Blueprints.Handlers;
 using Apps.Contentful.Models.Requests.Tags;
+using Blackbird.Filters.Xliff.Xliff1;
 
 namespace Apps.Contentful.Actions;
 
@@ -319,7 +320,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         var file = await fileManagementClient.DownloadAsync(input.Content);
         var html = Encoding.UTF8.GetString(await file.GetByteData());
 
-        if (Xliff2Serializer.IsXliff2(html))
+        if (Xliff2Serializer.IsXliff2(html) || Xliff1Serializer.IsXliff1(html))
         {
             html = Transformation.Parse(html, input.Content.Name).Target().Serialize();
             if (html == null) throw new PluginMisconfigurationException("XLIFF did not contain any files");
@@ -343,11 +344,12 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                     continue;
                 }
                 
-                await client.ExecuteWithErrorHandling(async () =>
-                {
-                    var entryVersion = await client.GetEntry(entryToUpdate.EntryId);
-                    return await client.CreateOrUpdateEntry(entry, version: entryVersion.SystemProperties.Version);
-                });
+                var partialObject = PartialObjectBuilder.Build(entry, input.Locale);
+                await client.ExecuteWithErrorHandling(async () => await client.UpdateEntryForLocale(
+                    entry: partialObject,             
+                    id: entryToUpdate.EntryId,
+                    locale: input.Locale
+                ));
             }
             catch (FieldConversionException ex)
             {
