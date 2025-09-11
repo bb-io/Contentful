@@ -27,7 +27,7 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
 
                 bodyNode.AppendChild(entryNode);
                 x.ContentTypeFields.ToList()
-                    .ForEach(y => MapFieldToHtml(y, x.EntryFields, locale, spaceId, doc, entryNode));
+                    .ForEach(y => MapFieldToHtml(y, x.EntryFields, locale, spaceId, doc, entryNode, x.Id));
             }
             catch (Exception ex)
             {
@@ -40,9 +40,7 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
         return doc.DocumentNode.OuterHtml;
     }
 
-    private void MapFieldToHtml(Field field, JObject entryFields, string locale, string spaceId,
-        HtmlDocument doc,
-        HtmlNode bodyNode)
+    private void MapFieldToHtml(Field field, JObject entryFields, string locale, string spaceId, HtmlDocument doc, HtmlNode bodyNode, string entryId)
     {
         if (!entryFields.TryGetValue(field.Id, out var entryField))
             return;
@@ -52,14 +50,13 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
 
         var node = field.Type switch
         {
-            "Integer" or "Number" or "Symbol" or "Text" => ConvertPrimitivesToHtml(bodyNode, doc, field,
-                entryField, locale),
-            "Object" => ConvertJsonObjectToHtml(doc, field, entryField, locale, spaceId),
-            "Location" => ConvertLocationObjectToHtml(doc, field, entryField, locale),
-            "Boolean" => ConvertBooleanToHtml(doc, field, entryField, locale),
-            "RichText" => ConvertRichTextToHtml(doc, field, entryField, locale, spaceId),
-            "Array" => ConvertArrayToHtml(doc, field, entryField, locale),
-            "Link" => ConvertLinkToHtml(doc, field, entryField, locale),
+            "Integer" or "Number" or "Symbol" or "Text" => ConvertPrimitivesToHtml(bodyNode, doc, field, entryField, locale, entryId),
+            "Object" => ConvertJsonObjectToHtml(doc, field, entryField, locale, spaceId, entryId),
+            "Location" => ConvertLocationObjectToHtml(doc, field, entryField, locale, entryId),
+            "Boolean" => ConvertBooleanToHtml(doc, field, entryField, locale, entryId),
+            "RichText" => ConvertRichTextToHtml(doc, field, entryField, locale, spaceId, entryId),
+            "Array" => ConvertArrayToHtml(doc, field, entryField, locale, entryId),
+            "Link" => ConvertLinkToHtml(doc, field, entryField, locale, entryId),
             _ => null
         };
 
@@ -67,11 +64,11 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
             bodyNode.AppendChild(node);
     }
 
-    private HtmlNode? ConvertJsonObjectToHtml(HtmlDocument doc, Field field, JToken entryField, string locale, string spaceId)
+    private HtmlNode? ConvertJsonObjectToHtml(HtmlDocument doc, Field field, JToken entryField, string locale, string spaceId, string entryId)
     {
         if (entryField[locale] is JObject localeObject && localeObject["nodeType"]?.ToString() == "document")
         {
-            var htmlNode = ConvertRichTextToHtml(doc, field, entryField, locale, spaceId);
+            var htmlNode = ConvertRichTextToHtml(doc, field, entryField, locale, spaceId, entryId);
             htmlNode?.SetAttributeValue("data-rich-text", "true");
             return htmlNode;
         }
@@ -248,7 +245,7 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
         return htmlBuilder.ToString();
     }
 
-    private HtmlNode? ConvertLinkToHtml(HtmlDocument doc, Field field, JToken entryField, string locale)
+    private HtmlNode? ConvertLinkToHtml(HtmlDocument doc, Field field, JToken entryField, string locale, string entryId)
     {
         var linkData = entryField[locale]?["sys"];
 
@@ -301,6 +298,7 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
                         imgNode.SetAttributeValue(ConvertConstants.FieldIdAttribute, field.Id);
                         imgNode.SetAttributeValue("data-contentful-link-type", linkType);
                         imgNode.SetAttributeValue("data-contentful-link-id", linkId);
+                        imgNode.SetAttributeValue(ConvertConstants.BlackbirdKey, $"{entryId}-{field.Id}");
 
                         var altText = asset.Title?.ContainsKey(fileLocale) ?? false
                             ? asset.Title[fileLocale]
@@ -323,11 +321,11 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
             { "data-contentful-localized", field.Localized.ToString() }
         };
 
-        return WrapFieldInDiv(doc, field.Type, field.Id, additionalAttributes: additionalAttributes);
+        return WrapFieldInDiv(doc, entryId, field.Type, field.Id, additionalAttributes: additionalAttributes);
     }
 
     private HtmlNode? ConvertArrayToHtml(HtmlDocument doc, Field field, JToken entryField,
-        string locale)
+        string locale, string entryId)
     {
         var itemType = field.Items.Type;
         var arrayItems = (JArray?)entryField?[locale];
@@ -350,11 +348,11 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
             additionalAttributes.Add("data-contentful-localized", field.Localized.ToString());
         }
 
-        return WrapFieldInDiv(doc, field.Type, field.Id, additionalAttributes: additionalAttributes);
+        return WrapFieldInDiv(doc, entryId, field.Type, field.Id, additionalAttributes: additionalAttributes);
     }
 
     private HtmlNode? ConvertRichTextToHtml(HtmlDocument doc, Field field, JToken entryField,
-        string locale, string spaceId)
+        string locale, string spaceId, string entryId)
     {
         var content = (JArray?)entryField[locale]?["content"];
 
@@ -364,11 +362,11 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
         var richTextToHtmlConverter = new RichTextToHtmlConverter(content, spaceId);
         var fieldContent = richTextToHtmlConverter.ToHtml();
 
-        return WrapFieldInDiv(doc, field.Type, field.Id, fieldContent);
+        return WrapFieldInDiv(doc, entryId, field.Type, field.Id, fieldContent);
     }
 
     private HtmlNode? ConvertBooleanToHtml(HtmlDocument doc, Field field, JToken entryField,
-        string locale)
+        string locale, string entryId)
     {
         var boolValue = (bool?)entryField?[locale];
 
@@ -379,11 +377,11 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
         {
             { "data-contentful-bool-value", boolValue.ToString() }
         };
-        return WrapFieldInDiv(doc, field.Type, field.Id, additionalAttributes: additionalAttributes);
+        return WrapFieldInDiv(doc, entryId, field.Type, field.Id, additionalAttributes: additionalAttributes);
     }
 
     private HtmlNode? ConvertLocationObjectToHtml(HtmlDocument doc, Field field, JToken entryField,
-        string locale)
+        string locale, string entryId)
     {
         var jsonValue = entryField[locale]?.ToString();
 
@@ -395,11 +393,11 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
             { "data-contentful-json-value", jsonValue }
         };
 
-        return WrapFieldInDiv(doc, field.Type, field.Id, additionalAttributes: additionalAttributes);
+        return WrapFieldInDiv(doc, entryId, field.Type, field.Id, additionalAttributes: additionalAttributes);
     }
 
     private HtmlNode? ConvertPrimitivesToHtml(HtmlNode bodyNode, HtmlDocument doc, Field field, JToken entryField,
-        string locale)
+        string locale, string entryId)
     {
         var fieldContent = entryField[locale]?.ToString();
 
@@ -418,15 +416,16 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
             tagName = "h2";
         }
 
-        return WrapFieldInDiv(doc, field.Type, field.Id, fieldContent, tagName: tagName);
+        return WrapFieldInDiv(doc, entryId, field.Type, field.Id, fieldContent, tagName: tagName);
     }
 
-    private HtmlNode WrapFieldInDiv(HtmlDocument doc, string fieldType, string fieldId, string fieldContent = "",
+    private HtmlNode WrapFieldInDiv(HtmlDocument doc, string entryId, string fieldType, string fieldId, string fieldContent = "",
         Dictionary<string, string>? additionalAttributes = null, string tagName = HtmlConstants.Div)
     {
         var node = doc.CreateElement(tagName);
         node.SetAttributeValue(ConvertConstants.FieldTypeAttribute, fieldType);
         node.SetAttributeValue(ConvertConstants.FieldIdAttribute, fieldId);
+        node.SetAttributeValue(ConvertConstants.BlackbirdKey, $"{entryId}-{fieldId}");
 
         if (additionalAttributes != null)
         {
