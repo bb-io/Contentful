@@ -267,8 +267,14 @@ public class EntryActionsTests : TestBase
         var contentString = FileManager.ReadOutputAsString(response.Content);
         var codedContent = HtmlContentCoder.Deserialize(contentString, response.Content.Name);
 
+        foreach (var unit in codedContent.TextUnits.Where(x => x.Key is null))
+        {
+            Console.WriteLine(unit.GetCodedText());
+        }
+
         Console.WriteLine(contentString);
         Assert.AreEqual(lang, codedContent.Language);
         Assert.AreEqual(contentId, codedContent.UniqueContentId);
+        Assert.IsTrue(codedContent.TextUnits.All(x => x.Key is not null));
     }
 }
