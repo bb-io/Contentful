@@ -491,6 +491,7 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
         var htmlDoc = new HtmlDocument();
         var htmlNode = htmlDoc.CreateElement(HtmlConstants.Html);
         htmlDoc.DocumentNode.AppendChild(htmlNode);
+        htmlNode.SetAttributeValue("lang", locale);
 
         var headNode = htmlDoc.CreateElement(HtmlConstants.Head);
         htmlNode.AppendChild(headNode);
@@ -504,6 +505,11 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
         localeMetaNode.SetAttributeValue("name", "blackbird-locale");
         localeMetaNode.SetAttributeValue("content", locale);
         headNode.AppendChild(localeMetaNode);
+
+        var ucidMetaNode = htmlDoc.CreateElement("meta");
+        ucidMetaNode.SetAttributeValue("name", "blackbird-ucid");
+        ucidMetaNode.SetAttributeValue("content", entryId);
+        headNode.AppendChild(ucidMetaNode);
 
         var bodyNode = htmlDoc.CreateElement(HtmlConstants.Body);
         htmlNode.AppendChild(bodyNode);

@@ -3,7 +3,9 @@ using Apps.Contentful.Models.Identifiers;
 using Apps.Contentful.Models.Requests;
 using Apps.Contentful.Models.Requests.Tags;
 using Blackbird.Applications.Sdk.Common.Exceptions;
+using Blackbird.Filters.Coders;
 using Newtonsoft.Json;
+using System.Text;
 using Tests.Contentful.Base;
 using static Microsoft.VisualStudio.TestTools.UnitTesting.Assert;
 
@@ -214,9 +216,8 @@ public class EntryActionsTests : TestBase
         var entryActions = new EntryActions(InvocationContext, FileManager);
         var entryIdentifier = new DownloadContentInput
         {
-            Locale = "de-DE",
-            ContentId= "1k2iExRQPNlNhXTYvZsjRE",
-            Environment= "staging",
+            Locale = "en-US",
+            ContentId= "5746dLKTkEZjOQX21HX2KI",
             
         };
         var entry = new GetEntryAsHtmlRequest
@@ -240,5 +241,34 @@ public class EntryActionsTests : TestBase
         var json = JsonConvert.SerializeObject(response, Formatting.Indented);
         Console.WriteLine(json);
         Assert.IsNotNull(response);
+    }
+
+    [TestMethod]
+    public async Task DownloadEntry_Has_Blacklake_required_fields()
+    {
+        var lang = "en-US";
+        var contentId = "5746dLKTkEZjOQX21HX2KI";
+
+        var entryActions = new EntryActions(InvocationContext, FileManager);
+        var entryIdentifier = new DownloadContentInput
+        {
+            Locale = lang,
+            ContentId = contentId,
+
+        };
+        var entry = new GetEntryAsHtmlRequest
+        {
+            GetReferenceContent = true,
+            GetEmbeddedInlineContent = true,
+        };
+
+        var response = await entryActions.GetEntryLocalizableFieldsAsHtmlFile(entryIdentifier, entry);
+
+        var contentString = FileManager.ReadOutputAsString(response.Content);
+        var codedContent = HtmlContentCoder.Deserialize(contentString, response.Content.Name);
+
+        Console.WriteLine(contentString);
+        Assert.AreEqual(lang, codedContent.Language);
+        Assert.AreEqual(contentId, codedContent.UniqueContentId);
     }
 }
