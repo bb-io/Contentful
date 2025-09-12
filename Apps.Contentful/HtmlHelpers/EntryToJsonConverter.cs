@@ -23,6 +23,27 @@ public static class EntryToJsonConverter
             .ToList();
     }
 
+    public static MainEntryDto? GetMainEntryInfo(string html)
+    {
+        if (string.IsNullOrWhiteSpace(html))
+            return null;
+
+        var doc = new HtmlDocument();
+        doc.LoadHtml(html);
+
+        var entryIdNode = doc.DocumentNode
+            .SelectSingleNode("//meta[@name='blackbird-entry-id']");
+
+        var localeNode = doc.DocumentNode
+            .SelectSingleNode("//meta[@name='blackbird-locale']");
+
+        return new MainEntryDto
+        {
+            EntryId = entryIdNode?.GetAttributeValue("content", null),
+            Locale = localeNode?.GetAttributeValue("content", null)
+        };
+    }
+
     public static void ToJson(Entry<object> entry, HtmlNode html, string locale, ContentType contentType, bool doNotUpdateReferenceFields)
     {
         var entryFields = (JObject)entry.Fields;
