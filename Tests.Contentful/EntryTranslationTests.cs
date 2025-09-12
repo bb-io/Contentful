@@ -3,6 +3,8 @@ using Apps.Contentful.Models.Identifiers;
 using Apps.Contentful.Models.Requests;
 using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Files;
+using Blackbird.Filters.Coders;
+using Blackbird.Filters.Transformations;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -27,7 +29,12 @@ public class EntryTranslationTests : TestBase
     public async Task Translate_from_xliff_file()
     {
         var actions = new EntryActions(InvocationContext, FileManager);
-        await actions.SetEntryLocalizableFieldsFromHtmlFile(new Apps.Contentful.Models.Requests.Tags.UploadEntryRequest { Content = new FileReference { Name = "contentful-pseudo.xliff" }, Locale = "de" });
+        var response = await actions.SetEntryLocalizableFieldsFromHtmlFile(new Apps.Contentful.Models.Requests.Tags.UploadEntryRequest { Content = new FileReference { Name = "contentful.html.xlf" }, Locale = "nl" });
 
+        var contentString = FileManager.ReadOutputAsString(response.Content);
+        var transformation = Transformation.Parse(contentString, response.Content.Name);
+
+        Assert.AreEqual("5746dLKTkEZjOQX21HX2KI", transformation.UniqueTargetContentId);
+        Assert.AreEqual("nl", transformation.TargetLanguage);
     }
 }

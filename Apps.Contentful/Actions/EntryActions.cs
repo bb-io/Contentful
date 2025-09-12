@@ -1,38 +1,40 @@
-﻿using System.Net.Mime;
-using System.Text;
-using Apps.Contentful.Api;
+﻿using Apps.Contentful.Api;
 using Apps.Contentful.Extensions;
 using Apps.Contentful.HtmlHelpers;
 using Apps.Contentful.Models;
 using Apps.Contentful.Models.Entities;
-using Blackbird.Applications.Sdk.Common;
-using Blackbird.Applications.Sdk.Common.Authentication;
-using Apps.Contentful.Models.Responses;
+using Apps.Contentful.Models.Exceptions;
 using Apps.Contentful.Models.Identifiers;
 using Apps.Contentful.Models.Requests;
-using Newtonsoft.Json.Linq;
+using Apps.Contentful.Models.Requests.Tags;
+using Apps.Contentful.Models.Responses;
+using Apps.Contentful.Utils;
+using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
+using Blackbird.Applications.Sdk.Common.Authentication;
+using Blackbird.Applications.Sdk.Common.Dynamic;
+using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
-using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using Blackbird.Applications.Sdk.Utils.Extensions.Files;
 using Blackbird.Applications.Sdk.Utils.Extensions.Sdk;
-using Contentful.Core.Models;
-using Newtonsoft.Json;
-using Contentful.Core.Extensions;
-using HtmlAgilityPack;
-using Newtonsoft.Json.Serialization;
-using System.Web;
-using Apps.Contentful.Models.Exceptions;
-using Apps.Contentful.Utils;
-using Blackbird.Applications.Sdk.Common.Exceptions;
-using Blackbird.Filters.Transformations;
-using Blackbird.Filters.Xliff.Xliff2;
 using Blackbird.Applications.SDK.Blueprints;
-using System;
-using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.SDK.Blueprints.Handlers;
-using Apps.Contentful.Models.Requests.Tags;
+using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
+using Blackbird.Filters.Constants;
+using Blackbird.Filters.Extensions;
+using Blackbird.Filters.Transformations;
 using Blackbird.Filters.Xliff.Xliff1;
+using Blackbird.Filters.Xliff.Xliff2;
+using Contentful.Core.Extensions;
+using Contentful.Core.Models;
+using HtmlAgilityPack;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Serialization;
+using System;
+using System.Net.Mime;
+using System.Text;
+using System.Web;
 
 namespace Apps.Contentful.Actions;
 
@@ -303,10 +305,11 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
     [BlueprintActionDefinition(BlueprintAction.UploadContent)]
     [Action("Upload entry", Description = "Update all localizable fields of specified entry, and its child entries, from a translated file.")]
-    public async Task SetEntryLocalizableFieldsFromHtmlFile(
+    public async Task<DownloadContentOutput> SetEntryLocalizableFieldsFromHtmlFile(
         [ActionParameter] UploadEntryRequest input)
     {
         var client = new ContentfulClient(Creds, input.Environment);
+        var output = new DownloadContentOutput();
 
         var locales = await client.ExecuteWithErrorHandling(async () =>await client.GetLocalesCollection());
         if (locales.All(x => x.Code != input.Locale))
@@ -318,15 +321,19 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         }
 
         var file = await fileManagementClient.DownloadAsync(input.Content);
-        var html = Encoding.UTF8.GetString(await file.GetByteData());
+        var content = Encoding.UTF8.GetString(await file.GetByteData());
 
-        if (Xliff2Serializer.IsXliff2(html) || Xliff1Serializer.IsXliff1(html))
+
+        Transformation? transformation = null;
+        if (Xliff2Serializer.IsXliff2(content) || Xliff1Serializer.IsXliff1(content))
         {
-            html = Transformation.Parse(html, input.Content.Name).Target().Serialize();
-            if (html == null) throw new PluginMisconfigurationException("XLIFF did not contain any files");
+            transformation = Transformation.Parse(content, input.Content.Name);
+            content = transformation.Target().Serialize();
+            if (content == null) throw new PluginMisconfigurationException("XLIFF did not contain any files");
         }
 
-        var entriesToUpdate = EntryToJsonConverter.GetEntriesInfo(html);
+        var mainEntryInfo = EntryToJsonConverter.GetMainEntryInfo(content);
+        var entriesToUpdate = EntryToJsonConverter.GetEntriesInfo(content);
 
         foreach (var entryToUpdate in entriesToUpdate)
         {
@@ -377,6 +384,19 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                     $"Converting entry to JSON failed. Entry ID: {entry.SystemProperties.Id};  Exception: {ex}; Locale: {input.Locale}; Entry: {JsonConvert.SerializeObject(entry)}; HTML: {entryToUpdate.HtmlNode.OuterHtml};");
             }
         }
+
+        if (transformation is not null)
+        {
+            transformation.UniqueTargetContentId = input.ContentId ?? mainEntryInfo?.EntryId;
+            transformation.TargetLanguage = input.Locale;
+
+            output.Content = await fileManagementClient.UploadAsync(transformation.Serialize().ToStream(), MediaTypes.Xliff, transformation.XliffFileName);
+        } else
+        {
+            output.Content = input.Content;
+        }
+
+        return output;
     }
 
     #region Utils
