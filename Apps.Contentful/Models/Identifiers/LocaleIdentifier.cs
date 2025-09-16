@@ -6,5 +6,5 @@ namespace Apps.Contentful.Models.Identifiers;
 public class LocaleIdentifier : EnvironmentIdentifier
 {
     [DataSource(typeof(LocaleDataSourceHandler))]
-    public string Locale { get; set; }
+    public string Locale { get; set; } = string.Empty;
 }
