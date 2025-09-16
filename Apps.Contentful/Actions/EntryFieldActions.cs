@@ -171,9 +171,17 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
         var entry = await client.ExecuteWithErrorHandling(async () =>
             await client.GetEntry(entryIdentifier.EntryId));
         var fields = (JObject)entry.Fields;
+        if(fields.TryGetValue(fieldIdentifier.FieldId, out JToken fieldToken) == false
+           || fieldToken[entryIdentifier.Locale] == null)
+        {
+            var availableFields = fields.Properties().Select(f => f.Name);
+            throw new PluginApplicationException($"Field '{fieldIdentifier.FieldId}' or locale '{entryIdentifier.Locale}' not found in entry {entryIdentifier.EntryId}. " +
+                                                 $"Available fields: {string.Join(", ", availableFields)}. Please check your input and try again");
+        }
+        
         return new GetNumberContentResponse
         {
-            NumberContent = fields[fieldIdentifier.FieldId][entryIdentifier.Locale].ToInt()
+            NumberContent = fields[fieldIdentifier.FieldId]![entryIdentifier.Locale].ToInt()
         };
     }
 
