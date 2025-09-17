@@ -55,6 +55,11 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
         [ActionParameter] EntryLocaleIdentifier entryIdentifier,
         [ActionParameter] FieldIdentifier fieldIdentifier)
     {
+        if (string.IsNullOrEmpty(entryIdentifier.EntryId))
+        {
+            throw new PluginMisconfigurationException("Entry ID must be provided. Please check your input and try again");
+        }
+
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var entry = await client.ExecuteWithErrorHandling(async () =>
             await client.GetEntry(entryIdentifier.EntryId));
