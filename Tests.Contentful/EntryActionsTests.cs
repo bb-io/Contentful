@@ -135,8 +135,8 @@ public class EntryActionsTests : TestBase
         var entryActions = new EntryActions(InvocationContext, FileManager);
         var entryIdentifier = new EntryIdentifier
         {
-            Environment = "dev",
-            EntryId = "3Y4pOwtBOf3g47dh55LcyO"
+            Environment = "master",
+            EntryId = "5N76zvCw2PMHTE2rY6pnCo"
         };
         var localeIdentifier = new LocaleOptionalIdentifier
         {
@@ -144,6 +144,8 @@ public class EntryActionsTests : TestBase
         };
 
         var entry = await entryActions.GetEntry(entryIdentifier, localeIdentifier);
+        var json = Newtonsoft.Json.JsonConvert.SerializeObject(entry, Formatting.Indented);
+        Console.WriteLine(json);
 
         IsNotNull(entry);
         IsNotNull(entry.Title);

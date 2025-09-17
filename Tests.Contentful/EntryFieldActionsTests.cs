@@ -16,7 +16,7 @@ public class EntryFieldActionsTests : TestBase
         {
             Environment = "master",
             EntryId = "5N76zvCw2PMHTE2rY6pnCo",
-            Locale = "en-US"
+            Locale = "nl"
         };
 
         var response = await entryFieldActions.GetNumberFieldContent(request, new()
