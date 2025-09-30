@@ -21,8 +21,8 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
 {
 
     [Webhook("On entry created", typeof(EntryCreatedHandler), Description = "On entry created")]
-    public Task<WebhookResponse<EntryEntity>> EntryCreated(WebhookRequest webhookRequest, 
-        [WebhookParameter] OptionalTagListIdentifier tags, 
+    public Task<WebhookResponse<EntryEntity>> EntryCreated(WebhookRequest webhookRequest,
+        [WebhookParameter] OptionalTagListIdentifier tags,
         [WebhookParameter] OptionalMultipleContentTypeIdentifier types,
         [WebhookParameter] OptionalFilterUsersIdentifier users
         )
@@ -40,8 +40,8 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
     [Webhook("On entry auto saved", typeof(EntryAutoSavedHandler), Description = "On entry auto saved")]
     public Task<WebhookResponse<FieldsChangedResponse>> EntryAutoSaved(WebhookRequest webhookRequest,
         [WebhookParameter] OptionalEntryIdentifier optionalEntryIdentifier,
-        [WebhookParameter] LocaleOptionalIdentifier localeOptionalIdentifier, 
-        [WebhookParameter] OptionalTagListIdentifier tags, 
+        [WebhookParameter] LocaleOptionalIdentifier localeOptionalIdentifier,
+        [WebhookParameter] OptionalTagListIdentifier tags,
         [WebhookParameter] OptionalMultipleContentTypeIdentifier types)
         => HandleFieldsChangedResponse(webhookRequest, localeOptionalIdentifier, tags, types, optionalEntryIdentifier);
 
@@ -49,7 +49,7 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
     [Webhook("On entry published", typeof(EntryPublishedHandler), Description = "On entry published")]
     public Task<WebhookResponse<EntryEntity>> EntryPublished(WebhookRequest webhookRequest,
         [WebhookParameter] OptionalEntryIdentifier optionalEntryIdentifier,
-        [WebhookParameter] OptionalTagListIdentifier tags, 
+        [WebhookParameter] OptionalTagListIdentifier tags,
         [WebhookParameter] OptionalMultipleContentTypeIdentifier types,
         [WebhookParameter] OptionalFilterUsersIdentifier users)
         => HandleEntryWebhookResponse(webhookRequest, tags, types, optionalEntryIdentifier, users);
@@ -84,10 +84,10 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
             Result = new() { Id = payload.Sys.Id }
         });
     }
-    
-    private async Task<WebhookResponse<EntryEntity>> HandleEntryWebhookResponse(WebhookRequest webhookRequest, 
-        OptionalTagListIdentifier tagsInput, 
-        OptionalMultipleContentTypeIdentifier types, 
+
+    private async Task<WebhookResponse<EntryEntity>> HandleEntryWebhookResponse(WebhookRequest webhookRequest,
+        OptionalTagListIdentifier tagsInput,
+        OptionalMultipleContentTypeIdentifier types,
         OptionalEntryIdentifier optionalEntryIdentifier,
         OptionalFilterUsersIdentifier users
         )
@@ -96,9 +96,9 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
 
         if (payload is null)
             throw new InvalidCastException(nameof(webhookRequest.Body));
-        
+
         var entryActions = new EntryActions(invocationContext, null!);
-        var entry = await entryActions.GetEntry(new EntryIdentifier { EntryId = payload.Sys.Id, Environment = tagsInput.Environment }, 
+        var entry = await entryActions.GetEntry(new EntryIdentifier { EntryId = payload.Sys.Id, Environment = tagsInput.Environment },
             new LocaleOptionalIdentifier());
 
         if (types.ContentModels != null && !types.ContentModels.Contains(entry.ContentTypeId))
@@ -113,7 +113,8 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
 
         if (tagsInput.TagIds != null && !tagsInput.TagIds.All(x => entry.TagIds.Contains(x)))
         {
-            return new() {
+            return new()
+            {
                 HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
                 Result = null,
                 ReceivedWebhookRequestType = WebhookRequestType.Preflight,
@@ -132,7 +133,8 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
 
         if (tagsInput.ExcludeTags != null && tagsInput.ExcludeTags.Any(x => entry.TagIds.Contains(x)))
         {
-            return new() {
+            return new()
+            {
                 HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
                 Result = null,
                 ReceivedWebhookRequestType = WebhookRequestType.Preflight,
@@ -165,7 +167,7 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
             Result = entry
         };
     }
-    
+
     private async Task<WebhookResponse<FieldsChangedResponse>> HandleFieldsChangedResponse(
         WebhookRequest webhookRequest,
         LocaleOptionalIdentifier localeOptionalIdentifier,
@@ -189,10 +191,10 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
         {
             foreach (var propertyLocale in (JObject)propertyField.Value)
             {
-                if (!string.IsNullOrEmpty(localeOptionalIdentifier.Locale)) 
+                if (!string.IsNullOrEmpty(localeOptionalIdentifier.Locale))
                     if (propertyLocale.Key != localeOptionalIdentifier.Locale)
                         continue;
-                
+
                 changes.Fields.Add(new FieldObject
                 {
                     FieldId = propertyField.Name,
@@ -201,11 +203,11 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
                 });
             }
         }
-        
+
         var entryActions = new EntryActions(invocationContext, null!);
-        var entry = await entryActions.GetEntry(new EntryIdentifier { EntryId = payload.Sys.Id, Environment = tagsInput.Environment }, 
+        var entry = await entryActions.GetEntry(new EntryIdentifier { EntryId = payload.Sys.Id, Environment = tagsInput.Environment },
             new LocaleOptionalIdentifier());
-        
+
         if (types.ContentModels != null && !types.ContentModels.Contains(entry.ContentTypeId))
         {
             return new()
@@ -215,10 +217,11 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
                 ReceivedWebhookRequestType = WebhookRequestType.Preflight,
             };
         }
-        
+
         if (tagsInput.TagIds != null && !tagsInput.TagIds.All(x => entry.TagIds.Contains(x)))
         {
-            return new() {
+            return new()
+            {
                 HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
                 Result = null,
                 ReceivedWebhookRequestType = WebhookRequestType.Preflight,
@@ -237,7 +240,8 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
 
         if (tagsInput.ExcludeTags != null && tagsInput.ExcludeTags.Any(x => entry.TagIds.Contains(x)))
         {
-            return new() {
+            return new()
+            {
                 HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
                 Result = null,
                 ReceivedWebhookRequestType = WebhookRequestType.Preflight,

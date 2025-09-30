@@ -167,6 +167,53 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
             await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version));
     }
 
+    [Action("Get entry's array field", Description =
+    "Get the array content of the specified field of the specified entry. " +
+    "Field must be of type Array. Returns the array values as a list of strings.")]
+    public async Task<GetArrayContentResponse> GetArrayFieldContent(
+    [ActionParameter] EntryLocaleIdentifier entryIdentifier,
+    [ActionParameter] FieldIdentifier fieldIdentifier)
+    {
+        if (string.IsNullOrEmpty(entryIdentifier.EntryId))
+        {
+            throw new PluginMisconfigurationException("Entry ID must be provided. Please check your input and try again");
+        }
+
+        var client = new ContentfulClient(Creds, entryIdentifier.Environment);
+        var entry = await client.ExecuteWithErrorHandling(async () =>
+            await client.GetEntry(entryIdentifier.EntryId));
+        var field = ((JObject)entry.Fields)[fieldIdentifier.FieldId]?[entryIdentifier.Locale];
+
+        if (field is null)
+            return new()
+            {
+                ArrayContent = null
+            };
+
+        var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
+        var contentType =
+            await client.ExecuteWithErrorHandling(async () => await client.GetContentType(contentTypeId));
+        var fieldType = contentType.Fields.First(f => f.Id == fieldIdentifier.FieldId).Type;
+
+        if (fieldType != "Array")
+        {
+            throw new PluginMisconfigurationException(
+                "The specified field must be of type Array.");
+        }
+
+        var arrayContent = new List<string>();
+        if (field is JArray jArray)
+        {
+            arrayContent = jArray.Select(item => item.ToString()).ToList();
+        }
+
+        return new GetArrayContentResponse
+        {
+            ArrayContent = arrayContent,
+            MissingLocales = await GetMissingLocales(entryIdentifier, fieldIdentifier, entry)
+        };
+    }
+
     [Action("Get entry's number field", Description = "Get entry's number field value by field ID.")]
     public async Task<GetNumberContentResponse> GetNumberFieldContent(
         [ActionParameter] EntryLocaleIdentifier entryIdentifier,
