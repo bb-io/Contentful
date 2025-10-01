@@ -267,7 +267,7 @@ public class EntryActionsTests : TestBase
         var response = await entryActions.GetEntryLocalizableFieldsAsHtmlFile(entryIdentifier, entry);
 
         var contentString = FileManager.ReadOutputAsString(response.Content);
-        var codedContent = HtmlContentCoder.Deserialize(contentString, response.Content.Name);
+        var codedContent = (new HtmlContentCoder()).Deserialize(contentString, response.Content.Name);
 
         foreach (var unit in codedContent.TextUnits.Where(x => x.Key is null))
         {
