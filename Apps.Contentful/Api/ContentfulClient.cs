@@ -4,6 +4,7 @@ using Blackbird.Applications.Sdk.Common.Exceptions;
 using Contentful.Core;
 using Contentful.Core.Configuration;
 using Contentful.Core.Errors;
+using Contentful.Core.Models;
 using Newtonsoft.Json;
 using Polly;
 using Polly.Retry;
@@ -24,8 +25,7 @@ public class ContentfulClient : ContentfulManagementClient
             SpaceId = creds.First(p => p.KeyName == "spaceId").Value,
             Environment = environment,
             ManagementBaseUrl = creds.First(p => p.KeyName == CredNames.BaseUrl).Value + "/spaces/",
-            MaxNumberOfRateLimitRetries = RetryCount,
-            
+            MaxNumberOfRateLimitRetries = RetryCount,            
         })
     {
         _retryPolicy = Policy
@@ -45,6 +45,17 @@ public class ContentfulClient : ContentfulManagementClient
 
                 return Task.CompletedTask;
             });
+    }
+
+    public string GetEntryEditorUrl(string entryId)
+    {
+        if (_options.Environment is not null)
+        {
+            return $"https://app.contentful.com/spaces/{_options.SpaceId}/environments/{_options.Environment}/entries/{entryId}";
+        } else
+        {
+            return $"https://app.contentful.com/spaces/{_options.SpaceId}/entries/{entryId}";
+        }            
     }
 
     public async Task<IEnumerable<T>> Paginate<T>(Func<string, Task<IEnumerable<T>>> method, string? initialQueryString)

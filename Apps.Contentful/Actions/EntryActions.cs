@@ -283,10 +283,13 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             input.MaxDepth);
 
         var htmlConverter = new EntryToHtmlConverter(InvocationContext, entryIdentifier.Environment);
-        var resultHtml = htmlConverter.ToHtml(entriesContent, selectedLocale, spaceId);
 
-        var originalEntry = await GetEntry(new() { EntryId = entryIdentifier.ContentId, Environment = entryIdentifier.Environment}, 
+        var originalEntry = await GetEntry(new() { EntryId = entryIdentifier.ContentId, Environment = entryIdentifier.Environment },
             new LocaleOptionalIdentifier { Locale = selectedLocale });
+
+        var updatedByUser = await client.GetUser(originalEntry.UpdatedBy);
+
+        var resultHtml = htmlConverter.ToHtml(entriesContent, selectedLocale, spaceId, originalEntry.Title, client.GetEntryEditorUrl(originalEntry.ContentId), updatedByUser);
         
         var fileNameFirstPart = string.IsNullOrEmpty(originalEntry.Title) ? entryIdentifier.ContentId : originalEntry.Title;
         var file = await fileManagementClient.UploadAsync(new MemoryStream(Encoding.UTF8.GetBytes(resultHtml)),
@@ -317,7 +320,6 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
         var file = await fileManagementClient.DownloadAsync(input.Content);
         var content = Encoding.UTF8.GetString(await file.GetByteData());
-
 
         Transformation? transformation = null;
         if (Xliff2Serializer.IsXliff2(content) || Xliff1Serializer.IsXliff1(content))
@@ -382,7 +384,18 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
         if (transformation is not null)
         {
-            transformation.UniqueTargetContentId = input.ContentId ?? mainEntryInfo?.EntryId;
+            var originalEntry = await GetEntry(new()
+            {
+                EntryId = input.ContentId ?? mainEntryInfo?.EntryId,
+                Environment = input.Environment
+            }, new LocaleOptionalIdentifier { Locale = input.Locale });
+
+            var entryId = input.ContentId ?? mainEntryInfo?.EntryId;
+            transformation.TargetSystemReference.ContentId = originalEntry.ContentId;
+            transformation.TargetSystemReference.ContentName = originalEntry.Title;
+            transformation.TargetSystemReference.AdminUrl = client.GetEntryEditorUrl(originalEntry.ContentId);
+            transformation.TargetSystemReference.SystemName = "Contentful";
+            transformation.TargetSystemReference.SystemRef = "https://www.contentful.com/";
             transformation.TargetLanguage = input.Locale;
 
             output.Content = await fileManagementClient.UploadAsync(transformation.Serialize().ToStream(), MediaTypes.Xliff, transformation.XliffFileName);
@@ -638,6 +651,9 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         bool ignoreLocalizationFields = false)
     {
         var entry = await client.GetEntryWithErrorHandling(entryId);
+        if (entry == null) return null;
+
+        var user = await client.GetUser(entry.SystemProperties.UpdatedBy.SystemProperties.Id);
 
         if (rootEntryId != entry.SystemProperties.Id &&
             ignoredContentTypeIds.Contains(entry.SystemProperties.ContentType.SystemProperties.Id))
@@ -666,16 +682,16 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             return new(entryId, entry.Fields,
                 contentType.Fields
                     .Where(x => x.Localized || x.Type == "Link" || (x.Type == "Array" && x.Items?.Type == "Link"))
-                    .Where(x => !ignoredFieldIds.Contains(x.Id)).ToArray());
+                    .Where(x => !ignoredFieldIds.Contains(x.Id)).ToArray(), user);
         }
 
         if (!ignoreLocalizationFields)
         {
             return new(entryId, entry.Fields,
-                contentType.Fields.Where(x => x.Localized).Where(x => !ignoredFieldIds.Contains(x.Id)).ToArray());
+                contentType.Fields.Where(x => x.Localized).Where(x => !ignoredFieldIds.Contains(x.Id)).ToArray(), user);
         }        
 
-        return new(entryId, entry.Fields, contentType.Fields.Where(x => !ignoredFieldIds.Contains(x.Id)).ToArray());
+        return new(entryId, entry.Fields, contentType.Fields.Where(x => !ignoredFieldIds.Contains(x.Id)).ToArray(), user);
     }
 
     private (string? entryId, string? fieldId, string? locale) ExtractIdsFromHtml(string html)

@@ -1,22 +1,23 @@
-using System.Text;
 using Apps.Contentful.Api;
 using Apps.Contentful.HtmlHelpers.Constants;
 using Apps.Contentful.Models;
 using Blackbird.Applications.Sdk.Common.Invocation;
+using Blackbird.Filters.Shared;
 using Contentful.Core.Models;
 using Contentful.Core.Models.Management;
 using HtmlAgilityPack;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System.Text;
 
 namespace Apps.Contentful.HtmlHelpers;
 
 public class EntryToHtmlConverter(InvocationContext invocationContext, string? environment)
 {
-    public string ToHtml(List<EntryContentDto> entriesContent, string locale, string spaceId)
+    public string ToHtml(List<EntryContentDto> entriesContent, string locale, string spaceId, string entryTitle, string entryAdminUrl, User updatedBy)
     {
         var entryId = entriesContent.Select(x => x.Id).FirstOrDefault() ?? string.Empty;
-        var (doc, bodyNode) = PrepareEmptyHtmlDocument(entryId, locale);
+        var (doc, bodyNode) = PrepareEmptyHtmlDocument(entryId, locale, entryTitle, entryAdminUrl, updatedBy);
 
         entriesContent.ForEach(x =>
         {
@@ -321,7 +322,7 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
             { "data-contentful-localized", field.Localized.ToString() }
         };
 
-        return WrapFieldInDiv(doc, entryId, field.Type, field.Id, additionalAttributes: additionalAttributes);
+        return WrapFieldInDiv(doc, entryId, field, additionalAttributes: additionalAttributes);
     }
 
     private HtmlNode? ConvertArrayToHtml(HtmlDocument doc, Field field, JToken entryField,
@@ -348,7 +349,7 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
             additionalAttributes.Add("data-contentful-localized", field.Localized.ToString());
         }
 
-        return WrapFieldInDiv(doc, entryId, field.Type, field.Id, additionalAttributes: additionalAttributes);
+        return WrapFieldInDiv(doc, entryId, field, additionalAttributes: additionalAttributes);
     }
 
     private HtmlNode? ConvertRichTextToHtml(HtmlDocument doc, Field field, JToken entryField,
@@ -362,7 +363,7 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
         var richTextToHtmlConverter = new RichTextToHtmlConverter(content, spaceId);
         var fieldContent = richTextToHtmlConverter.ToHtml();
 
-        return WrapFieldInDiv(doc, entryId, field.Type, field.Id, fieldContent);
+        return WrapFieldInDiv(doc, entryId, field, fieldContent);
     }
 
     private HtmlNode? ConvertBooleanToHtml(HtmlDocument doc, Field field, JToken entryField,
@@ -377,7 +378,7 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
         {
             { "data-contentful-bool-value", boolValue.ToString() }
         };
-        return WrapFieldInDiv(doc, entryId, field.Type, field.Id, additionalAttributes: additionalAttributes);
+        return WrapFieldInDiv(doc, entryId, field, additionalAttributes: additionalAttributes);
     }
 
     private HtmlNode? ConvertLocationObjectToHtml(HtmlDocument doc, Field field, JToken entryField,
@@ -393,7 +394,7 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
             { "data-contentful-json-value", jsonValue }
         };
 
-        return WrapFieldInDiv(doc, entryId, field.Type, field.Id, additionalAttributes: additionalAttributes);
+        return WrapFieldInDiv(doc, entryId, field, additionalAttributes: additionalAttributes);
     }
 
     private HtmlNode? ConvertPrimitivesToHtml(HtmlNode bodyNode, HtmlDocument doc, Field field, JToken entryField,
@@ -416,16 +417,16 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
             tagName = "h2";
         }
 
-        return WrapFieldInDiv(doc, entryId, field.Type, field.Id, fieldContent, tagName: tagName);
+        return WrapFieldInDiv(doc, entryId, field, fieldContent, tagName: tagName);
     }
 
-    private HtmlNode WrapFieldInDiv(HtmlDocument doc, string entryId, string fieldType, string fieldId, string fieldContent = "",
+    private HtmlNode WrapFieldInDiv(HtmlDocument doc, string entryId, Field field, string fieldContent = "",
         Dictionary<string, string>? additionalAttributes = null, string tagName = HtmlConstants.Div)
     {
         var node = doc.CreateElement(tagName);
-        node.SetAttributeValue(ConvertConstants.FieldTypeAttribute, fieldType);
-        node.SetAttributeValue(ConvertConstants.FieldIdAttribute, fieldId);
-        node.SetAttributeValue(ConvertConstants.BlackbirdKey, $"{entryId}-{fieldId}");
+        node.SetAttributeValue(ConvertConstants.FieldTypeAttribute, field.Type);
+        node.SetAttributeValue(ConvertConstants.FieldIdAttribute, field.Id);
+        node.SetAttributeValue(ConvertConstants.BlackbirdKey, $"{entryId}-{field.Id}");
 
         if (additionalAttributes != null)
         {
@@ -433,6 +434,23 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
             {
                 node.SetAttributeValue(attr.Key, attr.Value);
             }
+        }
+
+        var sizeValidations = field.Validations.OfType<SizeValidator>().ToList().FirstOrDefault();
+        var sizeRestrictions = new SizeRestrictions();
+        if (sizeValidations != null)
+        {
+            sizeRestrictions.MinimumSize = sizeValidations.Min;
+            sizeRestrictions.MaximumSize = sizeValidations.Max;           
+        } else if (field.Type == "Symbol")
+        {
+            sizeRestrictions.MaximumSize = 256;                
+        }
+
+        var serialized = SizeRestrictionHelper.Serialize(sizeRestrictions);
+        if (serialized != null)
+        {
+            node.SetAttributeValue("data-blackbird-size", serialized);
         }
 
         if (fieldContent.Contains("\n"))
@@ -485,7 +503,15 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
         return node;
     }
 
-    private (HtmlDocument document, HtmlNode bodyNode) PrepareEmptyHtmlDocument(string entryId, string locale)
+    private void AddBlackbirdMeta(HtmlDocument htmlDoc, HtmlNode headNode, string name, string value)
+    {
+        var entryMetaNode = htmlDoc.CreateElement("meta");
+        entryMetaNode.SetAttributeValue("name", $"blackbird-{name}");
+        entryMetaNode.SetAttributeValue("content", value);
+        headNode.AppendChild(entryMetaNode);
+    }
+
+    private (HtmlDocument document, HtmlNode bodyNode) PrepareEmptyHtmlDocument(string entryId, string locale, string entryTitle, string adminUrl, User updatedBy)
     {
         var htmlDoc = new HtmlDocument();
         var htmlNode = htmlDoc.CreateElement(HtmlConstants.Html);
@@ -495,23 +521,22 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
         var headNode = htmlDoc.CreateElement(HtmlConstants.Head);
         htmlNode.AppendChild(headNode);
 
-        var entryMetaNode = htmlDoc.CreateElement("meta");
-        entryMetaNode.SetAttributeValue("name", "blackbird-entry-id");
-        entryMetaNode.SetAttributeValue("content", entryId);
-        headNode.AppendChild(entryMetaNode);
+        // These 2 look redundant, but are only used for this Contentful app roundtrip (not Blacklake) can be phased out in the future
+        AddBlackbirdMeta(htmlDoc, headNode, "entry-id", entryId);
+        AddBlackbirdMeta(htmlDoc, headNode, "locale", locale);
 
-        var localeMetaNode = htmlDoc.CreateElement("meta");
-        localeMetaNode.SetAttributeValue("name", "blackbird-locale");
-        localeMetaNode.SetAttributeValue("content", locale);
-        headNode.AppendChild(localeMetaNode);
-
-        var ucidMetaNode = htmlDoc.CreateElement("meta");
-        ucidMetaNode.SetAttributeValue("name", "blackbird-ucid");
-        ucidMetaNode.SetAttributeValue("content", entryId);
-        headNode.AppendChild(ucidMetaNode);
+        AddBlackbirdMeta(htmlDoc, headNode, "ucid", entryId);
+        AddBlackbirdMeta(htmlDoc, headNode, "content-name", entryTitle);
+        AddBlackbirdMeta(htmlDoc, headNode, "admin-url", adminUrl);
+        AddBlackbirdMeta(htmlDoc, headNode, "system-name", "Contentful");
+        AddBlackbirdMeta(htmlDoc, headNode, "system-ref", "https://www.contentful.com");
 
         var bodyNode = htmlDoc.CreateElement(HtmlConstants.Body);
         htmlNode.AppendChild(bodyNode);
+
+        bodyNode.SetAttributeValue("its-rev-tool", "Contentful");
+        bodyNode.SetAttributeValue("its-rev-tool-ref", "https://www.contentful.com");
+        bodyNode.SetAttributeValue("its-rev-person", $"{updatedBy.FirstName} {updatedBy.LastName}");
 
         return (htmlDoc, bodyNode);
     }

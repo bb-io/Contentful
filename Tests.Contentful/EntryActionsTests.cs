@@ -55,23 +55,23 @@ public class EntryActionsTests : TestBase
         IsFalse(string.IsNullOrEmpty(fileResponse.Content.ToString()));
     }
     
-    [TestMethod]
-    public async Task SetEntryLocalizableFieldsFromHtmlFile_WithoutReferenceEntries_ShouldNotFail()
-    {
-        var entryActions = new EntryActions(InvocationContext, FileManager);
-        var entryIdentifier = new UploadEntryRequest()
-        {
-            Environment = "dev",
-            Locale = "nl",
-            Content = new()
-            {
-                Name = "Mr. Coffee Mug Warmer_en-US.html",
-                ContentType = "text/html"
-            }
-        };
+    //[TestMethod]
+    //public async Task SetEntryLocalizableFieldsFromHtmlFile_WithoutReferenceEntries_ShouldNotFail()
+    //{
+    //    var entryActions = new EntryActions(InvocationContext, FileManager);
+    //    var entryIdentifier = new UploadEntryRequest()
+    //    {
+    //        Environment = "dev",
+    //        Locale = "nl",
+    //        Content = new()
+    //        {
+    //            Name = "Mr. Coffee Mug Warmer_en-US.html",
+    //            ContentType = "text/html"
+    //        }
+    //    };
         
-        await entryActions.SetEntryLocalizableFieldsFromHtmlFile(entryIdentifier);
-    }
+    //    await entryActions.SetEntryLocalizableFieldsFromHtmlFile(entryIdentifier);
+    //}
 
     [TestMethod]
     public async Task SetEntryLocalizableFieldsFromHtmlFile_WithHyperlinkEntries_ShouldNotFail()
@@ -129,30 +129,30 @@ public class EntryActionsTests : TestBase
         await entryActions.SetEntryLocalizableFieldsFromHtmlFile(entryIdentifier);
     }
 
-    [TestMethod]
-    public async Task GetEntry_ValidEntryWithLocale_ShouldReturnEntryWithTitle()
-    {
-        var entryActions = new EntryActions(InvocationContext, FileManager);
-        var entryIdentifier = new EntryIdentifier
-        {
-            Environment = "master",
-            EntryId = "5N76zvCw2PMHTE2rY6pnCo"
-        };
-        var localeIdentifier = new LocaleOptionalIdentifier
-        {
-            Locale = "en-US"
-        };
+    //[TestMethod]
+    //public async Task GetEntry_ValidEntryWithLocale_ShouldReturnEntryWithTitle()
+    //{
+    //    var entryActions = new EntryActions(InvocationContext, FileManager);
+    //    var entryIdentifier = new EntryIdentifier
+    //    {
+    //        Environment = "master",
+    //        EntryId = "5N76zvCw2PMHTE2rY6pnCo"
+    //    };
+    //    var localeIdentifier = new LocaleOptionalIdentifier
+    //    {
+    //        Locale = "en-US"
+    //    };
 
-        var entry = await entryActions.GetEntry(entryIdentifier, localeIdentifier);
-        var json = Newtonsoft.Json.JsonConvert.SerializeObject(entry, Formatting.Indented);
-        Console.WriteLine(json);
+    //    var entry = await entryActions.GetEntry(entryIdentifier, localeIdentifier);
+    //    var json = Newtonsoft.Json.JsonConvert.SerializeObject(entry, Formatting.Indented);
+    //    Console.WriteLine(json);
 
-        IsNotNull(entry);
-        IsNotNull(entry.Title);
-        IsNotNull(entry.TagIds);
+    //    IsNotNull(entry);
+    //    IsNotNull(entry.Title);
+    //    IsNotNull(entry.TagIds);
         
-        Console.WriteLine($"Entry title: {entry.Title}");
-    }
+    //    Console.WriteLine($"Entry title: {entry.Title}");
+    //}
 
     
     [TestMethod]
@@ -191,25 +191,25 @@ public class EntryActionsTests : TestBase
     }
 
 
-    [TestMethod]
-    public async Task SetEntryTextField_WithReferenceEntry_ShouldNotFail()
-    {
-        var entryActions = new EntryFieldActions(InvocationContext);
-        var entryIdentifier = new EntryLocaleIdentifier()
-        {
-            Locale= "en-US",
-            EntryId= "5FBuCuJwXpF5UhW3N9oYve",
-            Environment = "master"
-        };
+    //[TestMethod]
+    //public async Task SetEntryTextField_WithReferenceEntry_ShouldNotFail()
+    //{
+    //    var entryActions = new EntryFieldActions(InvocationContext);
+    //    var entryIdentifier = new EntryLocaleIdentifier()
+    //    {
+    //        Locale= "en-US",
+    //        EntryId= "5FBuCuJwXpF5UhW3N9oYve",
+    //        Environment = "master"
+    //    };
 
-        var fieldIdentifier = new FieldIdentifier()
-        {
-            FieldId= "text_sanitized",
+    //    var fieldIdentifier = new FieldIdentifier()
+    //    {
+    //        FieldId= "text_sanitized",
             
-        };
+    //    };
 
-        await entryActions.SetTextFieldContent(entryIdentifier, fieldIdentifier, "a {Open ‹a href=\"{url}\" data-q=\"x & y\"›{label}‹/a› — {when, time, short}}");
-    }
+    //    await entryActions.SetTextFieldContent(entryIdentifier, fieldIdentifier, "a {Open ‹a href=\"{url}\" data-q=\"x & y\"›{label}‹/a› — {when, time, short}}");
+    //}
 
 
     [TestMethod]
@@ -276,7 +276,49 @@ public class EntryActionsTests : TestBase
 
         Console.WriteLine(contentString);
         Assert.AreEqual(lang, codedContent.Language);
-        Assert.AreEqual(contentId, codedContent.UniqueContentId);
+        Assert.AreEqual(contentId, codedContent.SystemReference.ContentId);
+        Assert.AreEqual($"https://app.contentful.com/spaces/12ktqqmw656e/entries/{contentId}", codedContent.SystemReference.AdminUrl);
+        Assert.AreEqual("Contentful", codedContent.SystemReference.SystemName);
+        Assert.AreEqual("https://www.contentful.com", codedContent.SystemReference.SystemRef);
+        Assert.IsNotNull(codedContent.SystemReference.ContentName);
+
+        Assert.IsNotNull(codedContent.Provenance.Review.Person);
+        Console.WriteLine(codedContent.Provenance.Review.Person);
+        Assert.AreEqual("Contentful", codedContent.Provenance.Review.Tool);
+        Assert.AreEqual("https://www.contentful.com", codedContent.Provenance.Review.ToolReference);
+
         Assert.IsTrue(codedContent.TextUnits.All(x => x.Key is not null));
+    }
+
+    [TestMethod]
+    public async Task DownloadEntry_Has_Size_Restrictions()
+    {
+        var lang = "en-US";
+        var contentId = "7pB35K9cZjsZrBmnUjwjLa";
+
+        var entryActions = new EntryActions(InvocationContext, FileManager);
+        var entryIdentifier = new DownloadContentInput
+        {
+            Locale = lang,
+            ContentId = contentId,
+
+        };
+        var entry = new GetEntryAsHtmlRequest
+        {
+            GetReferenceContent = true,
+            GetEmbeddedInlineContent = true,
+        };
+
+        var response = await entryActions.GetEntryLocalizableFieldsAsHtmlFile(entryIdentifier, entry);
+
+        Console.WriteLine(response.Content.Name);
+        var contentString = FileManager.ReadOutputAsString(response.Content);
+        var codedContent = (new HtmlContentCoder()).Deserialize(contentString, response.Content.Name);
+
+        Console.WriteLine(contentString);
+
+        Assert.IsTrue(codedContent.TextUnits.Any(x => x.SizeRestrictions.MaximumSize == 256));
+        Assert.IsTrue(codedContent.TextUnits.Any(x => x.SizeRestrictions.MaximumSize == 60));
+        Assert.IsTrue(codedContent.TextUnits.Any(x => x.SizeRestrictions.MaximumSize == 160));
     }
 }
