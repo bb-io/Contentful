@@ -5,8 +5,10 @@ using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Files;
 using Blackbird.Filters.Coders;
 using Blackbird.Filters.Transformations;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -34,7 +36,9 @@ public class EntryTranslationTests : TestBase
         var contentString = FileManager.ReadOutputAsString(response.Content);
         var transformation = Transformation.Parse(contentString, response.Content.Name);
 
-        Assert.AreEqual("5746dLKTkEZjOQX21HX2KI", transformation.UniqueTargetContentId);
+        Assert.AreEqual("5746dLKTkEZjOQX21HX2KI", transformation.TargetSystemReference.ContentId);
         Assert.AreEqual("nl", transformation.TargetLanguage);
+
+        Console.WriteLine(JsonConvert.SerializeObject(transformation.TargetSystemReference, Formatting.Indented));
     }
 }
