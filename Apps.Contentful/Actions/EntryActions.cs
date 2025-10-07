@@ -309,7 +309,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         var client = new ContentfulClient(Creds, input.Environment);
         var output = new DownloadContentOutput();
 
-        var locales = await client.ExecuteWithErrorHandling(async () =>await client.GetLocalesCollection());
+        var locales = await client.ExecuteWithErrorHandling(async () => await client.GetLocalesCollection());
         if (locales.All(x => x.Code != input.Locale))
         {
             var allLocales = string.Join(", ", locales.Select(x => x.Code));
@@ -335,7 +335,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         foreach (var entryToUpdate in entriesToUpdate)
         {
             var entry = await client.ExecuteWithErrorHandling(() => client.GetEntry(entryToUpdate.EntryId));
-            var contentType = await client.ExecuteWithErrorHandling(() =>
+            var contentType = await client.ExecuteWithErrorHandling(() => 
                 client.GetContentType(entry.SystemProperties.ContentType.SystemProperties.Id));
 
             try
@@ -381,6 +381,8 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                     $"Converting entry to JSON failed. Entry ID: {entry.SystemProperties.Id};  Exception: {ex}; Locale: {input.Locale}; Entry: {JsonConvert.SerializeObject(entry)}; HTML: {entryToUpdate.HtmlNode.OuterHtml};");
             }
         }
+
+        await UpdateImageAlts(content, input, client);
 
         if (transformation is not null)
         {
@@ -707,6 +709,21 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             ?.GetAttributeValue("content", null);
 
         return (entryId, fieldId, locale);
+    }
+
+    private static async Task UpdateImageAlts(string content, UploadEntryRequest input, ContentfulClient client)
+    {
+        var images = await EntryAssetHelper.GetImagesToUpdate(content, client);
+        if (!images.Any())
+            return;
+
+        foreach (var image in images)
+        {
+            var updated = EntryAssetHelper.UpdateImageTitle(image.Asset, image.AltText, input.Locale);
+            if (!updated) continue;
+
+            await client.ExecuteWithErrorHandling(() => client.CreateOrUpdateAsset(image.Asset, version: image.Asset.SystemProperties.Version));
+        }
     }
 
     #endregion
