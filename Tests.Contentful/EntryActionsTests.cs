@@ -5,7 +5,6 @@ using Apps.Contentful.Models.Requests.Tags;
 using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Filters.Coders;
 using Newtonsoft.Json;
-using System.Text;
 using Tests.Contentful.Base;
 using static Microsoft.VisualStudio.TestTools.UnitTesting.Assert;
 
@@ -55,24 +54,6 @@ public class EntryActionsTests : TestBase
         IsFalse(string.IsNullOrEmpty(fileResponse.Content.ToString()));
     }
     
-    //[TestMethod]
-    //public async Task SetEntryLocalizableFieldsFromHtmlFile_WithoutReferenceEntries_ShouldNotFail()
-    //{
-    //    var entryActions = new EntryActions(InvocationContext, FileManager);
-    //    var entryIdentifier = new UploadEntryRequest()
-    //    {
-    //        Environment = "dev",
-    //        Locale = "nl",
-    //        Content = new()
-    //        {
-    //            Name = "Mr. Coffee Mug Warmer_en-US.html",
-    //            ContentType = "text/html"
-    //        }
-    //    };
-        
-    //    await entryActions.SetEntryLocalizableFieldsFromHtmlFile(entryIdentifier);
-    //}
-
     [TestMethod]
     public async Task SetEntryLocalizableFieldsFromHtmlFile_WithHyperlinkEntries_ShouldNotFail()
     {
@@ -129,32 +110,27 @@ public class EntryActionsTests : TestBase
         await entryActions.SetEntryLocalizableFieldsFromHtmlFile(entryIdentifier);
     }
 
-    //[TestMethod]
-    //public async Task GetEntry_ValidEntryWithLocale_ShouldReturnEntryWithTitle()
-    //{
-    //    var entryActions = new EntryActions(InvocationContext, FileManager);
-    //    var entryIdentifier = new EntryIdentifier
-    //    {
-    //        Environment = "master",
-    //        EntryId = "5N76zvCw2PMHTE2rY6pnCo"
-    //    };
-    //    var localeIdentifier = new LocaleOptionalIdentifier
-    //    {
-    //        Locale = "en-US"
-    //    };
+    [TestMethod]
+    public async Task SetEntryLocalizableFieldsFromHtmlFile_WithImageAltsTranslated_ShouldNotFail()
+    {
+        // Arrange
+        var entryActions = new EntryActions(InvocationContext, FileManager);
+        var entryIdentifier = new UploadEntryRequest()
+        {
+            ContentId = "5746dLKTkEZjOQX21HX2KI",
+            Environment = "master",
+            Locale = "nl",
+            Content = new() { Name = "The Loire Valley_en-US.html (3).xlf" }
+        };
 
-    //    var entry = await entryActions.GetEntry(entryIdentifier, localeIdentifier);
-    //    var json = Newtonsoft.Json.JsonConvert.SerializeObject(entry, Formatting.Indented);
-    //    Console.WriteLine(json);
+        // Act
+        var result = await entryActions.SetEntryLocalizableFieldsFromHtmlFile(entryIdentifier);
 
-    //    IsNotNull(entry);
-    //    IsNotNull(entry.Title);
-    //    IsNotNull(entry.TagIds);
-        
-    //    Console.WriteLine($"Entry title: {entry.Title}");
-    //}
+        // Assert
+        Console.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
+        IsNotNull(result);
+    }
 
-    
     [TestMethod]
     public async Task GetEntry_ValidEntryWithoutLocale_ShouldReturnEntryWithTitle()
     {
@@ -173,7 +149,6 @@ public class EntryActionsTests : TestBase
         Console.WriteLine($"Entry title: {entry.Title}");
     }
 
-
     [TestMethod]
     public async Task AddTagEntry_ShouldReturnEntryWithTag()
     {
@@ -189,28 +164,6 @@ public class EntryActionsTests : TestBase
 
         Assert.IsTrue(true);
     }
-
-
-    //[TestMethod]
-    //public async Task SetEntryTextField_WithReferenceEntry_ShouldNotFail()
-    //{
-    //    var entryActions = new EntryFieldActions(InvocationContext);
-    //    var entryIdentifier = new EntryLocaleIdentifier()
-    //    {
-    //        Locale= "en-US",
-    //        EntryId= "5FBuCuJwXpF5UhW3N9oYve",
-    //        Environment = "master"
-    //    };
-
-    //    var fieldIdentifier = new FieldIdentifier()
-    //    {
-    //        FieldId= "text_sanitized",
-            
-    //    };
-
-    //    await entryActions.SetTextFieldContent(entryIdentifier, fieldIdentifier, "a {Open ‹a href=\"{url}\" data-q=\"x & y\"›{label}‹/a› — {when, time, short}}");
-    //}
-
 
     [TestMethod]
     public async Task DownloadEntry_ShouldNotFail()

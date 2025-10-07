@@ -309,7 +309,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         var client = new ContentfulClient(Creds, input.Environment);
         var output = new DownloadContentOutput();
 
-        var locales = await client.ExecuteWithErrorHandling(async () =>await client.GetLocalesCollection());
+        var locales = await client.ExecuteWithErrorHandling(async () => await client.GetLocalesCollection());
         if (locales.All(x => x.Code != input.Locale))
         {
             var allLocales = string.Join(", ", locales.Select(x => x.Code));
@@ -335,7 +335,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         foreach (var entryToUpdate in entriesToUpdate)
         {
             var entry = await client.ExecuteWithErrorHandling(() => client.GetEntry(entryToUpdate.EntryId));
-            var contentType = await client.ExecuteWithErrorHandling(() =>
+            var contentType = await client.ExecuteWithErrorHandling(() => 
                 client.GetContentType(entry.SystemProperties.ContentType.SystemProperties.Id));
 
             try
@@ -381,6 +381,8 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                     $"Converting entry to JSON failed. Entry ID: {entry.SystemProperties.Id};  Exception: {ex}; Locale: {input.Locale}; Entry: {JsonConvert.SerializeObject(entry)}; HTML: {entryToUpdate.HtmlNode.OuterHtml};");
             }
         }
+
+        await UpdateImageAlts(content, input, client);
 
         if (transformation is not null)
         {
@@ -707,6 +709,52 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             ?.GetAttributeValue("content", null);
 
         return (entryId, fieldId, locale);
+    }
+
+    private static async Task UpdateImageAlts(string content, UploadEntryRequest input, ContentfulClient client)
+    {
+        var htmlDoc = new HtmlDocument();
+        htmlDoc.LoadHtml(content);
+
+        var imgNodes = htmlDoc.DocumentNode.SelectNodes("//img[@data-contentful-link-id]");
+        if (imgNodes != null)
+        {
+            foreach (var imgNode in imgNodes)
+            {
+                var assetId = imgNode.GetAttributeValue("data-contentful-link-id", null);
+                var altText = imgNode.GetAttributeValue("alt", null);
+
+                if (string.IsNullOrEmpty(assetId) || string.IsNullOrEmpty(altText))
+                    continue;
+
+                try
+                {
+                    var asset = await client.ExecuteWithErrorHandling(() => client.GetAsset(assetId));
+                    if (asset == null)
+                        continue;
+
+                    asset.Title ??= new Dictionary<string, string>();
+
+                    var currentTitle = asset.Title.ContainsKey(input.Locale)
+                        ? asset.Title[input.Locale]
+                        : null;
+
+                    if (currentTitle == altText)
+                        continue;
+
+                    asset.Title[input.Locale] = altText;
+
+                    await client.ExecuteWithErrorHandling(() => client.CreateOrUpdateAsset(asset, version: asset.SystemProperties.Version));
+                }
+                catch (Exception ex)
+                {
+                    if (ex.Message.Contains("archived") || ex.Message.Contains("not found"))
+                        continue;
+
+                    throw new PluginApplicationException($"Error updating asset {assetId}: {ex.Message}");
+                }
+            }
+        }
     }
 
     #endregion
