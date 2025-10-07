@@ -713,47 +713,16 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
     private static async Task UpdateImageAlts(string content, UploadEntryRequest input, ContentfulClient client)
     {
-        var htmlDoc = new HtmlDocument();
-        htmlDoc.LoadHtml(content);
+        var images = await EntryAssetHelper.GetImagesToUpdate(content, client);
+        if (!images.Any())
+            return;
 
-        var imgNodes = htmlDoc.DocumentNode.SelectNodes("//img[@data-contentful-link-id]");
-        if (imgNodes != null)
+        foreach (var image in images)
         {
-            foreach (var imgNode in imgNodes)
-            {
-                var assetId = imgNode.GetAttributeValue("data-contentful-link-id", null);
-                var altText = imgNode.GetAttributeValue("alt", null);
+            var updated = EntryAssetHelper.UpdateImageTitle(image.Asset, image.AltText, input.Locale);
+            if (!updated) continue;
 
-                if (string.IsNullOrEmpty(assetId) || string.IsNullOrEmpty(altText))
-                    continue;
-
-                try
-                {
-                    var asset = await client.ExecuteWithErrorHandling(() => client.GetAsset(assetId));
-                    if (asset == null)
-                        continue;
-
-                    asset.Title ??= new Dictionary<string, string>();
-
-                    var currentTitle = asset.Title.ContainsKey(input.Locale)
-                        ? asset.Title[input.Locale]
-                        : null;
-
-                    if (currentTitle == altText)
-                        continue;
-
-                    asset.Title[input.Locale] = altText;
-
-                    await client.ExecuteWithErrorHandling(() => client.CreateOrUpdateAsset(asset, version: asset.SystemProperties.Version));
-                }
-                catch (Exception ex)
-                {
-                    if (ex.Message.Contains("archived") || ex.Message.Contains("not found"))
-                        continue;
-
-                    throw new PluginApplicationException($"Error updating asset {assetId}: {ex.Message}");
-                }
-            }
+            await client.ExecuteWithErrorHandling(() => client.CreateOrUpdateAsset(image.Asset, version: image.Asset.SystemProperties.Version));
         }
     }
 
