@@ -95,6 +95,28 @@ public class EntryActionsTests : TestBase
         }
         IsNotNull(result);
     }
+    
+    [TestMethod]
+    public async Task ListEntries_WithValidMixedDateFilters_ShouldReturnFilteredEntries()
+    {
+        // Arrange
+        var entryActions = new EntryActions(InvocationContext, FileManager);
+        var listEntriesRequest = new ListEntriesRequest
+        {
+            FirstPublishedAfter = new DateTime(2025, 08, 31),
+            PublishedBefore = new DateTime(2025, 09, 06)
+        };
+
+        // Act
+        var result = await entryActions.ListEntries(listEntriesRequest);
+
+        // Assert
+        foreach (var entry in result.Entries)
+        {
+            Console.WriteLine($"{entry.ContentId}");
+        }
+        IsNotNull(result);
+    }
 
     [TestMethod]
     public async Task GetEntryLocalizableFieldsAsHtmlFile_WithoutReferenceEntries_ShouldGenerateHtmlFile()
