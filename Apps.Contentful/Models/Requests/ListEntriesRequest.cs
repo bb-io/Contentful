@@ -18,7 +18,19 @@ public class ListEntriesRequest : ContentModelOptionalIdentifier
 
     [Display("Updated to")]
     public DateTime? UpdatedTo { get; set; }
-    
+
+    [Display("Published before")]
+    public DateTime? PublishedBefore { get; set; }
+
+    [Display("Published after")]
+    public DateTime? PublishedAfter { get; set; }
+
+    [Display("First published before")]
+    public DateTime? FirstPublishedBefore { get; set; }
+
+    [Display("First published after")]
+    public DateTime? FirstPublishedAfter { get; set; }
+
     [Display("Published", Description = "Filter by published entries. If not set, all entries are returned.")]
     public bool? Published { get; set; }
     

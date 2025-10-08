@@ -27,6 +27,7 @@ using Contentful.Core.Models;
 using HtmlAgilityPack;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System.Collections.Specialized;
 using System.Net.Mime;
 using System.Text;
 using System.Web;
@@ -72,27 +73,11 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     {
         var client = new ContentfulClient(Creds, request.Environment);
 
+        ValidateDates(request.PublishedAfter, request.PublishedBefore, "Published");
+        ValidateDates(request.FirstPublishedAfter, request.FirstPublishedBefore, "First published");
+
         var queryString = HttpUtility.ParseQueryString(string.Empty);
-
-        if (request.ContentModelId != null)
-        {
-            queryString.Add("content_type", request.ContentModelId);
-        }
-
-        if (request.UpdatedFrom.HasValue)
-        {
-            queryString.Add("sys.updatedAt[gte]", request.UpdatedFrom.Value.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'"));
-        }
-
-        if (request.UpdatedTo.HasValue)
-        {
-            queryString.Add("sys.updatedAt[lte]", request.UpdatedTo.Value.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'"));
-        }
-
-        if (!string.IsNullOrWhiteSpace(request.SearchTerm))
-        {
-            queryString.Add("query", request.SearchTerm);
-        }
+        ApplyListEntriesRequestFilters(queryString, request);
 
         IEnumerable<Entry<object>> entries =
             await client.Paginate<Entry<object>>(
@@ -723,6 +708,59 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             if (!updated) continue;
 
             await client.ExecuteWithErrorHandling(() => client.CreateOrUpdateAsset(image.Asset, version: image.Asset.SystemProperties.Version));
+        }
+    }
+
+    private static void ApplyListEntriesRequestFilters(NameValueCollection queryString, ListEntriesRequest request)
+    {
+        if (request.ContentModelId != null)
+        {
+            queryString.Add("content_type", request.ContentModelId);
+        }
+
+        if (request.UpdatedFrom.HasValue)
+        {
+            queryString.Add("sys.updatedAt[gte]", request.UpdatedFrom.Value.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'"));
+        }
+
+        if (request.UpdatedTo.HasValue)
+        {
+            queryString.Add("sys.updatedAt[lte]", request.UpdatedTo.Value.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'"));
+        }
+
+        if (request.PublishedBefore.HasValue)
+        {
+            queryString.Add("sys.publishedAt[lt]", request.PublishedBefore.Value.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'"));
+        }
+
+        if (request.PublishedAfter.HasValue)
+        {
+            queryString.Add("sys.publishedAt[gt]", request.PublishedAfter.Value.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'"));
+        }
+
+        if (request.FirstPublishedBefore.HasValue)
+        {
+            queryString.Add("sys.firstPublishedAt[lt]", request.FirstPublishedBefore.Value.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'"));
+        }
+
+        if (request.FirstPublishedAfter.HasValue)
+        {
+            queryString.Add("sys.firstPublishedAt[gt]", request.FirstPublishedAfter.Value.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'"));
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.SearchTerm))
+        {
+            queryString.Add("query", request.SearchTerm);
+        }
+    }
+
+    private static void ValidateDates(DateTime? after, DateTime? before, string name)
+    {
+        if (after.HasValue && before.HasValue && after > before)
+        {
+            throw new PluginMisconfigurationException(
+                $"{name} after date cannot be later than {name} before date. Please specify a different value."
+            );
         }
     }
 
