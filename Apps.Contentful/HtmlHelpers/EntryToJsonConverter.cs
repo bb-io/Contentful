@@ -60,9 +60,11 @@ public static class EntryToJsonConverter
         if (doNotUpdateReferenceFields == true)
         {
             var field = contentType.Fields.FirstOrDefault(x => x.Id == fieldId);
-            if (field != null && (field.Type == "Link" || (field.Type == "Array" && field.Items.LinkType == "Entry")))
+            if (field != null)
             {
-                return;
+                var isRef = field.Type == "Link" ||
+                            (field.Type == "Array" && field.Items != null && field.Items.LinkType == "Entry");
+                if (isRef) return;
             }
         }
 
@@ -100,10 +102,10 @@ public static class EntryToJsonConverter
         switch (fieldType)
         {
             case "Integer":
-                if (!int.TryParse(htmlNode.InnerText, out var intValue))
-                {
-                    throw new FieldConversionException(fieldId, htmlNode.InnerText, "integer");
-                }
+                var raw = htmlNode.InnerText?.Trim();
+                if (!int.TryParse(raw, System.Globalization.NumberStyles.Integer,
+                    System.Globalization.CultureInfo.InvariantCulture, out var intValue))
+                    throw new FieldConversionException(fieldId, raw ?? "", "integer");
                 SetEntryFieldValue(fieldId, intValue);
                 break;
             case "Number":
@@ -132,8 +134,15 @@ public static class EntryToJsonConverter
                 SetEntryFieldValue(fieldId, jsonObject);
                 break;
             case "Boolean":
-                var boolValue = Convert.ToBoolean(htmlNode.Attributes["data-contentful-bool-value"].Value);
-                SetEntryFieldValue(fieldId, boolValue);
+                var rawBool = htmlNode.Attributes["data-contentful-bool-value"]?.Value?.Trim();
+                bool parsed;
+                if (bool.TryParse(rawBool, out var b)) parsed = true;
+                else if (rawBool is "1" or "yes" or "Yes" or "YES") { b = true; parsed = true; }
+                else if (rawBool is "0" or "no" or "No" or "NO") { b = false; parsed = true; }
+                else parsed = false;
+
+                if (!parsed) throw new FieldConversionException(fieldId, rawBool ?? "", "boolean (true/false/1/0)");
+                SetEntryFieldValue(fieldId, b);
                 break;
             case "RichText":
                 var richTextValue = ParseToRichText(htmlNode);
