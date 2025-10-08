@@ -38,6 +38,87 @@ public class EntryActionsTests : TestBase
     }
 
     [TestMethod]
+    public async Task ListEntries_WithValidPublishedDateFilters_ShouldReturnFilteredEntries()
+    {
+        // Arrange
+        var entryActions = new EntryActions(InvocationContext, FileManager);
+        var listEntriesRequest = new ListEntriesRequest
+        {
+            PublishedAfter = new DateTime(2025, 10, 01),
+            PublishedBefore = new DateTime(2025, 10, 04)
+        };
+
+        // Act
+        var result = await entryActions.ListEntries(listEntriesRequest);
+
+        // Assert
+        foreach (var entry in result.Entries)
+        {
+            Console.WriteLine($"{entry.ContentId}");
+        }
+        IsNotNull(result);
+    }
+
+    [TestMethod]
+    public async Task ListEntries_WithInvalidPublishedDateFilters_ShouldFailWithException()
+    {
+        // Arrange
+        var entryActions = new EntryActions(InvocationContext, FileManager);
+        var listEntriesRequest = new ListEntriesRequest
+        {
+            PublishedAfter = new DateTime(2025, 10, 04),
+            PublishedBefore = new DateTime(2025, 10, 01)
+        };
+
+        // Act & Assert
+        await ThrowsExceptionAsync<PluginMisconfigurationException>(async () => await entryActions.ListEntries(listEntriesRequest));
+    }
+
+    [TestMethod]
+    public async Task ListEntries_WithValidFirstPublishedDateFilters_ShouldReturnFilteredEntries()
+    {
+        // Arrange
+        var entryActions = new EntryActions(InvocationContext, FileManager);
+        var listEntriesRequest = new ListEntriesRequest
+        {
+            FirstPublishedAfter = new DateTime(2025, 08, 31),
+            FirstPublishedBefore = new DateTime(2025, 09, 02)
+        };
+
+        // Act
+        var result = await entryActions.ListEntries(listEntriesRequest);
+
+        // Assert
+        foreach (var entry in result.Entries)
+        {
+            Console.WriteLine($"{entry.ContentId}");
+        }
+        IsNotNull(result);
+    }
+    
+    [TestMethod]
+    public async Task ListEntries_WithValidMixedDateFilters_ShouldReturnFilteredEntries()
+    {
+        // Arrange
+        var entryActions = new EntryActions(InvocationContext, FileManager);
+        var listEntriesRequest = new ListEntriesRequest
+        {
+            FirstPublishedAfter = new DateTime(2025, 08, 31),
+            PublishedBefore = new DateTime(2025, 09, 06)
+        };
+
+        // Act
+        var result = await entryActions.ListEntries(listEntriesRequest);
+
+        // Assert
+        foreach (var entry in result.Entries)
+        {
+            Console.WriteLine($"{entry.ContentId}");
+        }
+        IsNotNull(result);
+    }
+
+    [TestMethod]
     public async Task GetEntryLocalizableFieldsAsHtmlFile_WithoutReferenceEntries_ShouldGenerateHtmlFile()
     {
         var entryActions = new EntryActions(InvocationContext, FileManager);
