@@ -230,10 +230,10 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
             throw new PluginApplicationException($"Field '{fieldIdentifier.FieldId}' or locale '{entryIdentifier.Locale}' not found in entry {entryIdentifier.EntryId}. " +
                                                  $"Available fields: {string.Join(", ", availableFields)}. Please check your input and try again");
         }
-        
+
         return new GetNumberContentResponse
         {
-            NumberContent = fields[fieldIdentifier.FieldId]![entryIdentifier.Locale].ToInt()
+            NumberContent = fields[fieldIdentifier.FieldId][entryIdentifier.Locale].Value<double>()
         };
     }
 
