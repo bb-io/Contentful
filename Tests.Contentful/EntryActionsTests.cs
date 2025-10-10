@@ -213,6 +213,23 @@ public class EntryActionsTests : TestBase
     }
 
     [TestMethod]
+    public async Task SetEntryLocalizableFieldsFromHtmlFile_MxliffFile_ShouldFailWithException()
+    {
+        // Arrange
+        var entryActions = new EntryActions(InvocationContext, FileManager);
+        var entryIdentifier = new UploadEntryRequest()
+        {
+            Locale = "nl",
+            Content = new() { Name = "empty.mxliff" }
+        };
+
+        // Act & Assert
+        await ThrowsExceptionAsync<PluginMisconfigurationException>(
+            async () => await entryActions.SetEntryLocalizableFieldsFromHtmlFile(entryIdentifier)
+        );
+    }
+
+    [TestMethod]
     public async Task GetEntry_ValidEntryWithoutLocale_ShouldReturnEntryWithTitle()
     {
         var entryActions = new EntryActions(InvocationContext, FileManager);

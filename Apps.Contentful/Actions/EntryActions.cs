@@ -291,6 +291,11 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     public async Task<DownloadContentOutput> SetEntryLocalizableFieldsFromHtmlFile(
         [ActionParameter] UploadEntryRequest input)
     {
+        if (!input.Content.Name.EndsWith(".html") && !input.Content.Name.EndsWith(".xliff") && !input.Content.Name.EndsWith(".xlf"))
+        {
+            throw new PluginMisconfigurationException("Only .html, .xliff and .xlf files are supported. Please specify a different file");
+        }
+
         var client = new ContentfulClient(Creds, input.Environment);
         var output = new DownloadContentOutput();
 
