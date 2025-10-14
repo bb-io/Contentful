@@ -399,7 +399,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         return output;
     }
 
-    [Action("Get reference entries", Description = "Get referenced entries from specified reference fields of an entry.")]
+    [Action("Get referenced entries", Description = "Get referenced entries from specified reference fields of an entry.")]
     public async Task<GetReferenceEntriesResponse> GetReferenceEntries([ActionParameter] GetReferenceEntriesRequest input)
     {
         ContentfulClientExtensions.ThrowIfNullOrEmpty(input.EntryId, nameof(input.EntryId));
