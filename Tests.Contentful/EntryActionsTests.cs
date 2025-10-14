@@ -372,4 +372,38 @@ public class EntryActionsTests : TestBase
         Assert.IsTrue(codedContent.TextUnits.Any(x => x.SizeRestrictions.MaximumSize == 60));
         Assert.IsTrue(codedContent.TextUnits.Any(x => x.SizeRestrictions.MaximumSize == 160));
     }
+
+    [TestMethod]
+    public async Task GetReferenceEntries_WithoutFieldIds_ShouldReturnAllReferencedEntries()
+    {
+        // Arrange
+        var entryActions = new EntryActions(InvocationContext, FileManager);
+        var request = new GetReferenceEntriesRequest
+        {
+            EntryId = "1973QRvX9m84FWpFpC7ZnH"
+        };
+
+        // Act
+        var response = await entryActions.GetReferenceEntries(request);
+
+        // Assert
+        IsNotNull(response);
+        IsNotNull(response.ReferencedEntries);
+        IsNotNull(response.ReferencedEntryIds);
+
+        Console.WriteLine($"Found {response.ReferencedEntries.Count()} referenced entries:");
+        foreach (var entry in response.ReferencedEntries)
+        {
+            Console.WriteLine($"- Entry ID: {entry.ContentId}, Content Type: {entry.ContentTypeId}");
+        }
+
+        Console.WriteLine($"\nReferenced Entry IDs:");
+        foreach (var entryId in response.ReferencedEntryIds)
+        {
+            Console.WriteLine($"- {entryId}");
+        }
+
+        // Verify that both collections have the same count
+        AreEqual(response.ReferencedEntries.Count(), response.ReferencedEntryIds.Count());
+    }
 }
