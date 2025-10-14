@@ -399,6 +399,83 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         return output;
     }
 
+    [Action("Get referenced entries", Description = "Get referenced entries from specified reference fields of an entry.")]
+    public async Task<GetReferenceEntriesResponse> GetReferenceEntries([ActionParameter] GetReferenceEntriesRequest input)
+    {
+        ContentfulClientExtensions.ThrowIfNullOrEmpty(input.EntryId, nameof(input.EntryId));
+        
+        var client = new ContentfulClient(Creds, input.Environment);
+        var entry = await client.ExecuteWithErrorHandling(async () => await client.GetEntry(input.EntryId));
+        
+        var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
+        var contentType = await client.ExecuteWithErrorHandling(async () => await client.GetContentType(contentTypeId));
+        
+        var entryFields = (JObject)entry.Fields;
+        var referencedEntryIds = new List<string>();
+        
+        var referenceFields = contentType.Fields.Where(f => f.LinkType == "Entry" || 
+                                                           (f.Type == "Array" && f.Items?.LinkType == "Entry"));
+        if (input.FieldIds != null && input.FieldIds.Any())
+        {
+            referenceFields = referenceFields.Where(f => input.FieldIds.Contains(f.Id));
+        }
+        
+        foreach (var field in referenceFields)
+        {
+            if (!entryFields.TryGetValue(field.Id, out var fieldValue))
+                continue;
+                
+            if (field.LinkType == "Entry")
+            {
+                foreach (var localeValue in fieldValue.Children<JProperty>())
+                {
+                    var refId = localeValue.Value?["sys"]?["id"]?.ToString();
+                    if (!string.IsNullOrEmpty(refId))
+                    {
+                        referencedEntryIds.Add(refId);
+                    }
+                }
+            }
+            else if (field.Type == "Array" && field.Items?.LinkType == "Entry")
+            {
+                foreach (var localeValue in fieldValue.Children<JProperty>())
+                {
+                    if (localeValue.Value is JArray array)
+                    {
+                        foreach (var item in array)
+                        {
+                            var refId = item?["sys"]?["id"]?.ToString();
+                            if (!string.IsNullOrEmpty(refId))
+                            {
+                                referencedEntryIds.Add(refId);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        var referencedEntries = new List<EntryEntity>();
+        foreach (var entryId in referencedEntryIds.Distinct())
+        {
+            try
+            {
+                var referencedEntry = await client.ExecuteWithErrorHandling(async () => await client.GetEntry(entryId));
+                referencedEntries.Add(new EntryEntity(referencedEntry));
+            }
+            catch
+            {
+                continue;
+            }
+        }
+        
+        return new GetReferenceEntriesResponse
+        {
+            ReferencedEntries = referencedEntries,
+            ReferencedEntryIds = referencedEntryIds.Distinct().ToList()
+        };
+    }
+
     #region Utils
 
     private async Task<List<EntryContentDto>> GetLinkedEntriesContent(string entryId, string locale,
