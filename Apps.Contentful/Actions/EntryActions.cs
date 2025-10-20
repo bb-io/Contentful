@@ -251,7 +251,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             throw new PluginMisconfigurationException($"Locale {selectedLocale} not found. Available locales: {allLocales}");
         }
 
-        var entriesContent = await GetLinkedEntriesContent(
+        var entriesContent = await client.ExecuteWithErrorHandling(async () => await GetLinkedEntriesContent(
             entryIdentifier.ContentId,
             selectedLocale,
             client,
@@ -265,14 +265,14 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             input.IgnoredContentTypeIds?.ToList() ?? new List<string>(),
             input.ExcludeTags?.ToList(),
             entryIdentifier.ContentId,
-            input.MaxDepth);
+            input.MaxDepth));
 
         var htmlConverter = new EntryToHtmlConverter(InvocationContext, entryIdentifier.Environment);
 
-        var originalEntry = await GetEntry(new() { EntryId = entryIdentifier.ContentId, Environment = entryIdentifier.Environment },
-            new LocaleOptionalIdentifier { Locale = selectedLocale });
+        var originalEntry = await client.ExecuteWithErrorHandling(async () => await GetEntry(new() { EntryId = entryIdentifier.ContentId, Environment = entryIdentifier.Environment },
+            new LocaleOptionalIdentifier { Locale = selectedLocale }));
 
-        var updatedByUser = await client.GetUser(originalEntry.UpdatedBy);
+        var updatedByUser = await client.ExecuteWithErrorHandling(async () => await client.GetUser(originalEntry.UpdatedBy));
 
         var resultHtml = htmlConverter.ToHtml(entriesContent, selectedLocale, spaceId, originalEntry.Title, client.GetEntryEditorUrl(originalEntry.ContentId), updatedByUser);
         
