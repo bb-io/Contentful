@@ -1,4 +1,5 @@
 ﻿using Apps.Contentful.Api;
+using Apps.Contentful.DataSourceHandlers;
 using Apps.Contentful.Extensions;
 using Apps.Contentful.HtmlHelpers;
 using Apps.Contentful.Models;
@@ -12,6 +13,7 @@ using Apps.Contentful.Utils;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Authentication;
+using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Utils.Extensions.Files;
@@ -109,6 +111,26 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         {
             entries = entries.Where(e => e.Metadata.Tags.All(t => !request.ExcludeTags.Contains(t.Sys.Id)));
         }
+
+        var entriesResponse = entries.Select(e => new EntryEntity(e)).ToArray();
+        return new ListEntriesResponse(entriesResponse, entriesResponse.Length);
+    }
+
+    [Action("Search entries by text in field", Description = "Search for entries containing specific text in a given field.")]
+    public async Task<ListEntriesResponse> SearchEntriesByFieldText(
+        [ActionParameter] ContentModelIdentifier model,
+        [ActionParameter, Display("Field ID"), DataSource(typeof(FieldFromModelDataHandler))] string fieldId,
+        [ActionParameter, Display("Search term")] string searchTerm)
+    {
+        var client = new ContentfulClient(Creds, model.Environment);
+
+        var queryString = HttpUtility.ParseQueryString(string.Empty);
+        queryString.Add("content_type", model.ContentModelId);
+        queryString.Add($"fields.{fieldId}[match]", searchTerm);
+
+        IEnumerable<Entry<object>> entries =
+            await client.Paginate<Entry<object>>(
+                async (query) => await client.GetEntriesCollection<Entry<object>>(query), "?" + queryString);
 
         var entriesResponse = entries.Select(e => new EntryEntity(e)).ToArray();
         return new ListEntriesResponse(entriesResponse, entriesResponse.Length);
