@@ -133,6 +133,7 @@ public class EntryActionsTests : TestBase
         // Assert
         IsTrue(response.Entries.Any());
         IsTrue(response.EntriesIds.Any());
+        AreNotEqual(response.FirstEntryId, string.Empty);
         IsTrue(response.TotalCount > 0);
 
         Console.WriteLine(JsonConvert.SerializeObject(response.EntriesIds, Formatting.Indented));
