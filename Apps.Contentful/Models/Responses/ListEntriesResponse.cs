@@ -7,6 +7,9 @@ public class ListEntriesResponse(IEnumerable<EntryEntity> entries, double totalC
 {
     public IEnumerable<EntryEntity> Entries { get; set; } = entries;
 
+    [Display("Entry IDs")]
+    public IEnumerable<string> EntriesIds => Entries.Select(e => e.ContentId);
+
     [Display("Total count")]
     public double TotalCount { get; set; } = totalCount;
 }

@@ -114,6 +114,26 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         return new ListEntriesResponse(entriesResponse, entriesResponse.Length);
     }
 
+    [Action("Search entries by text in field", Description = "Search for entries containing specific text in a given field.")]
+    public async Task<ListEntriesResponse> SearchEntriesByFieldText(
+        [ActionParameter] ContentModelIdentifier model,
+        [ActionParameter] FieldIdentifier field,
+        [ActionParameter, Display("Search term")] string searchTerm)
+    {
+        var client = new ContentfulClient(Creds, model.Environment);
+
+        var queryString = HttpUtility.ParseQueryString(string.Empty);
+        queryString.Add("content_type", model.ContentModelId);
+        queryString.Add($"fields.{field.FieldId}[match]", searchTerm);
+
+        IEnumerable<Entry<object>> entries =
+            await client.Paginate<Entry<object>>(
+                async (query) => await client.GetEntriesCollection<Entry<object>>(query), "?" + queryString);
+
+        var entriesResponse = entries.Select(e => new EntryEntity(e)).ToArray();
+        return new ListEntriesResponse(entriesResponse, entriesResponse.Length);
+    }
+
     [Action("Get entry", Description = "Get details of a specific entry")]
     public async Task<EntryWithTitleEntity> GetEntry([ActionParameter] EntryIdentifier input, 
         [ActionParameter] LocaleOptionalIdentifier localeOptionalIdentifier)

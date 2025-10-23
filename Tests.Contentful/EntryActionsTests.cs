@@ -119,6 +119,26 @@ public class EntryActionsTests : TestBase
     }
 
     [TestMethod]
+    public async Task SearchEntriesByFieldText_ShouldWork()
+    {
+        // Arrange
+        var entryActions = new EntryActions(InvocationContext, FileManager);
+        var contentModel = new ContentModelIdentifier { ContentModelId = "page" };
+        var field = new FieldIdentifier { FieldId = "slug" };
+        var searchTerm = "blackbird-use-cases";
+
+        // Act
+        var response = await entryActions.SearchEntriesByFieldText(contentModel, field, searchTerm);
+
+        // Assert
+        IsTrue(response.Entries.Any());
+        IsTrue(response.EntriesIds.Any());
+        IsTrue(response.TotalCount > 0);
+
+        Console.WriteLine(JsonConvert.SerializeObject(response.EntriesIds, Formatting.Indented));
+    }
+
+    [TestMethod]
     public async Task GetEntryLocalizableFieldsAsHtmlFile_WithoutReferenceEntries_ShouldGenerateHtmlFile()
     {
         var entryActions = new EntryActions(InvocationContext, FileManager);
