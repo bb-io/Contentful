@@ -413,10 +413,10 @@ public class EntryActionsTests : TestBase
         // Arrange
         var entryActions = new EntryActions(InvocationContext, FileManager);
         var entry = new EntryIdentifier { EntryId = "1973QRvX9m84FWpFpC7ZnH" };
-        var contentModel = new ContentModelOptionalIdentifier();
+        var contentModels = new OptionalMultipleContentTypeIdentifier();
 
         // Act
-        var response = await entryActions.GetEntriesLinkingToEntry(entry, contentModel);
+        var response = await entryActions.GetEntriesLinkingToEntry(entry, contentModels);
 
         // Assert
         IsTrue(response.Entries.Any());
@@ -433,10 +433,10 @@ public class EntryActionsTests : TestBase
         // Arrange
         var entryActions = new EntryActions(InvocationContext, FileManager);
         var entry = new EntryIdentifier { EntryId = "1973QRvX9m84FWpFpC7ZnH" };
-        var contentModel = new ContentModelOptionalIdentifier { ContentModelId = "pageWrapper" };
+        var contentModels = new OptionalMultipleContentTypeIdentifier { ContentModels = ["pageWrapper"] };
 
         // Act
-        var response = await entryActions.GetEntriesLinkingToEntry(entry, contentModel);
+        var response = await entryActions.GetEntriesLinkingToEntry(entry, contentModels);
 
         // Assert
         IsTrue(response.Entries.Any());

@@ -479,7 +479,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     [Action("Search links to entry", Description = "Get entries that link to the specified entry.")]
     public async Task<GetEntriesLinkingToEntryResponse> GetEntriesLinkingToEntry(
         [ActionParameter] EntryIdentifier entry,
-        [ActionParameter] ContentModelOptionalIdentifier contentModel)
+        [ActionParameter] OptionalMultipleContentTypeIdentifier contentModels)
     {
         ContentfulClientExtensions.ThrowIfNullOrEmpty(entry.EntryId, nameof(entry.EntryId));
 
@@ -494,10 +494,11 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         
         var entriesResponse = entries.Select(e => new EntryEntity(e)).ToList();
 
-        if (!string.IsNullOrEmpty(contentModel.ContentModelId))
+        if (contentModels.ContentModels?.Any() == true)
         {
+            var models = contentModels.ContentModels.ToHashSet();
             entriesResponse = entriesResponse
-                .Where(e => e.ContentTypeId == contentModel.ContentModelId)
+                .Where(e => models.Contains(e.ContentTypeId))
                 .ToList();
         }
 
