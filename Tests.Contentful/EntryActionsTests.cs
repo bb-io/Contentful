@@ -22,13 +22,13 @@ public class EntryActionsTests : TestBase
 
         await ThrowsExceptionAsync<PluginApplicationException>(() => listEntriesTask);
     }
-    
+
     [TestMethod]
     public async Task ListEntries_ValidEnvironment_ShouldReturnAllEntries()
     {
         var entryActions = new EntryActions(InvocationContext, FileManager);
-        var listEntriesRequest = new ListEntriesRequest { Environment = "dev", SearchTerm= "The perfect partner" };
-        
+        var listEntriesRequest = new ListEntriesRequest { Environment = "dev", SearchTerm = "The perfect partner" };
+
         var entriesResponse = await entryActions.ListEntries(listEntriesRequest);
 
         foreach (var entry in entriesResponse.Entries)
@@ -95,7 +95,7 @@ public class EntryActionsTests : TestBase
         }
         IsNotNull(result);
     }
-    
+
     [TestMethod]
     public async Task ListEntries_WithValidMixedDateFilters_ShouldReturnFilteredEntries()
     {
@@ -129,12 +129,12 @@ public class EntryActionsTests : TestBase
             Locale = "en-US"
         };
         var request = new GetEntryAsHtmlRequest();
-        
+
         var fileResponse = await entryActions.GetEntryLocalizableFieldsAsHtmlFile(entryIdentifier, request);
-        
+
         IsFalse(string.IsNullOrEmpty(fileResponse.Content.ToString()));
     }
-    
+
     [TestMethod]
     public async Task SetEntryLocalizableFieldsFromHtmlFile_WithHyperlinkEntries_ShouldNotFail()
     {
@@ -149,10 +149,10 @@ public class EntryActionsTests : TestBase
                 ContentType = "text/html"
             }
         };
-        
+
         await entryActions.SetEntryLocalizableFieldsFromHtmlFile(entryIdentifier);
     }
-    
+
     [TestMethod]
     public async Task SetEntryLocalizableFieldsFromHtmlFile_WithReferenceEntry_ShouldNotFail()
     {
@@ -168,7 +168,7 @@ public class EntryActionsTests : TestBase
             },
             DontUpdateReferenceFields = true
         };
-        
+
         await entryActions.SetEntryLocalizableFieldsFromHtmlFile(entryIdentifier);
     }
 
@@ -187,7 +187,7 @@ public class EntryActionsTests : TestBase
             },
             DontUpdateReferenceFields = true
         };
-        
+
         await entryActions.SetEntryLocalizableFieldsFromHtmlFile(entryIdentifier);
     }
 
@@ -270,8 +270,8 @@ public class EntryActionsTests : TestBase
         var entryIdentifier = new DownloadContentInput
         {
             Locale = "en-US",
-            ContentId= "5746dLKTkEZjOQX21HX2KI",
-            
+            ContentId = "5746dLKTkEZjOQX21HX2KI",
+
         };
         var entry = new GetEntryAsHtmlRequest
         {
@@ -405,5 +405,45 @@ public class EntryActionsTests : TestBase
 
         // Verify that both collections have the same count
         AreEqual(response.ReferencedEntries.Count(), response.ReferencedEntryIds.Count());
+    }
+
+    [TestMethod]
+    public async Task GetEntriesLinkingToEntry_ShouldWork()
+    {
+        // Arrange
+        var entryActions = new EntryActions(InvocationContext, FileManager);
+        var entry = new EntryIdentifier { EntryId = "1973QRvX9m84FWpFpC7ZnH" };
+        var contentModels = new OptionalMultipleContentTypeIdentifier();
+
+        // Act
+        var response = await entryActions.GetEntriesLinkingToEntry(entry, contentModels);
+
+        // Assert
+        IsTrue(response.Entries.Any());
+        IsTrue(response.EntriesIds.Any());
+        AreNotEqual(response.FirstEntryId, string.Empty);
+        IsTrue(response.TotalCount > 0);
+
+        Console.WriteLine(JsonConvert.SerializeObject(response.EntriesIds, Formatting.Indented));
+    }
+
+    [TestMethod]
+    public async Task GetEntriesLinkingToEntry_WithModelFilter_ShouldWork()
+    {
+        // Arrange
+        var entryActions = new EntryActions(InvocationContext, FileManager);
+        var entry = new EntryIdentifier { EntryId = "1973QRvX9m84FWpFpC7ZnH" };
+        var contentModels = new OptionalMultipleContentTypeIdentifier { ContentModels = ["pageWrapper"] };
+
+        // Act
+        var response = await entryActions.GetEntriesLinkingToEntry(entry, contentModels);
+
+        // Assert
+        IsTrue(response.Entries.Any());
+        IsTrue(response.EntriesIds.Any());
+        AreNotEqual(response.FirstEntryId, string.Empty);
+        IsTrue(response.TotalCount > 0);
+
+        Console.WriteLine(JsonConvert.SerializeObject(response.EntriesIds, Formatting.Indented));
     }
 }
