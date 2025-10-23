@@ -1,4 +1,5 @@
 ﻿using Apps.Contentful.Api;
+using Apps.Contentful.DataSourceHandlers;
 using Apps.Contentful.Extensions;
 using Apps.Contentful.HtmlHelpers;
 using Apps.Contentful.Models;
@@ -12,6 +13,7 @@ using Apps.Contentful.Utils;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Authentication;
+using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Utils.Extensions.Files;
@@ -117,14 +119,14 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     [Action("Search entries by text in field", Description = "Search for entries containing specific text in a given field.")]
     public async Task<ListEntriesResponse> SearchEntriesByFieldText(
         [ActionParameter] ContentModelIdentifier model,
-        [ActionParameter] FieldIdentifier field,
+        [ActionParameter, Display("Field ID"), DataSource(typeof(FieldFromModelDataHandler))] string fieldId,
         [ActionParameter, Display("Search term")] string searchTerm)
     {
         var client = new ContentfulClient(Creds, model.Environment);
 
         var queryString = HttpUtility.ParseQueryString(string.Empty);
         queryString.Add("content_type", model.ContentModelId);
-        queryString.Add($"fields.{field.FieldId}[match]", searchTerm);
+        queryString.Add($"fields.{fieldId}[match]", searchTerm);
 
         IEnumerable<Entry<object>> entries =
             await client.Paginate<Entry<object>>(

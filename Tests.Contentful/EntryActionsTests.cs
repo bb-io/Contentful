@@ -124,7 +124,7 @@ public class EntryActionsTests : TestBase
         // Arrange
         var entryActions = new EntryActions(InvocationContext, FileManager);
         var contentModel = new ContentModelIdentifier { ContentModelId = "page" };
-        var field = new FieldIdentifier { FieldId = "slug" };
+        var field = "slug";
         var searchTerm = "blackbird-use-cases";
 
         // Act
