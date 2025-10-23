@@ -406,4 +406,44 @@ public class EntryActionsTests : TestBase
         // Verify that both collections have the same count
         AreEqual(response.ReferencedEntries.Count(), response.ReferencedEntryIds.Count());
     }
+
+    [TestMethod]
+    public async Task GetEntriesLinkingToEntry_ShouldWork()
+    {
+        // Arrange
+        var entryActions = new EntryActions(InvocationContext, FileManager);
+        var entry = new EntryIdentifier { EntryId = "1973QRvX9m84FWpFpC7ZnH" };
+        var contentModel = new ContentModelOptionalIdentifier();
+
+        // Act
+        var response = await entryActions.GetEntriesLinkingToEntry(entry, contentModel);
+
+        // Assert
+        IsTrue(response.Entries.Any());
+        IsTrue(response.EntriesIds.Any());
+        AreNotEqual(response.FirstEntryId, string.Empty);
+        IsTrue(response.TotalCount > 0);
+
+        Console.WriteLine(JsonConvert.SerializeObject(response.EntriesIds, Formatting.Indented));
+    }
+
+    [TestMethod]
+    public async Task GetEntriesLinkingToEntry_WithModelFilter_ShouldWork()
+    {
+        // Arrange
+        var entryActions = new EntryActions(InvocationContext, FileManager);
+        var entry = new EntryIdentifier { EntryId = "1973QRvX9m84FWpFpC7ZnH" };
+        var contentModel = new ContentModelOptionalIdentifier { ContentModelId = "pageWrapper" };
+
+        // Act
+        var response = await entryActions.GetEntriesLinkingToEntry(entry, contentModel);
+
+        // Assert
+        IsTrue(response.Entries.Any());
+        IsTrue(response.EntriesIds.Any());
+        AreNotEqual(response.FirstEntryId, string.Empty);
+        IsTrue(response.TotalCount > 0);
+
+        Console.WriteLine(JsonConvert.SerializeObject(response.EntriesIds, Formatting.Indented));
+    }
 }

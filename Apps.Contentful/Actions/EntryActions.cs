@@ -399,7 +399,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         return output;
     }
 
-    [Action("Get referenced entries", Description = "Get referenced entries from specified reference fields of an entry.")]
+    [Action("Search referenced entries", Description = "Get referenced entries from specified reference fields of an entry.")]
     public async Task<GetReferenceEntriesResponse> GetReferenceEntries([ActionParameter] GetReferenceEntriesRequest input)
     {
         ContentfulClientExtensions.ThrowIfNullOrEmpty(input.EntryId, nameof(input.EntryId));
@@ -473,6 +473,40 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         {
             ReferencedEntries = referencedEntries,
             ReferencedEntryIds = referencedEntryIds.Distinct().ToList()
+        };
+    }
+
+    [Action("Search links to entry", Description = "Get entries that link to the specified entry.")]
+    public async Task<GetEntriesLinkingToEntryResponse> GetEntriesLinkingToEntry(
+        [ActionParameter] EntryIdentifier entry,
+        [ActionParameter] ContentModelOptionalIdentifier contentModel)
+    {
+        ContentfulClientExtensions.ThrowIfNullOrEmpty(entry.EntryId, nameof(entry.EntryId));
+
+        var client = new ContentfulClient(Creds, entry.Environment);
+
+        var queryString = HttpUtility.ParseQueryString(string.Empty);
+        queryString.Add("links_to_entry", entry.EntryId);
+
+        IEnumerable<Entry<object>> entries =
+            await client.Paginate<Entry<object>>(
+                async (query) => await client.GetEntriesCollection<Entry<object>>(query), "?" + queryString);
+        
+        var entriesResponse = entries.Select(e => new EntryEntity(e)).ToList();
+
+        if (!string.IsNullOrEmpty(contentModel.ContentModelId))
+        {
+            entriesResponse = entriesResponse
+                .Where(e => e.ContentTypeId == contentModel.ContentModelId)
+                .ToList();
+        }
+
+        return new GetEntriesLinkingToEntryResponse
+        {
+            Entries = entriesResponse,
+            EntriesIds = entriesResponse.Select(e => e.ContentId),
+            FirstEntryId = entriesResponse.FirstOrDefault()?.ContentId ?? string.Empty,
+            TotalCount = entriesResponse.Count,
         };
     }
 
