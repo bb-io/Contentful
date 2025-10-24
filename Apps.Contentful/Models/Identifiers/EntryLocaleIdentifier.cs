@@ -11,11 +11,10 @@ public class EntryLocaleIdentifier : LocaleIdentifier
     [DataSource(typeof(EntryLocaleDataSourceHandler))]
     public string EntryId { get; set; }
 
-    public void Validate()
+    public new void Validate()
     {
+        base.Validate();
         if (string.IsNullOrWhiteSpace(EntryId))
             throw new PluginMisconfigurationException("Entry ID must be provided. Please check your input and try again");
-        if (string.IsNullOrEmpty(Locale))
-            throw new PluginMisconfigurationException("Locale must be provided. Please check your input and try again");
     }
 }
