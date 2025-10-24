@@ -122,6 +122,11 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         [ActionParameter, Display("Field ID"), DataSource(typeof(FieldFromModelDataHandler))] string fieldId,
         [ActionParameter, Display("Search term")] string searchTerm)
     {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            throw new PluginMisconfigurationException("Search term cannot be null or empty. Please provide a valid search term.");
+        }
+
         var client = new ContentfulClient(Creds, model.Environment);
 
         var queryString = HttpUtility.ParseQueryString(string.Empty);
@@ -424,8 +429,15 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     [Action("Search referenced entries", Description = "Get referenced entries from specified reference fields of an entry.")]
     public async Task<GetReferenceEntriesResponse> GetReferenceEntries([ActionParameter] GetReferenceEntriesRequest input)
     {
-        ContentfulClientExtensions.ThrowIfNullOrEmpty(input.EntryId, nameof(input.EntryId));
-        
+        if (string.IsNullOrWhiteSpace(input.EntryId))
+        {
+            return new GetReferenceEntriesResponse
+            {
+                ReferencedEntries = [],
+                ReferencedEntryIds = [],
+            };
+        }
+
         var client = new ContentfulClient(Creds, input.Environment);
         var entry = await client.ExecuteWithErrorHandling(async () => await client.GetEntry(input.EntryId));
         
@@ -503,7 +515,16 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         [ActionParameter] EntryIdentifier entry,
         [ActionParameter] OptionalMultipleContentTypeIdentifier contentModels)
     {
-        ContentfulClientExtensions.ThrowIfNullOrEmpty(entry.EntryId, nameof(entry.EntryId));
+        if (string.IsNullOrWhiteSpace(entry.EntryId))
+        {
+            return new GetEntriesLinkingToEntryResponse
+            {
+                Entries = [],
+                EntriesIds = [],
+                FirstEntryId = string.Empty,
+                TotalCount = 0,
+            };
+        }
 
         var client = new ContentfulClient(Creds, entry.Environment);
 
