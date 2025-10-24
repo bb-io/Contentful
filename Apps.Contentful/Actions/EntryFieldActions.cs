@@ -11,7 +11,6 @@ using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Contentful.Core.Models;
 using Newtonsoft.Json;
-using Contentful.Core.Extensions;
 using Newtonsoft.Json.Serialization;
 using Blackbird.Applications.Sdk.Common.Exceptions;
 
@@ -30,6 +29,8 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
        [ActionParameter] EntryLocaleIdentifier entryIdentifier,
        [ActionParameter] GetFirstNotEmptyTextFieldContentRequest request)
     {
+        entryIdentifier.Validate();
+
         foreach (var fieldId in request.FieldIds)
         {
             try
@@ -55,10 +56,7 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
         [ActionParameter] EntryLocaleIdentifier entryIdentifier,
         [ActionParameter] FieldIdentifier fieldIdentifier)
     {
-        if (string.IsNullOrEmpty(entryIdentifier.EntryId))
-        {
-            throw new PluginMisconfigurationException("Entry ID must be provided. Please check your input and try again");
-        }
+        entryIdentifier.Validate();
 
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var entry = await client.ExecuteWithErrorHandling(async () =>
@@ -110,6 +108,8 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
         [ActionParameter] FieldIdentifier fieldIdentifier,
         [ActionParameter][Display("Text")] string text)
     {
+        entryIdentifier.Validate();
+
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var entry = await client.ExecuteWithErrorHandling(async () =>
             await client.GetEntry(entryIdentifier.EntryId));
@@ -174,10 +174,7 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
     [ActionParameter] EntryLocaleIdentifier entryIdentifier,
     [ActionParameter] FieldIdentifier fieldIdentifier)
     {
-        if (string.IsNullOrEmpty(entryIdentifier.EntryId))
-        {
-            throw new PluginMisconfigurationException("Entry ID must be provided. Please check your input and try again");
-        }
+        entryIdentifier.Validate();
 
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var entry = await client.ExecuteWithErrorHandling(async () =>
@@ -219,6 +216,8 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
         [ActionParameter] EntryLocaleIdentifier entryIdentifier,
         [ActionParameter] FieldIdentifier fieldIdentifier)
     {
+        entryIdentifier.Validate();
+
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var entry = await client.ExecuteWithErrorHandling(async () =>
             await client.GetEntry(entryIdentifier.EntryId));
@@ -243,6 +242,8 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
         [ActionParameter] FieldIdentifier fieldIdentifier,
         [ActionParameter][Display("Number")] int number)
     {
+        entryIdentifier.Validate();
+
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var entry = await client.ExecuteWithErrorHandling(async () =>
             await client.GetEntry(entryIdentifier.EntryId));
@@ -257,6 +258,8 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
         [ActionParameter] EntryLocaleIdentifier entryIdentifier,
         [ActionParameter] FieldIdentifier fieldIdentifier)
     {
+        entryIdentifier.Validate();
+
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var entry = await client.ExecuteWithErrorHandling(async () =>
             await client.GetEntry(entryIdentifier.EntryId));
@@ -279,6 +282,8 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
         [ActionParameter] FieldIdentifier fieldIdentifier,
         [ActionParameter][Display("Boolean")] bool boolean)
     {
+        entryIdentifier.Validate();
+
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var entry = await client.ExecuteWithErrorHandling(async () =>
             await client.GetEntry(entryIdentifier.EntryId));
@@ -293,6 +298,8 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
         [ActionParameter] EntryLocaleIdentifier entryIdentifier,
         [ActionParameter] FieldIdentifier fieldIdentifier)
     {
+        entryIdentifier.Validate();
+
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var entry = await client.ExecuteWithErrorHandling(async () =>
             await client.GetEntry(entryIdentifier.EntryId));
