@@ -42,7 +42,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 {
     private IEnumerable<AuthenticationCredentialsProvider> Creds =>
         InvocationContext.AuthenticationCredentialsProviders;
-          
+
 
     [Action("Get IDs from entry content", Description = "Extract entry and field IDs from the Blackbird generated content file.")]
     public async Task<GetIdsFromHtmlResponse> GetIdsFromHtmlFile([ActionParameter] GetIdsFromFileRequest input)
@@ -84,19 +84,19 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         IEnumerable<Entry<object>> entries =
             await client.Paginate<Entry<object>>(
                 async (query) => await client.GetEntriesCollection<Entry<object>>(query), "?" + queryString);
-        
+
         if (request.Published.HasValue && request.Published.Value)
-        {            
-            entries = entries.Where(e => e.SystemProperties.PublishedVersion != null && 
+        {
+            entries = entries.Where(e => e.SystemProperties.PublishedVersion != null &&
                                          e.SystemProperties.Version == e.SystemProperties.PublishedVersion + 1);
         }
-        
+
         if (request.Changed.HasValue && request.Changed.Value)
         {
-            entries = entries.Where(e => e.SystemProperties.PublishedVersion != null && 
+            entries = entries.Where(e => e.SystemProperties.PublishedVersion != null &&
                                          e.SystemProperties.Version >= e.SystemProperties.PublishedVersion + 2);
-        }        
-        
+        }
+
         if (request.Draft.HasValue && request.Draft.Value)
         {
             entries = entries.Where(e => e.SystemProperties.PublishedVersion.HasValue == false);
@@ -142,14 +142,14 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     }
 
     [Action("Get entry", Description = "Get details of a specific entry")]
-    public async Task<EntryWithTitleEntity> GetEntry([ActionParameter] EntryIdentifier input, 
+    public async Task<EntryWithTitleEntity> GetEntry([ActionParameter] EntryIdentifier input,
         [ActionParameter] LocaleOptionalIdentifier localeOptionalIdentifier)
     {
         if (string.IsNullOrEmpty(input.EntryId))
         {
             throw new PluginMisconfigurationException("Entry ID is null or empty. Please add a valid entry ID");
         }
-        
+
         var client = new ContentfulClient(Creds, input.Environment);
         var entry = await client.ExecuteWithErrorHandling(async () => await client.GetEntry(input.EntryId));
         var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
@@ -190,7 +190,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
         queryString.Add($"fields.{input.FieldID}", input.Value);
 
-        
+
         IEnumerable<Entry<object>> entries =
             await client.Paginate<Entry<object>>(
                 async (query) => await client.GetEntriesCollection<Entry<object>>(query), "?" + queryString);
@@ -216,7 +216,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     public async Task DeleteEntry([ActionParameter] EntryIdentifier entryIdentifier)
     {
         ContentfulClientExtensions.ThrowIfNullOrEmpty(entryIdentifier.EntryId, nameof(entryIdentifier.EntryId));
-        
+
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var entry = await client.ExecuteWithErrorHandling(async () =>
             await client.GetEntry(entryIdentifier.EntryId));
@@ -249,7 +249,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     }
 
     [BlueprintActionDefinition(BlueprintAction.DownloadContent)]
-    [Action("Download entry", Description ="Get all localizable fields of specified entry, and all chil entries as a complete translatable file.")]
+    [Action("Download entry", Description = "Get all localizable fields of specified entry, and all chil entries as a complete translatable file.")]
     public async Task<DownloadContentOutput> GetEntryLocalizableFieldsAsHtmlFile(
         [ActionParameter] DownloadContentInput entryIdentifier,
         [ActionParameter] GetEntryAsHtmlRequest input)
@@ -258,7 +258,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         {
             throw new PluginMisconfigurationException("Entry ID is null or empty. Please add a valid entry ID");
         }
-        if (entryIdentifier.ContentId.Contains("?")) 
+        if (entryIdentifier.ContentId.Contains("?"))
         {
             entryIdentifier.ContentId = entryIdentifier.ContentId.Remove(entryIdentifier.ContentId.IndexOf('?'));
         }
@@ -302,7 +302,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         var updatedByUser = await client.ExecuteWithErrorHandling(async () => await client.GetUser(originalEntry.UpdatedBy));
 
         var resultHtml = htmlConverter.ToHtml(entriesContent, selectedLocale, spaceId, originalEntry.Title, client.GetEntryEditorUrl(originalEntry.ContentId), updatedByUser);
-        
+
         var fileNameFirstPart = string.IsNullOrEmpty(originalEntry.Title) ? entryIdentifier.ContentId : originalEntry.Title;
         var file = await fileManagementClient.UploadAsync(new MemoryStream(Encoding.UTF8.GetBytes(resultHtml)),
             MediaTypeNames.Text.Html, $"{fileNameFirstPart}_{selectedLocale}.html");
@@ -352,7 +352,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         foreach (var entryToUpdate in entriesToUpdate)
         {
             var entry = await client.ExecuteWithErrorHandling(() => client.GetEntry(entryToUpdate.EntryId));
-            var contentType = await client.ExecuteWithErrorHandling(() => 
+            var contentType = await client.ExecuteWithErrorHandling(() =>
                 client.GetContentType(entry.SystemProperties.ContentType.SystemProperties.Id));
 
             try
@@ -364,10 +364,10 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                 {
                     continue;
                 }
-                
+
                 var partialObject = PartialObjectBuilder.Build(entry, input.Locale);
                 await client.ExecuteWithErrorHandling(async () => await client.UpdateEntryForLocale(
-                    entry: partialObject,             
+                    entry: partialObject,
                     id: entryToUpdate.EntryId,
                     locale: input.Locale
                 ));
@@ -384,9 +384,9 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                     continue;
                 }
 
-                if (ex.Message.Contains("Version mismatch error") 
+                if (ex.Message.Contains("Version mismatch error")
                     || ex.Message.Contains("The resource could not be found")
-                    || ex.Message.Contains("Internal server") 
+                    || ex.Message.Contains("Internal server")
                     || ex.Message.Contains("Validation error"))
                 {
                     throw new PluginApplicationException($"Converting entry to JSON failed. " +
@@ -418,7 +418,8 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             transformation.TargetLanguage = input.Locale;
 
             output.Content = await fileManagementClient.UploadAsync(transformation.Serialize().ToStream(), MediaTypes.Xliff, transformation.XliffFileName);
-        } else
+        }
+        else
         {
             output.Content = input.Content;
         }
@@ -440,25 +441,25 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
         var client = new ContentfulClient(Creds, input.Environment);
         var entry = await client.ExecuteWithErrorHandling(async () => await client.GetEntry(input.EntryId));
-        
+
         var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
         var contentType = await client.ExecuteWithErrorHandling(async () => await client.GetContentType(contentTypeId));
-        
+
         var entryFields = (JObject)entry.Fields;
         var referencedEntryIds = new List<string>();
-        
-        var referenceFields = contentType.Fields.Where(f => f.LinkType == "Entry" || 
+
+        var referenceFields = contentType.Fields.Where(f => f.LinkType == "Entry" ||
                                                            (f.Type == "Array" && f.Items?.LinkType == "Entry"));
         if (input.FieldIds != null && input.FieldIds.Any())
         {
             referenceFields = referenceFields.Where(f => input.FieldIds.Contains(f.Id));
         }
-        
+
         foreach (var field in referenceFields)
         {
             if (!entryFields.TryGetValue(field.Id, out var fieldValue))
                 continue;
-                
+
             if (field.LinkType == "Entry")
             {
                 foreach (var localeValue in fieldValue.Children<JProperty>())
@@ -488,7 +489,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                 }
             }
         }
-        
+
         var referencedEntries = new List<EntryEntity>();
         foreach (var entryId in referencedEntryIds.Distinct())
         {
@@ -502,7 +503,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                 continue;
             }
         }
-        
+
         return new GetReferenceEntriesResponse
         {
             ReferencedEntries = referencedEntries,
@@ -534,7 +535,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         IEnumerable<Entry<object>> entries =
             await client.Paginate<Entry<object>>(
                 async (query) => await client.GetEntriesCollection<Entry<object>>(query), "?" + queryString);
-        
+
         var entriesResponse = entries.Select(e => new EntryEntity(e)).ToList();
 
         if (contentModels.ContentModels?.Any() == true)
@@ -554,6 +555,57 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         };
     }
 
+    [Action("Duplicate entry", Description = "Create a clone of an existing entry with the same or different content type and field data. Supports recursive cloning of referenced entries and assets.")]
+    public async Task<DuplicateEntryResponse> DuplicateEntry(
+        [ActionParameter] DuplicateEntryRequest request)
+    {
+        ContentfulClientExtensions.ThrowIfNullOrEmpty(request.EntryId, nameof(request.EntryId));
+
+        if (request.DuplicateRecursively == true)
+        {
+            request.DuplicateFromFieldIds ??= [];
+            request.EnableAssetCloning ??= false;
+
+            if (!request.DuplicateFromFieldIds.Any())
+                throw new PluginMisconfigurationException("Reference fields must be specified together with 'Duplicate referenced content' input.");
+        }
+        else
+        {
+            if (request.DuplicateFromFieldIds is not null)
+                throw new PluginMisconfigurationException("Duplication of references can only be enabled together with 'Duplicate referenced content' input.");
+
+            if (request.EnableAssetCloning is not null)
+                throw new PluginMisconfigurationException("Asset duplication can only be enabled together with 'Duplicate referenced content' input.");
+        }
+
+        var client = new ContentfulClient(Creds, request.Environment);
+
+        if (request.DuplicateRecursively == true)
+        {
+            var cloner = new EntryCloner(client);
+            return await cloner.CloneRecursively(request);
+        }
+
+        var originalEntry = await client.GetEntryWithErrorHandling(request.EntryId)
+            ?? throw new PluginApplicationException("Couldn't fetch an entry which has to be cloned.");
+
+        var originalFields = originalEntry.Fields as JObject ?? [];
+
+        var clone = new Entry<dynamic> { Fields = originalFields.DeepClone() };
+        var cloneContentTypeId = request.NewRootContenTypeId is not null
+            ? request.NewRootContenTypeId
+            : originalEntry.SystemProperties.ContentType.SystemProperties.Id;
+
+        var createdClone = await client.ExecuteWithErrorHandling(async () =>
+            await client.CreateEntry(clone, cloneContentTypeId));
+
+        return new()
+        {
+            RootEntry = new EntryEntity(createdClone),
+            TotalItemsCloned = 1,
+        };
+    }
+
     #region Utils
 
     private async Task<List<EntryContentDto>> GetLinkedEntriesContent(string entryId, string locale,
@@ -569,7 +621,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             return resultList;
 
         var entryContent = await client.ExecuteWithErrorHandling(() =>
-            GetEntryContent(entryId, client, ignoredFieldIds, ignoredContentTypeIds, excludeTags, rootEntryId, 
+            GetEntryContent(entryId, client, ignoredFieldIds, ignoredContentTypeIds, excludeTags, rootEntryId,
                 ignoreReferenceLocalization));
 
         if (entryContent != null)
@@ -707,10 +759,10 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             {
                 var linkFieldIds = contentTypeFields
                     .Where(f => f.LinkType is "Entry")
-                    .Select(f => 
+                    .Select(f =>
                     {
                         var fieldToken = entryContent.EntryFields[f.Id];
-                        if (fieldToken == null) 
+                        if (fieldToken == null)
                             return null;
 
                         var localeToken = fieldToken[locale];
@@ -718,7 +770,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                             return null;
 
                         var sys = localeToken["sys"];
-                        if (sys == null) 
+                        if (sys == null)
                             return null;
 
                         return sys["id"]?.ToString();
@@ -808,21 +860,21 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             return null;
         }
 
-        if (excludeTags is not null && excludeTags.Any(excludedTag => 
+        if (excludeTags is not null && excludeTags.Any(excludedTag =>
                 entry.Metadata.Tags.Any(entryTag => entryTag.Sys.Id == excludedTag)))
         {
             if (rootEntryId == entryId)
             {
                 var excludedTags = string.Join(',', excludeTags);
-                throw new PluginMisconfigurationException($"The root entry ({rootEntryId}) has one or more tags that are included in the excluded tags you provided: {excludedTags}. " + 
+                throw new PluginMisconfigurationException($"The root entry ({rootEntryId}) has one or more tags that are included in the excluded tags you provided: {excludedTags}. " +
                                                           $"Most likely, you don't want to translate this entry. If you do, please modify either the excluded tags or the entry tags.");
             }
-            
+
             return null;
         }
 
         var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
-        var contentType = await client.ExecuteWithErrorHandling(async () =>await client.GetContentType(contentTypeId));
+        var contentType = await client.ExecuteWithErrorHandling(async () => await client.GetContentType(contentTypeId));
 
         if (ignoreLocalizationForLinks)
         {
@@ -836,7 +888,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         {
             return new(entryId, entry.Fields,
                 contentType.Fields.Where(x => x.Localized).Where(x => !ignoredFieldIds.Contains(x.Id)).ToArray(), user);
-        }        
+        }
 
         return new(entryId, entry.Fields, contentType.Fields.Where(x => !ignoredFieldIds.Contains(x.Id)).ToArray(), user);
     }
