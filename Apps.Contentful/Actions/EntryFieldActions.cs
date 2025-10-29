@@ -13,6 +13,8 @@ using Contentful.Core.Models;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using Blackbird.Applications.Sdk.Common.Exceptions;
+using Blackbird.Applications.Sdk.Common.Dynamic;
+using Apps.Contentful.DataSourceHandlers;
 
 namespace Apps.Contentful.Actions;
 
@@ -140,7 +142,7 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
         if (fields[fieldIdentifier.FieldId] == null)
         {
             fields[fieldIdentifier.FieldId] = new JObject();
-        }        
+        }
 
         if (fieldType == "RichText")
         {
@@ -222,7 +224,7 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
         var entry = await client.ExecuteWithErrorHandling(async () =>
             await client.GetEntry(entryIdentifier.EntryId));
         var fields = (JObject)entry.Fields;
-        if(fields.TryGetValue(fieldIdentifier.FieldId, out JToken fieldToken) == false
+        if (fields.TryGetValue(fieldIdentifier.FieldId, out JToken fieldToken) == false
            || fieldToken[entryIdentifier.Locale] == null)
         {
             var availableFields = fields.Properties().Select(f => f.Name);
@@ -344,6 +346,34 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
         fields[fieldIdentifier.FieldId] ??= new JObject();
         fields[fieldIdentifier.FieldId][assetEntryIdentifier.Locale] =
             JObject.Parse(JsonConvert.SerializeObject(payload));
+        await client.ExecuteWithErrorHandling(async () =>
+            await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version));
+    }
+
+    [Action("Set entry's reference field", Description = "Set entry's reference field by field ID.")]
+    public async Task SetReferenceFieldContent(
+        [ActionParameter] EntryLocaleIdentifier entryLocaleIdentifier,
+        [ActionParameter] FieldIdentifier fieldIdentifier,
+        [ActionParameter, Display("Entry ID"), DataSource(typeof(EntryLocaleDataSourceHandler))] string referencedEntryId)
+    {
+        var client = new ContentfulClient(Creds, entryLocaleIdentifier.Environment);
+        var payload = new
+        {
+            sys = new
+            {
+                type = "Link",
+                linkType = "Entry",
+                id = referencedEntryId
+            }
+        };
+
+        var entry = await client.ExecuteWithErrorHandling(async () =>
+            await client.GetEntry(entryLocaleIdentifier.EntryId));
+        var fields = (JObject)entry.Fields;
+
+        fields[fieldIdentifier.FieldId] ??= new JObject();
+        fields[fieldIdentifier.FieldId][entryLocaleIdentifier.Locale] = JObject.Parse(JsonConvert.SerializeObject(payload));
+
         await client.ExecuteWithErrorHandling(async () =>
             await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version));
     }
