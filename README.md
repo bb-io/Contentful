@@ -50,8 +50,8 @@ Follow [this guide](https://www.contentful.com/help/working-with-translations/) 
 - **Search refereced entries** returns a list of all entries that are referenced by the specified entry.
 - **Search links to entry** returns a list of all entries that link to the specified entry.
 - **Find entry by field value** Given a field and a desired value for the field, the first matching entry will be returned.
-- **Get entry** Get details of a specific entry
-- **Duplicate entry** duplicates entry. Support duplication of the referenced entries and assets as well (duplication of references from richtext field and to other spaces are not supported yet, contact us if you need support of it).
+- **Get entry** get details of a specific entry.
+- **Duplicate entry** duplicates an entry. Supports recursive duplication of referenced entries and assets. Note: Duplication of references from rich text fields or links to other spaces is not yet supported. Please contact us if you require this functionality.
 - **Add new entry** creates a new entry with the specified content model.
 - **Delete entry**
 - **Publish entry**
