@@ -467,4 +467,111 @@ public class EntryActionsTests : TestBase
 
         Console.WriteLine(JsonConvert.SerializeObject(response.EntriesIds, Formatting.Indented));
     }
+
+    [TestMethod]
+    public async Task DuplicateEntry_RootOnly_ShouldWork()
+    {
+        // Arrange
+        var entryActions = new EntryActions(InvocationContext, FileManager);
+        var request = new DuplicateEntryRequest
+        {
+            EntryId = "7lznd2f0YrjG6X685DCUHg",
+        };
+
+        // Act
+        var response = await entryActions.DuplicateEntry(request);
+
+        // Assert
+        AreNotEqual("7lznd2f0YrjG6X685DCUHg", response.RootEntry.ContentId);
+        AreEqual("allFieldTypes", response.RootEntry.ContentTypeId);
+        AreEqual(0, response.RecursivelyClonedEntryIds.Count());
+        AreEqual(0, response.RecursivelyClonedAssetIds.Count());
+        AreEqual(1, response.TotalItemsCloned);
+        AreEqual(0, response.RecursionDepthReached);
+
+        Console.WriteLine(JsonConvert.SerializeObject(response, Formatting.Indented));
+    }
+
+    [TestMethod]
+    public async Task DuplicateEntry_RootOnly_WithDifferentContentModel_ShouldWork()
+    {
+        // Arrange
+        var entryActions = new EntryActions(InvocationContext, FileManager);
+        var request = new DuplicateEntryRequest
+        {
+            EntryId = "7lznd2f0YrjG6X685DCUHg",
+            NewRootContenTypeId = "duplicateOfAllFieldTypes"
+        };
+
+        // Act
+        var response = await entryActions.DuplicateEntry(request);
+
+        // Assert
+        AreNotEqual("7lznd2f0YrjG6X685DCUHg", response.RootEntry.ContentId);
+        AreEqual("duplicateOfAllFieldTypes", response.RootEntry.ContentTypeId);
+        Console.WriteLine(JsonConvert.SerializeObject(response, Formatting.Indented));
+    }
+
+    [TestMethod]
+    public async Task DuplicateEntry_RecursivelyChangeRootContentType_ShouldWork()
+    {
+        // Arrange
+        var entryActions = new EntryActions(InvocationContext, FileManager);
+        var request = new DuplicateEntryRequest
+        {
+            EntryId = "7lznd2f0YrjG6X685DCUHg",
+            NewRootContenTypeId = "duplicateOfAllFieldTypes",
+            DuplicateRecursively = true,
+            DuplicateFromFieldIds = ["referenceSingleField"],
+        };
+
+        // Act
+        var response = await entryActions.DuplicateEntry(request);
+
+        // Assert
+        AreEqual(2, response.TotalItemsCloned);
+        AreEqual("duplicateOfAllFieldTypes", response.RootEntry.ContentTypeId);
+        Console.WriteLine(JsonConvert.SerializeObject(response, Formatting.Indented));
+    }
+
+    [TestMethod]
+    public async Task DuplicateEntry_RecursivelyFromFields_WithoutAssets_ShouldWork()
+    {
+        // Arrange
+        var entryActions = new EntryActions(InvocationContext, FileManager);
+        var request = new DuplicateEntryRequest
+        {
+            EntryId = "7lznd2f0YrjG6X685DCUHg",
+            DuplicateRecursively = true,
+            DuplicateFromFieldIds = ["referenceSingleField", "mediaSingleField", "mediaManyGalleryField"],
+        };
+
+        // Act
+        var response = await entryActions.DuplicateEntry(request);
+
+        // Assert
+        AreEqual(2, response.TotalItemsCloned);
+        Console.WriteLine(JsonConvert.SerializeObject(response, Formatting.Indented));
+    }
+
+    [TestMethod]
+    public async Task DuplicateEntry_RecursivelyFromFields_ShouldWork()
+    {
+        // Arrange
+        var entryActions = new EntryActions(InvocationContext, FileManager);
+        var request = new DuplicateEntryRequest
+        {
+            EntryId = "7lznd2f0YrjG6X685DCUHg",
+            DuplicateRecursively = true,
+            DuplicateFromFieldIds = ["referenceSingleField", "referenceManyField", "mediaSingleField", "mediaManyGalleryField"],
+            EnableAssetCloning = true,
+        };
+
+        // Act
+        var response = await entryActions.DuplicateEntry(request);
+
+        // Assert
+        AreEqual(7, response.TotalItemsCloned);
+        Console.WriteLine(JsonConvert.SerializeObject(response, Formatting.Indented));
+    }
 }
