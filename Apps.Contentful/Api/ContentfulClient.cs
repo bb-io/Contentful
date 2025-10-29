@@ -31,19 +31,19 @@ public class ContentfulClient : ContentfulManagementClient
         _retryPolicy = Policy
             .Handle<ContentfulRateLimitException>()
             .Or<ObjectDisposedException>()
-            .WaitAndRetryAsync(RetryCount, (_) => TimeSpan.Zero, (exception, _) =>
+            .Or<Exception>(ex => ex.Message.Contains("Version mismatch error"))
+            .WaitAndRetryAsync(RetryCount, (retryAttempt) => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)), async (exception, timeSpan, retryCount, context) =>
             {
                 if (exception is ContentfulRateLimitException contentfulRateLimitException)
                 {
-                    return Task.Delay(TimeSpan.FromSeconds(contentfulRateLimitException.SecondsUntilNextRequest + 5));
+                    await Task.Delay(TimeSpan.FromSeconds(contentfulRateLimitException.SecondsUntilNextRequest + 5));
                 }
-
-                if (exception.Message.Contains("Version mismatch error"))
+                else if (exception.Message.Contains("Version mismatch error"))
                 {
-                    return Task.Delay(TimeSpan.FromSeconds(5));
+                    var timeoutRandom = new Random();
+                    var delaySeconds = timeoutRandom.Next(2, 5);
+                    await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
                 }
-
-                return Task.CompletedTask;
             });
     }
 
