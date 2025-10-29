@@ -93,6 +93,7 @@ Finally, you can specify a list of Field IDs which will always be ignored and no
 - **Get entry's media field** returns the identifier of the asset attached to the entry's media field.
 - **Set entry's media field** sets the entry's media field with the specified asset.
 - **Get entry's array field** returns the array content of the specified field of the entry.
+- **Set entry's reference field** sets the entry's media reference field with the specified entry.
 
 ### Locales
 

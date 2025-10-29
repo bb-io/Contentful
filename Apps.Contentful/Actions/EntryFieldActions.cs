@@ -354,7 +354,7 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
     public async Task SetReferenceFieldContent(
         [ActionParameter] EntryLocaleIdentifier entryLocaleIdentifier,
         [ActionParameter] FieldIdentifier fieldIdentifier,
-        [ActionParameter, Display("Entry ID"), DataSource(typeof(EntryLocaleDataSourceHandler))] string referencedEntryId)
+        [ActionParameter, Display("Referenced entry ID"), DataSource(typeof(EntryLocaleDataSourceHandler))] string referencedEntryId)
     {
         var client = new ContentfulClient(Creds, entryLocaleIdentifier.Environment);
         var payload = new
