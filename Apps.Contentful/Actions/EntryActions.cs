@@ -912,14 +912,31 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     {
         var images = await EntryAssetHelper.GetImagesToUpdate(content, client);
         if (!images.Any())
+        {
             return;
+        }
 
         foreach (var image in images)
         {
             var updated = EntryAssetHelper.UpdateImageTitle(image.Asset, image.AltText, input.Locale);
-            if (!updated) continue;
+            if (!updated)
+            {
+                continue;
+            }
 
-            await client.ExecuteWithErrorHandling(() => client.CreateOrUpdateAsset(image.Asset, version: image.Asset.SystemProperties.Version));
+            try
+            {
+                await client.ExecuteWithErrorHandling(async () =>
+                {
+                    var asset = await client.GetAsset(image.Asset.SystemProperties.Id);
+                    await client.CreateOrUpdateAsset(image.Asset, version: asset.SystemProperties.Version);
+                });
+            }
+            catch (Exception e)
+            {
+                throw new PluginApplicationException(
+                    $"Failed to update asset '{image.Asset.SystemProperties.Id}' alt text. Exception: {e}");
+            }
         }
     }
 
