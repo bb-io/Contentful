@@ -356,6 +356,11 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
         [ActionParameter] FieldIdentifier fieldIdentifier,
         [ActionParameter, Display("Referenced entry ID"), DataSource(typeof(EntryLocaleDataSourceHandler))] string referencedEntryId)
     {
+        if (string.IsNullOrEmpty(referencedEntryId))
+        {
+            throw new PluginMisconfigurationException($"Referenced entry ID is null or empty. Please check your input and try again");
+        }
+        
         var client = new ContentfulClient(Creds, entryLocaleIdentifier.Environment);
         var payload = new
         {
