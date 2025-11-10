@@ -41,4 +41,19 @@ public class EntryTranslationTests : TestBase
 
         Console.WriteLine(JsonConvert.SerializeObject(transformation.TargetSystemReference, Formatting.Indented));
     }
+
+    [TestMethod]
+    public async Task Translate_from_deepl_updates_proper_fields()
+    {
+        var actions = new EntryActions(InvocationContext, FileManager);
+        var response = await actions.SetEntryLocalizableFieldsFromHtmlFile(new Apps.Contentful.Models.Requests.Tags.UploadEntryRequest { Content = new FileReference { Name = "The Loire Valley_en-US.html.xlf" }, Locale = "nl" });
+
+        var contentString = FileManager.ReadOutputAsString(response.Content);
+        var transformation = Transformation.Parse(contentString, response.Content.Name);
+
+        Assert.AreEqual("5746dLKTkEZjOQX21HX2KI", transformation.TargetSystemReference.ContentId);
+        Assert.AreEqual("nl", transformation.TargetLanguage);
+
+        Console.WriteLine(JsonConvert.SerializeObject(transformation.TargetSystemReference, Formatting.Indented));
+    }
 }
