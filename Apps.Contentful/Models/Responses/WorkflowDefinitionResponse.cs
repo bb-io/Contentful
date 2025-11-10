@@ -1,4 +1,5 @@
-﻿using Blackbird.Applications.Sdk.Common;
+﻿using Apps.Contentful.Models.Entities;
+using Blackbird.Applications.Sdk.Common;
 
 namespace Apps.Contentful.Models.Responses;
 
@@ -27,4 +28,10 @@ public class WorkflowDefinitionResponse
     
     [Display("Next step")]
     public WorkflowStep? NextStep { get; set; } = new ();
+
+    [Display("Latest comment")]
+    public string? Comment { get; set; }
+
+    [Display("All comments")]
+    public List<WorkflowComment>? Comments { get; set; }
 }

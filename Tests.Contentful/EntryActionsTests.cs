@@ -5,7 +5,6 @@ using Apps.Contentful.Models.Requests.Tags;
 using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Filters.Coders;
 using Newtonsoft.Json;
-using System.Text;
 using Tests.Contentful.Base;
 using static Microsoft.VisualStudio.TestTools.UnitTesting.Assert;
 
@@ -23,19 +22,121 @@ public class EntryActionsTests : TestBase
 
         await ThrowsExceptionAsync<PluginApplicationException>(() => listEntriesTask);
     }
-    
+
     [TestMethod]
     public async Task ListEntries_ValidEnvironment_ShouldReturnAllEntries()
     {
         var entryActions = new EntryActions(InvocationContext, FileManager);
-        var listEntriesRequest = new ListEntriesRequest { Environment = "dev", SearchTerm= "The perfect partner" };
-        
+        var listEntriesRequest = new ListEntriesRequest { Environment = "dev", SearchTerm = "The perfect partner" };
+
         var entriesResponse = await entryActions.ListEntries(listEntriesRequest);
 
         foreach (var entry in entriesResponse.Entries)
         {
             Console.WriteLine($"{entry.ContentId}");
         }
+    }
+
+    [TestMethod]
+    public async Task ListEntries_WithValidPublishedDateFilters_ShouldReturnFilteredEntries()
+    {
+        // Arrange
+        var entryActions = new EntryActions(InvocationContext, FileManager);
+        var listEntriesRequest = new ListEntriesRequest
+        {
+            PublishedAfter = new DateTime(2025, 10, 01),
+            PublishedBefore = new DateTime(2025, 10, 04)
+        };
+
+        // Act
+        var result = await entryActions.ListEntries(listEntriesRequest);
+
+        // Assert
+        foreach (var entry in result.Entries)
+        {
+            Console.WriteLine($"{entry.ContentId}");
+        }
+        IsNotNull(result);
+    }
+
+    [TestMethod]
+    public async Task ListEntries_WithInvalidPublishedDateFilters_ShouldFailWithException()
+    {
+        // Arrange
+        var entryActions = new EntryActions(InvocationContext, FileManager);
+        var listEntriesRequest = new ListEntriesRequest
+        {
+            PublishedAfter = new DateTime(2025, 10, 04),
+            PublishedBefore = new DateTime(2025, 10, 01)
+        };
+
+        // Act & Assert
+        await ThrowsExceptionAsync<PluginMisconfigurationException>(async () => await entryActions.ListEntries(listEntriesRequest));
+    }
+
+    [TestMethod]
+    public async Task ListEntries_WithValidFirstPublishedDateFilters_ShouldReturnFilteredEntries()
+    {
+        // Arrange
+        var entryActions = new EntryActions(InvocationContext, FileManager);
+        var listEntriesRequest = new ListEntriesRequest
+        {
+            FirstPublishedAfter = new DateTime(2025, 08, 31),
+            FirstPublishedBefore = new DateTime(2025, 09, 02)
+        };
+
+        // Act
+        var result = await entryActions.ListEntries(listEntriesRequest);
+
+        // Assert
+        foreach (var entry in result.Entries)
+        {
+            Console.WriteLine($"{entry.ContentId}");
+        }
+        IsNotNull(result);
+    }
+
+    [TestMethod]
+    public async Task ListEntries_WithValidMixedDateFilters_ShouldReturnFilteredEntries()
+    {
+        // Arrange
+        var entryActions = new EntryActions(InvocationContext, FileManager);
+        var listEntriesRequest = new ListEntriesRequest
+        {
+            FirstPublishedAfter = new DateTime(2025, 08, 31),
+            PublishedBefore = new DateTime(2025, 09, 06)
+        };
+
+        // Act
+        var result = await entryActions.ListEntries(listEntriesRequest);
+
+        // Assert
+        foreach (var entry in result.Entries)
+        {
+            Console.WriteLine($"{entry.ContentId}");
+        }
+        IsNotNull(result);
+    }
+
+    [TestMethod]
+    public async Task SearchEntriesByFieldText_ShouldWork()
+    {
+        // Arrange
+        var entryActions = new EntryActions(InvocationContext, FileManager);
+        var contentModel = new ContentModelIdentifier { ContentModelId = "page" };
+        var field = "slug";
+        var searchTerm = "blackbird-use-cases";
+
+        // Act
+        var response = await entryActions.SearchEntriesByFieldText(contentModel, field, searchTerm);
+
+        // Assert
+        IsTrue(response.Entries.Any());
+        IsTrue(response.EntriesIds.Any());
+        AreNotEqual(response.FirstEntryId, string.Empty);
+        IsTrue(response.TotalCount > 0);
+
+        Console.WriteLine(JsonConvert.SerializeObject(response.EntriesIds, Formatting.Indented));
     }
 
     [TestMethod]
@@ -49,29 +150,11 @@ public class EntryActionsTests : TestBase
             Locale = "en-US"
         };
         var request = new GetEntryAsHtmlRequest();
-        
+
         var fileResponse = await entryActions.GetEntryLocalizableFieldsAsHtmlFile(entryIdentifier, request);
-        
+
         IsFalse(string.IsNullOrEmpty(fileResponse.Content.ToString()));
     }
-    
-    //[TestMethod]
-    //public async Task SetEntryLocalizableFieldsFromHtmlFile_WithoutReferenceEntries_ShouldNotFail()
-    //{
-    //    var entryActions = new EntryActions(InvocationContext, FileManager);
-    //    var entryIdentifier = new UploadEntryRequest()
-    //    {
-    //        Environment = "dev",
-    //        Locale = "nl",
-    //        Content = new()
-    //        {
-    //            Name = "Mr. Coffee Mug Warmer_en-US.html",
-    //            ContentType = "text/html"
-    //        }
-    //    };
-        
-    //    await entryActions.SetEntryLocalizableFieldsFromHtmlFile(entryIdentifier);
-    //}
 
     [TestMethod]
     public async Task SetEntryLocalizableFieldsFromHtmlFile_WithHyperlinkEntries_ShouldNotFail()
@@ -87,10 +170,10 @@ public class EntryActionsTests : TestBase
                 ContentType = "text/html"
             }
         };
-        
+
         await entryActions.SetEntryLocalizableFieldsFromHtmlFile(entryIdentifier);
     }
-    
+
     [TestMethod]
     public async Task SetEntryLocalizableFieldsFromHtmlFile_WithReferenceEntry_ShouldNotFail()
     {
@@ -106,7 +189,7 @@ public class EntryActionsTests : TestBase
             },
             DontUpdateReferenceFields = true
         };
-        
+
         await entryActions.SetEntryLocalizableFieldsFromHtmlFile(entryIdentifier);
     }
 
@@ -125,36 +208,48 @@ public class EntryActionsTests : TestBase
             },
             DontUpdateReferenceFields = true
         };
-        
+
         await entryActions.SetEntryLocalizableFieldsFromHtmlFile(entryIdentifier);
     }
 
-    //[TestMethod]
-    //public async Task GetEntry_ValidEntryWithLocale_ShouldReturnEntryWithTitle()
-    //{
-    //    var entryActions = new EntryActions(InvocationContext, FileManager);
-    //    var entryIdentifier = new EntryIdentifier
-    //    {
-    //        Environment = "master",
-    //        EntryId = "5N76zvCw2PMHTE2rY6pnCo"
-    //    };
-    //    var localeIdentifier = new LocaleOptionalIdentifier
-    //    {
-    //        Locale = "en-US"
-    //    };
+    [TestMethod]
+    public async Task SetEntryLocalizableFieldsFromHtmlFile_WithImageAltsTranslated_ShouldNotFail()
+    {
+        // Arrange
+        var entryActions = new EntryActions(InvocationContext, FileManager);
+        var entryIdentifier = new UploadEntryRequest()
+        {
+            ContentId = "5746dLKTkEZjOQX21HX2KI",
+            Environment = "master",
+            Locale = "nl",
+            Content = new() { Name = "The Loire Valley_en-US.html (3).xlf" }
+        };
 
-    //    var entry = await entryActions.GetEntry(entryIdentifier, localeIdentifier);
-    //    var json = Newtonsoft.Json.JsonConvert.SerializeObject(entry, Formatting.Indented);
-    //    Console.WriteLine(json);
+        // Act
+        var result = await entryActions.SetEntryLocalizableFieldsFromHtmlFile(entryIdentifier);
 
-    //    IsNotNull(entry);
-    //    IsNotNull(entry.Title);
-    //    IsNotNull(entry.TagIds);
-        
-    //    Console.WriteLine($"Entry title: {entry.Title}");
-    //}
+        // Assert
+        Console.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
+        IsNotNull(result);
+    }
 
-    
+    [TestMethod]
+    public async Task SetEntryLocalizableFieldsFromHtmlFile_MxliffFile_ShouldFailWithException()
+    {
+        // Arrange
+        var entryActions = new EntryActions(InvocationContext, FileManager);
+        var entryIdentifier = new UploadEntryRequest()
+        {
+            Locale = "nl",
+            Content = new() { Name = "empty.mxliff" }
+        };
+
+        // Act & Assert
+        await ThrowsExceptionAsync<PluginMisconfigurationException>(
+            async () => await entryActions.SetEntryLocalizableFieldsFromHtmlFile(entryIdentifier)
+        );
+    }
+
     [TestMethod]
     public async Task GetEntry_ValidEntryWithoutLocale_ShouldReturnEntryWithTitle()
     {
@@ -173,7 +268,6 @@ public class EntryActionsTests : TestBase
         Console.WriteLine($"Entry title: {entry.Title}");
     }
 
-
     [TestMethod]
     public async Task AddTagEntry_ShouldReturnEntryWithTag()
     {
@@ -190,28 +284,6 @@ public class EntryActionsTests : TestBase
         Assert.IsTrue(true);
     }
 
-
-    //[TestMethod]
-    //public async Task SetEntryTextField_WithReferenceEntry_ShouldNotFail()
-    //{
-    //    var entryActions = new EntryFieldActions(InvocationContext);
-    //    var entryIdentifier = new EntryLocaleIdentifier()
-    //    {
-    //        Locale= "en-US",
-    //        EntryId= "5FBuCuJwXpF5UhW3N9oYve",
-    //        Environment = "master"
-    //    };
-
-    //    var fieldIdentifier = new FieldIdentifier()
-    //    {
-    //        FieldId= "text_sanitized",
-            
-    //    };
-
-    //    await entryActions.SetTextFieldContent(entryIdentifier, fieldIdentifier, "a {Open ‹a href=\"{url}\" data-q=\"x & y\"›{label}‹/a› — {when, time, short}}");
-    //}
-
-
     [TestMethod]
     public async Task DownloadEntry_ShouldNotFail()
     {
@@ -219,8 +291,8 @@ public class EntryActionsTests : TestBase
         var entryIdentifier = new DownloadContentInput
         {
             Locale = "en-US",
-            ContentId= "5746dLKTkEZjOQX21HX2KI",
-            
+            ContentId = "5746dLKTkEZjOQX21HX2KI",
+
         };
         var entry = new GetEntryAsHtmlRequest
         {
@@ -365,5 +437,186 @@ public class EntryActionsTests : TestBase
         Assert.IsTrue(codedContent.TextUnits.Any(x => x.SizeRestrictions.MaximumSize == 256));
         Assert.IsTrue(codedContent.TextUnits.Any(x => x.SizeRestrictions.MaximumSize == 60));
         Assert.IsTrue(codedContent.TextUnits.Any(x => x.SizeRestrictions.MaximumSize == 160));
+    }
+
+    [TestMethod]
+    public async Task GetReferenceEntries_WithoutFieldIds_ShouldReturnAllReferencedEntries()
+    {
+        // Arrange
+        var entryActions = new EntryActions(InvocationContext, FileManager);
+        var request = new GetReferenceEntriesRequest
+        {
+            EntryId = "1973QRvX9m84FWpFpC7ZnH"
+        };
+
+        // Act
+        var response = await entryActions.GetReferenceEntries(request);
+
+        // Assert
+        IsNotNull(response);
+        IsNotNull(response.ReferencedEntries);
+        IsNotNull(response.ReferencedEntryIds);
+
+        Console.WriteLine($"Found {response.ReferencedEntries.Count()} referenced entries:");
+        foreach (var entry in response.ReferencedEntries)
+        {
+            Console.WriteLine($"- Entry ID: {entry.ContentId}, Content Type: {entry.ContentTypeId}");
+        }
+
+        Console.WriteLine($"\nReferenced Entry IDs:");
+        foreach (var entryId in response.ReferencedEntryIds)
+        {
+            Console.WriteLine($"- {entryId}");
+        }
+
+        // Verify that both collections have the same count
+        AreEqual(response.ReferencedEntries.Count(), response.ReferencedEntryIds.Count());
+    }
+
+    [TestMethod]
+    public async Task GetEntriesLinkingToEntry_ShouldWork()
+    {
+        // Arrange
+        var entryActions = new EntryActions(InvocationContext, FileManager);
+        var entry = new EntryIdentifier { EntryId = "1973QRvX9m84FWpFpC7ZnH" };
+        var contentModels = new OptionalMultipleContentTypeIdentifier();
+
+        // Act
+        var response = await entryActions.GetEntriesLinkingToEntry(entry, contentModels);
+
+        // Assert
+        IsTrue(response.Entries.Any());
+        IsTrue(response.EntriesIds.Any());
+        AreNotEqual(response.FirstEntryId, string.Empty);
+        IsTrue(response.TotalCount > 0);
+
+        Console.WriteLine(JsonConvert.SerializeObject(response.EntriesIds, Formatting.Indented));
+    }
+
+    [TestMethod]
+    public async Task GetEntriesLinkingToEntry_WithModelFilter_ShouldWork()
+    {
+        // Arrange
+        var entryActions = new EntryActions(InvocationContext, FileManager);
+        var entry = new EntryIdentifier { EntryId = "1973QRvX9m84FWpFpC7ZnH" };
+        var contentModels = new OptionalMultipleContentTypeIdentifier { ContentModels = ["pageWrapper"] };
+
+        // Act
+        var response = await entryActions.GetEntriesLinkingToEntry(entry, contentModels);
+
+        // Assert
+        IsTrue(response.Entries.Any());
+        IsTrue(response.EntriesIds.Any());
+        AreNotEqual(response.FirstEntryId, string.Empty);
+        IsTrue(response.TotalCount > 0);
+
+        Console.WriteLine(JsonConvert.SerializeObject(response.EntriesIds, Formatting.Indented));
+    }
+
+    [TestMethod]
+    public async Task DuplicateEntry_RootOnly_ShouldWork()
+    {
+        // Arrange
+        var entryActions = new EntryActions(InvocationContext, FileManager);
+        var request = new DuplicateEntryRequest
+        {
+            EntryId = "7lznd2f0YrjG6X685DCUHg",
+        };
+
+        // Act
+        var response = await entryActions.DuplicateEntry(request);
+
+        // Assert
+        AreNotEqual("7lznd2f0YrjG6X685DCUHg", response.RootEntry.ContentId);
+        AreEqual("allFieldTypes", response.RootEntry.ContentTypeId);
+        AreEqual(0, response.RecursivelyClonedEntryIds.Count());
+        AreEqual(0, response.RecursivelyClonedAssetIds.Count());
+        AreEqual(1, response.TotalItemsCloned);
+        AreEqual(0, response.RecursionDepthReached);
+
+        Console.WriteLine(JsonConvert.SerializeObject(response, Formatting.Indented));
+    }
+
+    [TestMethod]
+    public async Task DuplicateEntry_RootOnly_WithDifferentContentModel_ShouldWork()
+    {
+        // Arrange
+        var entryActions = new EntryActions(InvocationContext, FileManager);
+        var request = new DuplicateEntryRequest
+        {
+            EntryId = "7lznd2f0YrjG6X685DCUHg",
+            NewRootContenTypeId = "duplicateOfAllFieldTypes"
+        };
+
+        // Act
+        var response = await entryActions.DuplicateEntry(request);
+
+        // Assert
+        AreNotEqual("7lznd2f0YrjG6X685DCUHg", response.RootEntry.ContentId);
+        AreEqual("duplicateOfAllFieldTypes", response.RootEntry.ContentTypeId);
+        Console.WriteLine(JsonConvert.SerializeObject(response, Formatting.Indented));
+    }
+
+    [TestMethod]
+    public async Task DuplicateEntry_RecursivelyChangeRootContentType_ShouldWork()
+    {
+        // Arrange
+        var entryActions = new EntryActions(InvocationContext, FileManager);
+        var request = new DuplicateEntryRequest
+        {
+            EntryId = "7lznd2f0YrjG6X685DCUHg",
+            NewRootContenTypeId = "duplicateOfAllFieldTypes",
+            DuplicateRecursively = true,
+            DuplicateFromFieldIds = ["referenceSingleField"],
+        };
+
+        // Act
+        var response = await entryActions.DuplicateEntry(request);
+
+        // Assert
+        AreEqual(2, response.TotalItemsCloned);
+        AreEqual("duplicateOfAllFieldTypes", response.RootEntry.ContentTypeId);
+        Console.WriteLine(JsonConvert.SerializeObject(response, Formatting.Indented));
+    }
+
+    [TestMethod]
+    public async Task DuplicateEntry_RecursivelyFromFields_WithoutAssets_ShouldWork()
+    {
+        // Arrange
+        var entryActions = new EntryActions(InvocationContext, FileManager);
+        var request = new DuplicateEntryRequest
+        {
+            EntryId = "7lznd2f0YrjG6X685DCUHg",
+            DuplicateRecursively = true,
+            DuplicateFromFieldIds = ["referenceSingleField", "mediaSingleField", "mediaManyGalleryField"],
+        };
+
+        // Act
+        var response = await entryActions.DuplicateEntry(request);
+
+        // Assert
+        AreEqual(2, response.TotalItemsCloned);
+        Console.WriteLine(JsonConvert.SerializeObject(response, Formatting.Indented));
+    }
+
+    [TestMethod]
+    public async Task DuplicateEntry_RecursivelyFromFields_ShouldWork()
+    {
+        // Arrange
+        var entryActions = new EntryActions(InvocationContext, FileManager);
+        var request = new DuplicateEntryRequest
+        {
+            EntryId = "7lznd2f0YrjG6X685DCUHg",
+            DuplicateRecursively = true,
+            DuplicateFromFieldIds = ["referenceSingleField", "referenceManyField", "mediaSingleField", "mediaManyGalleryField"],
+            EnableAssetCloning = true,
+        };
+
+        // Act
+        var response = await entryActions.DuplicateEntry(request);
+
+        // Assert
+        AreEqual(7, response.TotalItemsCloned);
+        Console.WriteLine(JsonConvert.SerializeObject(response, Formatting.Indented));
     }
 }

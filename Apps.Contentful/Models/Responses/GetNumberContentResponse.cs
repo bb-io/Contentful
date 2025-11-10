@@ -5,5 +5,5 @@ namespace Apps.Contentful.Models.Responses;
 public class GetNumberContentResponse
 {
     [Display("Number content")]
-    public int NumberContent { get; set; }
+    public double NumberContent { get; set; }
 }

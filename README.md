@@ -47,14 +47,17 @@ Follow [this guide](https://www.contentful.com/help/working-with-translations/) 
 ### Entries
 
 - **Search entries** returns a list of entries. Optionally filter by content model, environment, tags and the last updated date.
+- **Search refereced entries** returns a list of all entries that are referenced by the specified entry.
+- **Search links to entry** returns a list of all entries that link to the specified entry.
 - **Find entry by field value** Given a field and a desired value for the field, the first matching entry will be returned.
-- **Get entry** Get details of a specific entry
+- **Get entry** get details of a specific entry.
+- **Duplicate entry** duplicates an entry. Supports recursive duplication of referenced entries and assets. Note: Duplication of references from rich text fields or links to other spaces is not yet supported. Please contact us if you require this functionality.
 - **Add new entry** creates a new entry with the specified content model.
 - **Delete entry**
 - **Publish entry**
 - **Unpublish entry** note that publishing/unpublishing entries in contentful affects all locales.
 - **Download entry** returns all localizable fields of the specified entry as a Blackbird interoperable file.
-- **Upload entires** updates all localizable fields of specified entry .
+- **Upload entires** updates all localizable fields of specified entry.
 
 **Download entry** and **Upload entires** are intended to be used together in a typical translation flow: you can retrieve an entry's localizable fields as HTML file, put it into TMS, then retrieve a translated HTML file and put it back into Contentful's entry. **Upload entires** expects the same HTML structure as the structure of the file retrieved with **Download entry**.
 
@@ -90,6 +93,7 @@ Finally, you can specify a list of Field IDs which will always be ignored and no
 - **Get entry's media field** returns the identifier of the asset attached to the entry's media field.
 - **Set entry's media field** sets the entry's media field with the specified asset.
 - **Get entry's array field** returns the array content of the specified field of the entry.
+- **Set entry's reference field** sets the entry's media reference field with the specified entry.
 
 ### Locales
 

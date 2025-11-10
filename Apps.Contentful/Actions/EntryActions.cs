@@ -1,4 +1,5 @@
 ﻿using Apps.Contentful.Api;
+using Apps.Contentful.DataSourceHandlers;
 using Apps.Contentful.Extensions;
 using Apps.Contentful.HtmlHelpers;
 using Apps.Contentful.Models;
@@ -12,6 +13,7 @@ using Apps.Contentful.Utils;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Authentication;
+using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Utils.Extensions.Files;
@@ -27,6 +29,7 @@ using Contentful.Core.Models;
 using HtmlAgilityPack;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System.Collections.Specialized;
 using System.Net.Mime;
 using System.Text;
 using System.Web;
@@ -39,7 +42,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 {
     private IEnumerable<AuthenticationCredentialsProvider> Creds =>
         InvocationContext.AuthenticationCredentialsProviders;
-          
+
 
     [Action("Get IDs from entry content", Description = "Extract entry and field IDs from the Blackbird generated content file.")]
     public async Task<GetIdsFromHtmlResponse> GetIdsFromHtmlFile([ActionParameter] GetIdsFromFileRequest input)
@@ -72,44 +75,28 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     {
         var client = new ContentfulClient(Creds, request.Environment);
 
+        ValidateDates(request.PublishedAfter, request.PublishedBefore, "Published");
+        ValidateDates(request.FirstPublishedAfter, request.FirstPublishedBefore, "First published");
+
         var queryString = HttpUtility.ParseQueryString(string.Empty);
-
-        if (request.ContentModelId != null)
-        {
-            queryString.Add("content_type", request.ContentModelId);
-        }
-
-        if (request.UpdatedFrom.HasValue)
-        {
-            queryString.Add("sys.updatedAt[gte]", request.UpdatedFrom.Value.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'"));
-        }
-
-        if (request.UpdatedTo.HasValue)
-        {
-            queryString.Add("sys.updatedAt[lte]", request.UpdatedTo.Value.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'"));
-        }
-
-        if (!string.IsNullOrWhiteSpace(request.SearchTerm))
-        {
-            queryString.Add("query", request.SearchTerm);
-        }
+        ApplyListEntriesRequestFilters(queryString, request);
 
         IEnumerable<Entry<object>> entries =
             await client.Paginate<Entry<object>>(
                 async (query) => await client.GetEntriesCollection<Entry<object>>(query), "?" + queryString);
-        
+
         if (request.Published.HasValue && request.Published.Value)
-        {            
-            entries = entries.Where(e => e.SystemProperties.PublishedVersion != null && 
+        {
+            entries = entries.Where(e => e.SystemProperties.PublishedVersion != null &&
                                          e.SystemProperties.Version == e.SystemProperties.PublishedVersion + 1);
         }
-        
+
         if (request.Changed.HasValue && request.Changed.Value)
         {
-            entries = entries.Where(e => e.SystemProperties.PublishedVersion != null && 
+            entries = entries.Where(e => e.SystemProperties.PublishedVersion != null &&
                                          e.SystemProperties.Version >= e.SystemProperties.PublishedVersion + 2);
-        }        
-        
+        }
+
         if (request.Draft.HasValue && request.Draft.Value)
         {
             entries = entries.Where(e => e.SystemProperties.PublishedVersion.HasValue == false);
@@ -129,15 +116,40 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         return new ListEntriesResponse(entriesResponse, entriesResponse.Length);
     }
 
+    [Action("Search entries by text in field", Description = "Search for entries containing specific text in a given field.")]
+    public async Task<ListEntriesResponse> SearchEntriesByFieldText(
+        [ActionParameter] ContentModelIdentifier model,
+        [ActionParameter, Display("Field ID"), DataSource(typeof(FieldFromModelDataHandler))] string fieldId,
+        [ActionParameter, Display("Search term")] string searchTerm)
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            throw new PluginMisconfigurationException("Search term cannot be null or empty. Please provide a valid search term.");
+        }
+
+        var client = new ContentfulClient(Creds, model.Environment);
+
+        var queryString = HttpUtility.ParseQueryString(string.Empty);
+        queryString.Add("content_type", model.ContentModelId);
+        queryString.Add($"fields.{fieldId}[match]", searchTerm);
+
+        IEnumerable<Entry<object>> entries =
+            await client.Paginate<Entry<object>>(
+                async (query) => await client.GetEntriesCollection<Entry<object>>(query), "?" + queryString);
+
+        var entriesResponse = entries.Select(e => new EntryEntity(e)).ToArray();
+        return new ListEntriesResponse(entriesResponse, entriesResponse.Length);
+    }
+
     [Action("Get entry", Description = "Get details of a specific entry")]
-    public async Task<EntryWithTitleEntity> GetEntry([ActionParameter] EntryIdentifier input, 
+    public async Task<EntryWithTitleEntity> GetEntry([ActionParameter] EntryIdentifier input,
         [ActionParameter] LocaleOptionalIdentifier localeOptionalIdentifier)
     {
         if (string.IsNullOrEmpty(input.EntryId))
         {
             throw new PluginMisconfigurationException("Entry ID is null or empty. Please add a valid entry ID");
         }
-        
+
         var client = new ContentfulClient(Creds, input.Environment);
         var entry = await client.ExecuteWithErrorHandling(async () => await client.GetEntry(input.EntryId));
         var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
@@ -178,7 +190,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
         queryString.Add($"fields.{input.FieldID}", input.Value);
 
-        
+
         IEnumerable<Entry<object>> entries =
             await client.Paginate<Entry<object>>(
                 async (query) => await client.GetEntriesCollection<Entry<object>>(query), "?" + queryString);
@@ -204,7 +216,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     public async Task DeleteEntry([ActionParameter] EntryIdentifier entryIdentifier)
     {
         ContentfulClientExtensions.ThrowIfNullOrEmpty(entryIdentifier.EntryId, nameof(entryIdentifier.EntryId));
-        
+
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var entry = await client.ExecuteWithErrorHandling(async () =>
             await client.GetEntry(entryIdentifier.EntryId));
@@ -237,7 +249,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     }
 
     [BlueprintActionDefinition(BlueprintAction.DownloadContent)]
-    [Action("Download entry", Description ="Get all localizable fields of specified entry, and all chil entries as a complete translatable file.")]
+    [Action("Download entry", Description = "Get all localizable fields of specified entry, and all chil entries as a complete translatable file.")]
     public async Task<DownloadContentOutput> GetEntryLocalizableFieldsAsHtmlFile(
         [ActionParameter] DownloadContentInput entryIdentifier,
         [ActionParameter] GetEntryAsHtmlRequest input)
@@ -246,7 +258,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         {
             throw new PluginMisconfigurationException("Entry ID is null or empty. Please add a valid entry ID");
         }
-        if (entryIdentifier.ContentId.Contains("?")) 
+        if (entryIdentifier.ContentId.Contains("?"))
         {
             entryIdentifier.ContentId = entryIdentifier.ContentId.Remove(entryIdentifier.ContentId.IndexOf('?'));
         }
@@ -266,7 +278,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             throw new PluginMisconfigurationException($"Locale {selectedLocale} not found. Available locales: {allLocales}");
         }
 
-        var entriesContent = await GetLinkedEntriesContent(
+        var entriesContent = await client.ExecuteWithErrorHandling(async () => await GetLinkedEntriesContent(
             entryIdentifier.ContentId,
             selectedLocale,
             client,
@@ -280,17 +292,17 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             input.IgnoredContentTypeIds?.ToList() ?? new List<string>(),
             input.ExcludeTags?.ToList(),
             entryIdentifier.ContentId,
-            input.MaxDepth);
+            input.MaxDepth));
 
         var htmlConverter = new EntryToHtmlConverter(InvocationContext, entryIdentifier.Environment);
 
-        var originalEntry = await GetEntry(new() { EntryId = entryIdentifier.ContentId, Environment = entryIdentifier.Environment },
-            new LocaleOptionalIdentifier { Locale = selectedLocale });
+        var originalEntry = await client.ExecuteWithErrorHandling(async () => await GetEntry(new() { EntryId = entryIdentifier.ContentId, Environment = entryIdentifier.Environment },
+            new LocaleOptionalIdentifier { Locale = selectedLocale }));
 
-        var updatedByUser = await client.GetUser(originalEntry.UpdatedBy);
+        var updatedByUser = await client.ExecuteWithErrorHandling(async () => await client.GetUser(originalEntry.UpdatedBy));
 
         var resultHtml = htmlConverter.ToHtml(entriesContent, selectedLocale, spaceId, originalEntry.Title, client.GetEntryEditorUrl(originalEntry.ContentId), updatedByUser);
-        
+
         var fileNameFirstPart = string.IsNullOrEmpty(originalEntry.Title) ? entryIdentifier.ContentId : originalEntry.Title;
         var file = await fileManagementClient.UploadAsync(new MemoryStream(Encoding.UTF8.GetBytes(resultHtml)),
             MediaTypeNames.Text.Html, $"{fileNameFirstPart}_{selectedLocale}.html");
@@ -306,10 +318,15 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     public async Task<DownloadContentOutput> SetEntryLocalizableFieldsFromHtmlFile(
         [ActionParameter] UploadEntryRequest input)
     {
+        if (!input.Content.Name.EndsWith(".html") && !input.Content.Name.EndsWith(".xliff") && !input.Content.Name.EndsWith(".xlf"))
+        {
+            throw new PluginMisconfigurationException("Only .html, .xliff and .xlf files are supported. Please specify a different file");
+        }
+
         var client = new ContentfulClient(Creds, input.Environment);
         var output = new DownloadContentOutput();
 
-        var locales = await client.ExecuteWithErrorHandling(async () =>await client.GetLocalesCollection());
+        var locales = await client.ExecuteWithErrorHandling(async () => await client.GetLocalesCollection());
         if (locales.All(x => x.Code != input.Locale))
         {
             var allLocales = string.Join(", ", locales.Select(x => x.Code));
@@ -347,10 +364,10 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                 {
                     continue;
                 }
-                
+
                 var partialObject = PartialObjectBuilder.Build(entry, input.Locale);
                 await client.ExecuteWithErrorHandling(async () => await client.UpdateEntryForLocale(
-                    entry: partialObject,             
+                    entry: partialObject,
                     id: entryToUpdate.EntryId,
                     locale: input.Locale
                 ));
@@ -367,9 +384,9 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                     continue;
                 }
 
-                if (ex.Message.Contains("Version mismatch error") 
+                if (ex.Message.Contains("Version mismatch error")
                     || ex.Message.Contains("The resource could not be found")
-                    || ex.Message.Contains("Internal server") 
+                    || ex.Message.Contains("Internal server")
                     || ex.Message.Contains("Validation error"))
                 {
                     throw new PluginApplicationException($"Converting entry to JSON failed. " +
@@ -381,6 +398,8 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                     $"Converting entry to JSON failed. Entry ID: {entry.SystemProperties.Id};  Exception: {ex}; Locale: {input.Locale}; Entry: {JsonConvert.SerializeObject(entry)}; HTML: {entryToUpdate.HtmlNode.OuterHtml};");
             }
         }
+
+        await UpdateImageAlts(content, input, client);
 
         if (transformation is not null)
         {
@@ -399,12 +418,192 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             transformation.TargetLanguage = input.Locale;
 
             output.Content = await fileManagementClient.UploadAsync(transformation.Serialize().ToStream(), MediaTypes.Xliff, transformation.XliffFileName);
-        } else
+        }
+        else
         {
             output.Content = input.Content;
         }
 
         return output;
+    }
+
+    [Action("Search referenced entries", Description = "Get referenced entries from specified reference fields of an entry.")]
+    public async Task<GetReferenceEntriesResponse> GetReferenceEntries([ActionParameter] GetReferenceEntriesRequest input)
+    {
+        if (string.IsNullOrWhiteSpace(input.EntryId))
+        {
+            return new GetReferenceEntriesResponse
+            {
+                ReferencedEntries = [],
+                ReferencedEntryIds = [],
+            };
+        }
+
+        var client = new ContentfulClient(Creds, input.Environment);
+        var entry = await client.ExecuteWithErrorHandling(async () => await client.GetEntry(input.EntryId));
+
+        var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
+        var contentType = await client.ExecuteWithErrorHandling(async () => await client.GetContentType(contentTypeId));
+
+        var entryFields = (JObject)entry.Fields;
+        var referencedEntryIds = new List<string>();
+
+        var referenceFields = contentType.Fields.Where(f => f.LinkType == "Entry" ||
+                                                           (f.Type == "Array" && f.Items?.LinkType == "Entry"));
+        if (input.FieldIds != null && input.FieldIds.Any())
+        {
+            referenceFields = referenceFields.Where(f => input.FieldIds.Contains(f.Id));
+        }
+
+        foreach (var field in referenceFields)
+        {
+            if (!entryFields.TryGetValue(field.Id, out var fieldValue))
+                continue;
+
+            if (field.LinkType == "Entry")
+            {
+                foreach (var localeValue in fieldValue.Children<JProperty>())
+                {
+                    var refId = localeValue.Value?["sys"]?["id"]?.ToString();
+                    if (!string.IsNullOrEmpty(refId))
+                    {
+                        referencedEntryIds.Add(refId);
+                    }
+                }
+            }
+            else if (field.Type == "Array" && field.Items?.LinkType == "Entry")
+            {
+                foreach (var localeValue in fieldValue.Children<JProperty>())
+                {
+                    if (localeValue.Value is JArray array)
+                    {
+                        foreach (var item in array)
+                        {
+                            var refId = item?["sys"]?["id"]?.ToString();
+                            if (!string.IsNullOrEmpty(refId))
+                            {
+                                referencedEntryIds.Add(refId);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        var referencedEntries = new List<EntryEntity>();
+        foreach (var entryId in referencedEntryIds.Distinct())
+        {
+            try
+            {
+                var referencedEntry = await client.ExecuteWithErrorHandling(async () => await client.GetEntry(entryId));
+                referencedEntries.Add(new EntryEntity(referencedEntry));
+            }
+            catch
+            {
+                continue;
+            }
+        }
+
+        return new GetReferenceEntriesResponse
+        {
+            ReferencedEntries = referencedEntries,
+            ReferencedEntryIds = referencedEntryIds.Distinct().ToList()
+        };
+    }
+
+    [Action("Search links to entry", Description = "Get entries that link to the specified entry.")]
+    public async Task<GetEntriesLinkingToEntryResponse> GetEntriesLinkingToEntry(
+        [ActionParameter] EntryIdentifier entry,
+        [ActionParameter] OptionalMultipleContentTypeIdentifier contentModels)
+    {
+        if (string.IsNullOrWhiteSpace(entry.EntryId))
+        {
+            return new GetEntriesLinkingToEntryResponse
+            {
+                Entries = [],
+                EntriesIds = [],
+                FirstEntryId = string.Empty,
+                TotalCount = 0,
+            };
+        }
+
+        var client = new ContentfulClient(Creds, entry.Environment);
+
+        var queryString = HttpUtility.ParseQueryString(string.Empty);
+        queryString.Add("links_to_entry", entry.EntryId);
+
+        IEnumerable<Entry<object>> entries =
+            await client.Paginate<Entry<object>>(
+                async (query) => await client.GetEntriesCollection<Entry<object>>(query), "?" + queryString);
+
+        var entriesResponse = entries.Select(e => new EntryEntity(e)).ToList();
+
+        if (contentModels.ContentModels?.Any() == true)
+        {
+            var models = contentModels.ContentModels.ToHashSet();
+            entriesResponse = entriesResponse
+                .Where(e => models.Contains(e.ContentTypeId))
+                .ToList();
+        }
+
+        return new GetEntriesLinkingToEntryResponse
+        {
+            Entries = entriesResponse,
+            EntriesIds = entriesResponse.Select(e => e.ContentId),
+            FirstEntryId = entriesResponse.FirstOrDefault()?.ContentId ?? string.Empty,
+            TotalCount = entriesResponse.Count,
+        };
+    }
+
+    [Action("Duplicate entry", Description = "Create a clone of an existing entry with the same or different content type and field data. Supports recursive cloning of referenced entries and assets.")]
+    public async Task<DuplicateEntryResponse> DuplicateEntry(
+        [ActionParameter] DuplicateEntryRequest request)
+    {
+        ContentfulClientExtensions.ThrowIfNullOrEmpty(request.EntryId, nameof(request.EntryId));
+
+        if (request.DuplicateRecursively == true)
+        {
+            request.DuplicateFromFieldIds ??= [];
+            request.EnableAssetCloning ??= false;
+
+            if (!request.DuplicateFromFieldIds.Any())
+                throw new PluginMisconfigurationException("Reference fields must be specified together with 'Duplicate referenced content' input.");
+        }
+        else
+        {
+            if (request.DuplicateFromFieldIds is not null)
+                throw new PluginMisconfigurationException("Duplication of references can only be enabled together with 'Duplicate referenced content' input.");
+
+            if (request.EnableAssetCloning is not null)
+                throw new PluginMisconfigurationException("Asset duplication can only be enabled together with 'Duplicate referenced content' input.");
+        }
+
+        var client = new ContentfulClient(Creds, request.Environment);
+
+        if (request.DuplicateRecursively == true)
+        {
+            var cloner = new EntryCloner(client);
+            return await cloner.CloneRecursively(request);
+        }
+
+        var originalEntry = await client.GetEntryWithErrorHandling(request.EntryId)
+            ?? throw new PluginApplicationException("Couldn't fetch an entry which has to be cloned.");
+
+        var originalFields = originalEntry.Fields as JObject ?? [];
+
+        var clone = new Entry<dynamic> { Fields = originalFields.DeepClone() };
+        var cloneContentTypeId = request.NewRootContenTypeId is not null
+            ? request.NewRootContenTypeId
+            : originalEntry.SystemProperties.ContentType.SystemProperties.Id;
+
+        var createdClone = await client.ExecuteWithErrorHandling(async () =>
+            await client.CreateEntry(clone, cloneContentTypeId));
+
+        return new()
+        {
+            RootEntry = new EntryEntity(createdClone),
+            TotalItemsCloned = 1,
+        };
     }
 
     #region Utils
@@ -422,7 +621,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             return resultList;
 
         var entryContent = await client.ExecuteWithErrorHandling(() =>
-            GetEntryContent(entryId, client, ignoredFieldIds, ignoredContentTypeIds, excludeTags, rootEntryId, 
+            GetEntryContent(entryId, client, ignoredFieldIds, ignoredContentTypeIds, excludeTags, rootEntryId,
                 ignoreReferenceLocalization));
 
         if (entryContent != null)
@@ -560,10 +759,10 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             {
                 var linkFieldIds = contentTypeFields
                     .Where(f => f.LinkType is "Entry")
-                    .Select(f => 
+                    .Select(f =>
                     {
                         var fieldToken = entryContent.EntryFields[f.Id];
-                        if (fieldToken == null) 
+                        if (fieldToken == null)
                             return null;
 
                         var localeToken = fieldToken[locale];
@@ -571,7 +770,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                             return null;
 
                         var sys = localeToken["sys"];
-                        if (sys == null) 
+                        if (sys == null)
                             return null;
 
                         return sys["id"]?.ToString();
@@ -661,21 +860,21 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             return null;
         }
 
-        if (excludeTags is not null && excludeTags.Any(excludedTag => 
+        if (excludeTags is not null && excludeTags.Any(excludedTag =>
                 entry.Metadata.Tags.Any(entryTag => entryTag.Sys.Id == excludedTag)))
         {
             if (rootEntryId == entryId)
             {
                 var excludedTags = string.Join(',', excludeTags);
-                throw new PluginMisconfigurationException($"The root entry ({rootEntryId}) has one or more tags that are included in the excluded tags you provided: {excludedTags}. " + 
+                throw new PluginMisconfigurationException($"The root entry ({rootEntryId}) has one or more tags that are included in the excluded tags you provided: {excludedTags}. " +
                                                           $"Most likely, you don't want to translate this entry. If you do, please modify either the excluded tags or the entry tags.");
             }
-            
+
             return null;
         }
 
         var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
-        var contentType = await client.ExecuteWithErrorHandling(async () =>await client.GetContentType(contentTypeId));
+        var contentType = await client.ExecuteWithErrorHandling(async () => await client.GetContentType(contentTypeId));
 
         if (ignoreLocalizationForLinks)
         {
@@ -689,7 +888,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         {
             return new(entryId, entry.Fields,
                 contentType.Fields.Where(x => x.Localized).Where(x => !ignoredFieldIds.Contains(x.Id)).ToArray(), user);
-        }        
+        }
 
         return new(entryId, entry.Fields, contentType.Fields.Where(x => !ignoredFieldIds.Contains(x.Id)).ToArray(), user);
     }
@@ -707,6 +906,91 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             ?.GetAttributeValue("content", null);
 
         return (entryId, fieldId, locale);
+    }
+
+    private static async Task UpdateImageAlts(string content, UploadEntryRequest input, ContentfulClient client)
+    {
+        var images = await EntryAssetHelper.GetImagesToUpdate(content, client);
+        if (!images.Any())
+        {
+            return;
+        }
+
+        foreach (var image in images)
+        {
+            var updated = EntryAssetHelper.UpdateImageTitle(image.Asset, image.AltText, input.Locale);
+            if (!updated)
+            {
+                continue;
+            }
+
+            try
+            {
+                await client.ExecuteWithErrorHandling(async () =>
+                {
+                    var asset = await client.GetAsset(image.Asset.SystemProperties.Id);
+                    await client.CreateOrUpdateAsset(image.Asset, version: asset.SystemProperties.Version);
+                });
+            }
+            catch (Exception e)
+            {
+                throw new PluginApplicationException(
+                    $"Failed to update asset '{image.Asset.SystemProperties.Id}' alt text. Exception: {e}");
+            }
+        }
+    }
+
+    private static void ApplyListEntriesRequestFilters(NameValueCollection queryString, ListEntriesRequest request)
+    {
+        if (request.ContentModelId != null)
+        {
+            queryString.Add("content_type", request.ContentModelId);
+        }
+
+        if (request.UpdatedFrom.HasValue)
+        {
+            queryString.Add("sys.updatedAt[gte]", request.UpdatedFrom.Value.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'"));
+        }
+
+        if (request.UpdatedTo.HasValue)
+        {
+            queryString.Add("sys.updatedAt[lte]", request.UpdatedTo.Value.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'"));
+        }
+
+        if (request.PublishedBefore.HasValue)
+        {
+            queryString.Add("sys.publishedAt[lt]", request.PublishedBefore.Value.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'"));
+        }
+
+        if (request.PublishedAfter.HasValue)
+        {
+            queryString.Add("sys.publishedAt[gt]", request.PublishedAfter.Value.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'"));
+        }
+
+        if (request.FirstPublishedBefore.HasValue)
+        {
+            queryString.Add("sys.firstPublishedAt[lt]", request.FirstPublishedBefore.Value.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'"));
+        }
+
+        if (request.FirstPublishedAfter.HasValue)
+        {
+            queryString.Add("sys.firstPublishedAt[gt]", request.FirstPublishedAfter.Value.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'"));
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.SearchTerm))
+        {
+            queryString.Add("query", request.SearchTerm);
+        }
+    }
+
+    private static void ValidateDates(DateTime? after, DateTime? before, string name)
+    {
+        if (after.HasValue && before.HasValue && after > before)
+        {
+            throw new PluginMisconfigurationException(
+                $"{name} after date cannot be later than {name} before date. Please specify a different value."
+            );
+        }
     }
 
     #endregion

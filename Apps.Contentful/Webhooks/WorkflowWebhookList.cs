@@ -1,6 +1,7 @@
 ﻿using Apps.Contentful.Api;
 using Apps.Contentful.Invocables;
 using Apps.Contentful.Models.Dtos;
+using Apps.Contentful.Models.Entities;
 using Apps.Contentful.Models.Identifiers;
 using Apps.Contentful.Models.Requests;
 using Apps.Contentful.Models.Responses;
@@ -59,7 +60,24 @@ public class WorkflowWebhookList(InvocationContext invocationContext) : Contentf
                 ReceivedWebhookRequestType = WebhookRequestType.Preflight
             };
         }
-        
+
+        var commentsRequest = new ContentfulRestRequest($"/workflows/{workflowDto.Sys.Id}/comments", Method.Get, Creds);
+        commentsRequest.AddQueryParameter("limit", "100");
+
+        WorkflowCommentsListDto? commentsList = null;
+        commentsList = await client.ExecuteWithErrorHandling<WorkflowCommentsListDto>(commentsRequest);
+
+        var mappedComments = commentsList.Items.Select(i => new WorkflowComment
+        {
+            CommentId = i.Sys.Id,
+            Body = i.Body,
+            CreatedAt = i.Sys.CreatedAt,
+            UpdatedAt = i.Sys.UpdatedAt,
+            CreatedById = i.Sys.CreatedBy?.Sys?.Id
+        }).ToList();
+
+        var latest = mappedComments.OrderByDescending(c => c.UpdatedAt ?? c.CreatedAt ?? DateTime.MinValue).FirstOrDefault();
+
         return new WebhookResponse<WorkflowDefinitionResponse>
         {
             Result = new()
@@ -71,7 +89,9 @@ public class WorkflowWebhookList(InvocationContext invocationContext) : Contentf
                 EntryId = workflowDto.Sys.Entity.Sys.Id,
                 CurrentStep = currentStep ?? new(),
                 PreviousStep = previousStep ?? null,
-                NextStep = nextStep ?? null
+                NextStep = nextStep ?? null,
+                Comment = latest?.Body,
+                Comments = mappedComments
             }
         };
     }

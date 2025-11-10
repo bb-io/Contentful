@@ -15,31 +15,15 @@ public class ConnectionDefinition : IConnectionDefinition
             AuthenticationType = ConnectionAuthenticationType.OAuth2,
             ConnectionProperties = new List<ConnectionProperty>
             {
-                new(CredNames.ClientId) { DisplayName = "Client ID" }
-            }
-        },
-        new()
-        {
-            Name = "Base URL",
-            AuthenticationType = ConnectionAuthenticationType.Undefined,
-            ConnectionProperties = new List<ConnectionProperty>
-            {
+                new(CredNames.ClientId) { DisplayName = "Client ID" },
                 new(CredNames.BaseUrl) 
                 { 
                     DisplayName = "Base URL", 
                     Description = "The base URL of the Contentful API. " +
-                    "Example: https://api.contentful.com or https://api.eu.contentful.com",
+                                  "Example: https://api.contentful.com or https://api.eu.contentful.com",
                     DataItems = [new ("https://api.contentful.com", "(Default) api.contentful.com"), 
-                                 new ("https://api.eu.contentful.com", "(Europe) api.eu.contentful.com")]
-                }
-            }
-        },
-        new()
-        {
-            Name = "Space ID",
-            AuthenticationType = ConnectionAuthenticationType.Undefined,
-            ConnectionProperties = new List<ConnectionProperty>
-            {
+                        new ("https://api.eu.contentful.com", "(Europe) api.eu.contentful.com")]
+                },
                 new(CredNames.SpaceId) { DisplayName = "Space ID" }
             }
         }
