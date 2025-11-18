@@ -30,6 +30,7 @@ public class ContentfulClient : ContentfulManagementClient
     {
         _retryPolicy = Policy
             .Handle<ContentfulRateLimitException>()
+            .Or<ContentfulException>(ex => ex.Message.Contains("rate limit", StringComparison.OrdinalIgnoreCase))
             .Or<ObjectDisposedException>()
             .Or<Exception>(ex => ex.Message.Contains("Version mismatch error"))
             .WaitAndRetryAsync(RetryCount, (retryAttempt) => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)), async (exception, timeSpan, retryCount, context) =>
@@ -37,6 +38,10 @@ public class ContentfulClient : ContentfulManagementClient
                 if (exception is ContentfulRateLimitException contentfulRateLimitException)
                 {
                     await Task.Delay(TimeSpan.FromSeconds(contentfulRateLimitException.SecondsUntilNextRequest + 5));
+                }
+                else if (exception is ContentfulException && exception.Message.Contains("rate limit", StringComparison.OrdinalIgnoreCase))
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(5));
                 }
                 else if (exception.Message.Contains("Version mismatch error"))
                 {
@@ -98,7 +103,7 @@ public class ContentfulClient : ContentfulManagementClient
     {
         try
         {
-            await func.Invoke();
+            await _retryPolicy.ExecuteAsync(func);
         }
         catch (ContentfulException e)
         {

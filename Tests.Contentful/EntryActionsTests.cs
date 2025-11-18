@@ -219,10 +219,10 @@ public class EntryActionsTests : TestBase
         var entryActions = new EntryActions(InvocationContext, FileManager);
         var entryIdentifier = new UploadEntryRequest()
         {
-            ContentId = "5746dLKTkEZjOQX21HX2KI",
+            ContentId = "1xPiWUPP4x1NUoR6KjGqZE",
             Environment = "master",
             Locale = "nl",
-            Content = new() { Name = "The Loire Valley_en-US.html (3).xlf" }
+            Content = new() { Name = "Product Acceleration_en-US-en_us-de-QC-C.html" }
         };
 
         // Act
@@ -241,13 +241,15 @@ public class EntryActionsTests : TestBase
         var entryIdentifier = new UploadEntryRequest()
         {
             Locale = "nl",
-            Content = new() { Name = "empty.mxliff" }
-        };
+            Content = new() { Name = "Product Acceleration_en-US-en_us-de-QC-C.html" }
+            };
 
         // Act & Assert
-        await ThrowsExceptionAsync<PluginMisconfigurationException>(
+
+        var response = await ThrowsExceptionAsync<PluginMisconfigurationException>(
             async () => await entryActions.SetEntryLocalizableFieldsFromHtmlFile(entryIdentifier)
         );
+        Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(response));
     }
 
     [TestMethod]
@@ -291,23 +293,16 @@ public class EntryActionsTests : TestBase
         var entryIdentifier = new DownloadContentInput
         {
             Locale = "en-US",
-            ContentId = "5746dLKTkEZjOQX21HX2KI",
-
+            //ContentId = "6AK7VuXb0nW6a7GyUmvwaG",
+            ContentId = "4vB0BLA5hIxpIKFAtXpSyw",
+            Environment= "master",
+           
         };
         var entry = new GetEntryAsHtmlRequest
         {
-            IgnoredFieldIds = new List<string>
-           {
-                "slug"
-           },
-            GetHyperlinkContent = true,
-            IgnoredContentTypeIds = new List<string>
-            {
-                "page"
-            },
-            GetEmbeddedBlockContent = true,
-            GetEmbeddedInlineContent = true,
-            GetNonLocalizationReferenceContent = true
+            GetReferenceContent = true,
+            GetNonLocalizationReferenceContent = true,
+            IgnoredContentTypeIds = ["websitePage"],
         };
 
         var response = await entryActions.GetEntryLocalizableFieldsAsHtmlFile(entryIdentifier, entry);
@@ -321,6 +316,51 @@ public class EntryActionsTests : TestBase
     public async Task DownloadEntry_Has_Blacklake_required_fields()
     {
         var lang = "en-US";
+        var contentId = "5746dLKTkEZjOQX21HX2KI";
+
+        var entryActions = new EntryActions(InvocationContext, FileManager);
+        var entryIdentifier = new DownloadContentInput
+        {
+            Locale = lang,
+            ContentId = contentId,
+
+        };
+        var entry = new GetEntryAsHtmlRequest
+        {
+            GetReferenceContent = true,
+            GetEmbeddedInlineContent = true,
+        };
+
+        var response = await entryActions.GetEntryLocalizableFieldsAsHtmlFile(entryIdentifier, entry);
+
+        var contentString = FileManager.ReadOutputAsString(response.Content);
+        var codedContent = (new HtmlContentCoder()).Deserialize(contentString, response.Content.Name);
+
+        foreach (var unit in codedContent.TextUnits.Where(x => x.Key is null))
+        {
+            Console.WriteLine(unit.GetCodedText());
+        }
+
+        Console.WriteLine(contentString);
+        Assert.AreEqual(lang, codedContent.Language);
+        Assert.AreEqual(contentId, codedContent.SystemReference.ContentId);
+        Assert.AreEqual($"https://app.contentful.com/spaces/12ktqqmw656e/entries/{contentId}", codedContent.SystemReference.AdminUrl);
+        Assert.AreEqual("Contentful", codedContent.SystemReference.SystemName);
+        Assert.AreEqual("https://www.contentful.com", codedContent.SystemReference.SystemRef);
+        Assert.IsNotNull(codedContent.SystemReference.ContentName);
+
+        Assert.IsNotNull(codedContent.Provenance.Review.Person);
+        Console.WriteLine(codedContent.Provenance.Review.Person);
+        Assert.AreEqual("Contentful", codedContent.Provenance.Review.Tool);
+        Assert.AreEqual("https://www.contentful.com", codedContent.Provenance.Review.ToolReference);
+
+        Assert.IsTrue(codedContent.TextUnits.All(x => x.Key is not null));
+    }
+
+    [TestMethod]
+    public async Task DownloadEntry_other_language_Has_Blacklake_required_fields()
+    {
+        var lang = "nl";
         var contentId = "5746dLKTkEZjOQX21HX2KI";
 
         var entryActions = new EntryActions(InvocationContext, FileManager);
