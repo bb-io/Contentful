@@ -219,10 +219,10 @@ public class EntryActionsTests : TestBase
         var entryActions = new EntryActions(InvocationContext, FileManager);
         var entryIdentifier = new UploadEntryRequest()
         {
-            ContentId = "5746dLKTkEZjOQX21HX2KI",
+            ContentId = "1xPiWUPP4x1NUoR6KjGqZE",
             Environment = "master",
             Locale = "nl",
-            Content = new() { Name = "The Loire Valley_en-US.html (3).xlf" }
+            Content = new() { Name = "Product Acceleration_en-US-en_us-de-QC-C.html" }
         };
 
         // Act
@@ -241,13 +241,15 @@ public class EntryActionsTests : TestBase
         var entryIdentifier = new UploadEntryRequest()
         {
             Locale = "nl",
-            Content = new() { Name = "empty.mxliff" }
-        };
+            Content = new() { Name = "Product Acceleration_en-US-en_us-de-QC-C.html" }
+            };
 
         // Act & Assert
-        await ThrowsExceptionAsync<PluginMisconfigurationException>(
+
+        var response = await ThrowsExceptionAsync<PluginMisconfigurationException>(
             async () => await entryActions.SetEntryLocalizableFieldsFromHtmlFile(entryIdentifier)
         );
+        Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(response));
     }
 
     [TestMethod]
@@ -291,23 +293,16 @@ public class EntryActionsTests : TestBase
         var entryIdentifier = new DownloadContentInput
         {
             Locale = "en-US",
-            ContentId = "5746dLKTkEZjOQX21HX2KI",
-
+            //ContentId = "6AK7VuXb0nW6a7GyUmvwaG",
+            ContentId = "4vB0BLA5hIxpIKFAtXpSyw",
+            Environment= "master",
+           
         };
         var entry = new GetEntryAsHtmlRequest
         {
-            IgnoredFieldIds = new List<string>
-           {
-                "slug"
-           },
-            GetHyperlinkContent = true,
-            IgnoredContentTypeIds = new List<string>
-            {
-                "page"
-            },
-            GetEmbeddedBlockContent = true,
-            GetEmbeddedInlineContent = true,
-            GetNonLocalizationReferenceContent = true
+            GetReferenceContent = true,
+            GetNonLocalizationReferenceContent = true,
+            IgnoredContentTypeIds = ["websitePage"],
         };
 
         var response = await entryActions.GetEntryLocalizableFieldsAsHtmlFile(entryIdentifier, entry);

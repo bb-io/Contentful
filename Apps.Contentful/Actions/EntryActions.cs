@@ -1,5 +1,6 @@
 ﻿using Apps.Contentful.Api;
 using Apps.Contentful.DataSourceHandlers;
+using Apps.Contentful.Dtos;
 using Apps.Contentful.Extensions;
 using Apps.Contentful.HtmlHelpers;
 using Apps.Contentful.Models;
@@ -15,6 +16,7 @@ using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Exceptions;
+using Blackbird.Applications.Sdk.Common.Files;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Utils.Extensions.Files;
 using Blackbird.Applications.Sdk.Utils.Extensions.Sdk;
@@ -278,7 +280,9 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             throw new PluginMisconfigurationException($"Locale {selectedLocale} not found. Available locales: {allLocales}");
         }
 
-        var entriesContent = await client.ExecuteWithErrorHandling(async () => await GetLinkedEntriesContent(
+        var errors = new List<ContentProcessingError>();
+
+        var entriesContent =await GetLinkedEntriesContent(
             entryIdentifier.ContentId,
             selectedLocale,
             client,
@@ -292,24 +296,78 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             input.IgnoredContentTypeIds?.ToList() ?? new List<string>(),
             input.ExcludeTags?.ToList(),
             entryIdentifier.ContentId,
-            input.MaxDepth));
+            input.MaxDepth, 0, errors);
 
         var htmlConverter = new EntryToHtmlConverter(InvocationContext, entryIdentifier.Environment);
 
-        var originalEntry = await client.ExecuteWithErrorHandling(async () => await GetEntry(new() { EntryId = entryIdentifier.ContentId, Environment = entryIdentifier.Environment },
-            new LocaleOptionalIdentifier { Locale = selectedLocale }));
+        FileReference file;
+        string fileNameFirstPart = entryIdentifier.ContentId;
 
-        var updatedByUser = await client.ExecuteWithErrorHandling(async () => await client.GetUser(originalEntry.UpdatedBy));
+        try
+        {
+            var originalEntry = await client.ExecuteWithErrorHandling(async () => await GetEntry(
+                new() { EntryId = entryIdentifier.ContentId, Environment = entryIdentifier.Environment },
+                new LocaleOptionalIdentifier { Locale = selectedLocale }));
 
-        var resultHtml = htmlConverter.ToHtml(entriesContent, selectedLocale, spaceId, originalEntry.Title, client.GetEntryEditorUrl(originalEntry.ContentId), updatedByUser);
+            var updatedByUser = await client.ExecuteWithErrorHandling(async () =>
+                await client.GetUser(originalEntry.UpdatedBy));
 
-        var fileNameFirstPart = string.IsNullOrEmpty(originalEntry.Title) ? entryIdentifier.ContentId : originalEntry.Title;
-        var file = await fileManagementClient.UploadAsync(new MemoryStream(Encoding.UTF8.GetBytes(resultHtml)),
-            MediaTypeNames.Text.Html, $"{fileNameFirstPart}_{selectedLocale}.html");
+            var resultHtml = htmlConverter.ToHtml(
+                entriesContent,
+                selectedLocale,
+                spaceId,
+                originalEntry.Title,
+                client.GetEntryEditorUrl(originalEntry.ContentId),
+                updatedByUser);
+
+            fileNameFirstPart = string.IsNullOrEmpty(originalEntry.Title)
+                ? entryIdentifier.ContentId
+                : originalEntry.Title;
+
+            file = await fileManagementClient.UploadAsync(
+                new MemoryStream(Encoding.UTF8.GetBytes(resultHtml)),
+                MediaTypeNames.Text.Html,
+                $"{fileNameFirstPart}_{selectedLocale}.html");
+        }
+        catch (PluginApplicationException ex)
+        {
+            errors.Add(new ContentProcessingError
+            {
+                EntryId = entryIdentifier.ContentId,
+                ParentEntryId = null,
+                ErrorMessage = ex.Message
+            });
+
+            var fallbackHtml =
+                $"<html><body><p>Failed to load root entry '{entryIdentifier.ContentId}': {System.Security.SecurityElement.Escape(ex.Message)}</p></body></html>";
+
+            file = await fileManagementClient.UploadAsync(
+                new MemoryStream(Encoding.UTF8.GetBytes(fallbackHtml)),
+                MediaTypeNames.Text.Html,
+                $"{entryIdentifier.ContentId}_{selectedLocale}.html");
+        }
+        catch (Exception ex)
+        {
+            errors.Add(new ContentProcessingError
+            {
+                EntryId = entryIdentifier.ContentId,
+                ParentEntryId = null,
+                ErrorMessage = ex.Message
+            });
+
+            var fallbackHtml =
+                $"<html><body><p>Failed to load root entry '{entryIdentifier.ContentId}': {System.Security.SecurityElement.Escape(ex.Message)}</p></body></html>";
+
+            file = await fileManagementClient.UploadAsync(
+                new MemoryStream(Encoding.UTF8.GetBytes(fallbackHtml)),
+                MediaTypeNames.Text.Html,
+                $"{entryIdentifier.ContentId}_{selectedLocale}.html");
+        }
 
         return new()
         {
-            Content = file
+            Content = file,
+            Errors = errors.Any() ? errors : null
         };
     }
 
@@ -325,6 +383,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
         var client = new ContentfulClient(Creds, input.Environment);
         var output = new DownloadContentOutput();
+        var errors = new List<ContentProcessingError>();
 
         var locales = await client.ExecuteWithErrorHandling(async () => await client.GetLocalesCollection());
         if (locales.All(x => x.Code != input.Locale))
@@ -351,12 +410,14 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
         foreach (var entryToUpdate in entriesToUpdate)
         {
-            var entry = await client.ExecuteWithErrorHandling(() => client.GetEntry(entryToUpdate.EntryId));
-            var contentType = await client.ExecuteWithErrorHandling(() =>
-                client.GetContentType(entry.SystemProperties.ContentType.SystemProperties.Id));
+            Entry<dynamic>? entry = null;
 
             try
             {
+                entry = await client.ExecuteWithErrorHandling(() => client.GetEntry(entryToUpdate.EntryId));
+                var contentType = await client.ExecuteWithErrorHandling(() =>
+                    client.GetContentType(entry.SystemProperties.ContentType.SystemProperties.Id));
+
                 var oldEntryFields = (entry.Fields as JToken)!.DeepClone();
                 EntryToJsonConverter.ToJson(entry, entryToUpdate.HtmlNode, input.Locale, contentType, input.DontUpdateReferenceFields ?? false);
 
@@ -374,32 +435,54 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             }
             catch (FieldConversionException ex)
             {
-                throw new PluginMisconfigurationException(
-                    $"Error updating entry '{entry.SystemProperties.Id}': {ex.Message}");
+                errors.Add(new ContentProcessingError
+                {
+                    EntryId = entryToUpdate.EntryId,
+                    ParentEntryId = mainEntryInfo?.EntryId,
+                    ErrorMessage = $"Field conversion error: {ex.Message}"
+                });
             }
             catch (Exception ex)
             {
-                if (ex.Message.Contains("archived"))
+                var message = ex.Message;
+
+                if (message.Contains("archived", StringComparison.OrdinalIgnoreCase))
                 {
+                    errors.Add(new ContentProcessingError
+                    {
+                        EntryId = entryToUpdate.EntryId,
+                        ParentEntryId = mainEntryInfo?.EntryId,
+                        ErrorMessage = "Entry is archived"
+                    });
                     continue;
                 }
 
                 if (ex.Message.Contains("Version mismatch error")
-                    || ex.Message.Contains("The resource could not be found")
-                    || ex.Message.Contains("Internal server")
-                    || ex.Message.Contains("Validation error"))
+                || ex.Message.Contains("The resource could not be found")
+                || ex.Message.Contains("Internal server")
+                || ex.Message.Contains("Validation error"))
                 {
-                    throw new PluginApplicationException($"Converting entry to JSON failed. " +
-                                                         $"Entry ID: {entry.SystemProperties.Id}; " +
-                                                         $"Error: {ex.Message}");
+                    errors.Add(new ContentProcessingError
+                    {
+                        EntryId = entryToUpdate.EntryId,
+                        ParentEntryId = mainEntryInfo?.EntryId,
+                        ErrorMessage = message
+                    });
+
+                    continue;
                 }
 
-                throw new(
-                    $"Converting entry to JSON failed. Entry ID: {entry.SystemProperties.Id};  Exception: {ex}; Locale: {input.Locale}; Entry: {JsonConvert.SerializeObject(entry)}; HTML: {entryToUpdate.HtmlNode.OuterHtml};");
+                errors.Add(new ContentProcessingError
+                {
+                    EntryId = entryToUpdate.EntryId,
+                    ParentEntryId = mainEntryInfo?.EntryId,
+                    ErrorMessage =
+                    $"Unexpected error while converting entry to JSON. Message: {message}; Locale: {input.Locale}"
+                });
             }
         }
 
-        await UpdateImageAlts(content, input, client);
+        await UpdateImageAlts(content, input, client, errors);
 
         if (transformation is not null)
         {
@@ -423,6 +506,8 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         {
             output.Content = input.Content;
         }
+
+        output.Errors = errors.Any() ? errors : null;
 
         return output;
     }
@@ -612,7 +697,8 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         ContentfulClient client,
         List<EntryContentDto> resultList, bool getReferenceContent, bool ignoreReferenceLocalization, bool hyperlinks,
         bool inline, bool blocks, IEnumerable<string> ignoredFieldIds, List<string> ignoredContentTypeIds,
-        List<string>? excludeTags, string rootEntryId, int? maxDepth = null, int currentDepth = 0)
+        List<string>? excludeTags, string rootEntryId, int? maxDepth = null, int currentDepth = 0,
+        List<ContentProcessingError>? errors = null, string? parentEntryId = null)
     {
         if (maxDepth.HasValue && currentDepth >= maxDepth.Value)
             return resultList;
@@ -620,9 +706,26 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         if (resultList.Any(x => x.Id == entryId))
             return resultList;
 
-        var entryContent = await client.ExecuteWithErrorHandling(() =>
-            GetEntryContent(entryId, client, ignoredFieldIds, ignoredContentTypeIds, excludeTags, rootEntryId,
-                ignoreReferenceLocalization));
+        EntryContentDto? entryContent;
+
+        try
+        {
+            entryContent = await GetEntryContent(entryId, client, ignoredFieldIds, ignoredContentTypeIds, excludeTags, rootEntryId,
+                    ignoreReferenceLocalization);
+        }
+        catch (Exception ex)
+        {
+
+
+            errors?.Add(new ContentProcessingError
+            {
+                EntryId = entryId,
+                ParentEntryId = parentEntryId,
+                ErrorMessage = ex.Message
+            });
+
+            return resultList;
+        }
 
         if (entryContent != null)
         {
@@ -633,9 +736,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             foreach (var linkedEntryId in linkedIds)
                 await GetLinkedEntriesContent(linkedEntryId, locale, client, resultList, getReferenceContent,
                     ignoreReferenceLocalization, hyperlinks, inline, blocks, ignoredFieldIds, ignoredContentTypeIds,
-                    excludeTags, rootEntryId, maxDepth, currentDepth + 1);
-
-            return resultList;
+                    excludeTags, rootEntryId, maxDepth, currentDepth + 1, errors, entryId);
         }
 
         return resultList;
@@ -908,21 +1009,34 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         return (entryId, fieldId, locale);
     }
 
-    private static async Task UpdateImageAlts(string content, UploadEntryRequest input, ContentfulClient client)
+    private static async Task UpdateImageAlts(string content, UploadEntryRequest input, ContentfulClient client, List<ContentProcessingError>? errors = null)
     {
-        var images = await EntryAssetHelper.GetImagesToUpdate(content, client);
-        if (!images.Any())
+        IEnumerable<ImageUpdateCandidate> images;
+
+        try
         {
+            images = await EntryAssetHelper.GetImagesToUpdate(content, client);
+        }
+        catch (Exception e)
+        {
+            errors?.Add(new ContentProcessingError
+            {
+                EntryId = input.ContentId ?? string.Empty,
+                ParentEntryId = null,
+                ErrorMessage = $"Failed to resolve images for alt text update: {e.Message}"
+            });
+
             return;
         }
+
+        if (!images.Any())
+            return;
 
         foreach (var image in images)
         {
             var updated = EntryAssetHelper.UpdateImageTitle(image.Asset, image.AltText, input.Locale);
             if (!updated)
-            {
                 continue;
-            }
 
             try
             {
@@ -934,8 +1048,12 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             }
             catch (Exception e)
             {
-                throw new PluginApplicationException(
-                    $"Failed to update asset '{image.Asset.SystemProperties.Id}' alt text. Exception: {e}");
+                errors?.Add(new ContentProcessingError
+                {
+                    EntryId = image.Asset.SystemProperties.Id,
+                    ParentEntryId = input.ContentId,
+                    ErrorMessage = $"Failed to update asset '{image.Asset.SystemProperties.Id}' alt text: {e.Message}"
+                });
             }
         }
     }
