@@ -376,13 +376,14 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     public async Task<DownloadContentOutput> SetEntryLocalizableFieldsFromHtmlFile(
         [ActionParameter] UploadEntryRequest input)
     {
-        if (!input.Content.Name.EndsWith(".html") && !input.Content.Name.EndsWith(".xliff") && !input.Content.Name.EndsWith(".xlf"))
+        if (!input.Content.Name.EndsWith(".html") &&
+         !input.Content.Name.EndsWith(".xliff") &&
+         !input.Content.Name.EndsWith(".xlf"))
         {
             throw new PluginMisconfigurationException("Only .html, .xliff and .xlf files are supported. Please specify a different file");
         }
 
         var client = new ContentfulClient(Creds, input.Environment);
-        var output = new DownloadContentOutput();
         var errors = new List<ContentProcessingError>();
 
         var locales = await client.ExecuteWithErrorHandling(async () => await client.GetLocalesCollection());
@@ -402,7 +403,8 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         {
             transformation = Transformation.Parse(content, input.Content.Name);
             content = transformation.Target().Serialize();
-            if (content == null) throw new PluginMisconfigurationException("XLIFF did not contain any files");
+            if (content == null)
+                throw new PluginMisconfigurationException("XLIFF did not contain any files");
         }
 
         var mainEntryInfo = EntryToJsonConverter.GetMainEntryInfo(content);
@@ -410,21 +412,20 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
         foreach (var entryToUpdate in entriesToUpdate)
         {
-            Entry<dynamic>? entry = null;
-
             try
             {
-                entry = await client.ExecuteWithErrorHandling(() => client.GetEntry(entryToUpdate.EntryId));
+                var entry = await client.ExecuteWithErrorHandling(() =>
+                    client.GetEntry(entryToUpdate.EntryId));
+
                 var contentType = await client.ExecuteWithErrorHandling(() =>
                     client.GetContentType(entry.SystemProperties.ContentType.SystemProperties.Id));
 
                 var oldEntryFields = (entry.Fields as JToken)!.DeepClone();
-                EntryToJsonConverter.ToJson(entry, entryToUpdate.HtmlNode, input.Locale, contentType, input.DontUpdateReferenceFields ?? false);
+                EntryToJsonConverter.ToJson(entry, entryToUpdate.HtmlNode, input.Locale, contentType,
+                    input.DontUpdateReferenceFields ?? false);
 
                 if (JToken.DeepEquals(oldEntryFields.Escape(), (entry.Fields as JObject)!.Escape()))
-                {
                     continue;
-                }
 
                 var partialObject = PartialObjectBuilder.Build(entry, input.Locale);
                 await client.ExecuteWithErrorHandling(async () => await client.UpdateEntryForLocale(
@@ -457,10 +458,10 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                     continue;
                 }
 
-                if (ex.Message.Contains("Version mismatch error")
-                || ex.Message.Contains("The resource could not be found")
-                || ex.Message.Contains("Internal server")
-                || ex.Message.Contains("Validation error"))
+                if (message.Contains("Version mismatch error", StringComparison.OrdinalIgnoreCase) ||
+                    message.Contains("The resource could not be found", StringComparison.OrdinalIgnoreCase) ||
+                    message.Contains("Internal server", StringComparison.OrdinalIgnoreCase) ||
+                    message.Contains("Validation error", StringComparison.OrdinalIgnoreCase))
                 {
                     errors.Add(new ContentProcessingError
                     {
@@ -468,7 +469,6 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                         ParentEntryId = mainEntryInfo?.EntryId,
                         ErrorMessage = message
                     });
-
                     continue;
                 }
 
@@ -477,39 +477,18 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                     EntryId = entryToUpdate.EntryId,
                     ParentEntryId = mainEntryInfo?.EntryId,
                     ErrorMessage =
-                    $"Unexpected error while converting entry to JSON. Message: {message}; Locale: {input.Locale}"
+                        $"Unexpected error while converting entry to JSON. Message: {message}; Locale: {input.Locale}"
                 });
             }
         }
 
         await UpdateImageAlts(content, input, client, errors);
 
-        if (transformation is not null)
+        return new DownloadContentOutput
         {
-            var originalEntry = await GetEntry(new()
-            {
-                EntryId = input.ContentId ?? mainEntryInfo?.EntryId,
-                Environment = input.Environment
-            }, new LocaleOptionalIdentifier { Locale = input.Locale });
-
-            var entryId = input.ContentId ?? mainEntryInfo?.EntryId;
-            transformation.TargetSystemReference.ContentId = originalEntry.ContentId;
-            transformation.TargetSystemReference.ContentName = originalEntry.Title;
-            transformation.TargetSystemReference.AdminUrl = client.GetEntryEditorUrl(originalEntry.ContentId);
-            transformation.TargetSystemReference.SystemName = "Contentful";
-            transformation.TargetSystemReference.SystemRef = "https://www.contentful.com/";
-            transformation.TargetLanguage = input.Locale;
-
-            output.Content = await fileManagementClient.UploadAsync(transformation.Serialize().ToStream(), MediaTypes.Xliff, transformation.XliffFileName);
-        }
-        else
-        {
-            output.Content = input.Content;
-        }
-
-        output.Errors = errors.Any() ? errors : null;
-
-        return output;
+            Content = input.Content,
+            Errors = errors.Any() ? errors : null
+        };
     }
 
     [Action("Search referenced entries", Description = "Get referenced entries from specified reference fields of an entry.")]
