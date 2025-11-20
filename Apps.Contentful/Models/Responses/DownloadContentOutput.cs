@@ -7,6 +7,9 @@ public class DownloadContentOutput : IDownloadContentOutput
 {
     public FileReference Content { get; set; }
 
+    [Display("Main entry ID")]
+    public string RootEntryId { get; set; } = string.Empty;
+
     [Display("Errors")]
     public IEnumerable<ContentProcessingError>? Errors { get; set; }
 }

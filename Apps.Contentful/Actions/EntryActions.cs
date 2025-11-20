@@ -367,6 +367,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         return new()
         {
             Content = file,
+            RootEntryId = entryIdentifier.ContentId,
             Errors = errors.Any() ? errors : null
         };
     }
@@ -485,7 +486,10 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
         await UpdateImageAlts(content, input, client, errors);
 
-        var output = new DownloadContentOutput();
+        var output = new DownloadContentOutput
+        {
+            RootEntryId = input.ContentId ?? mainEntryInfo?.EntryId ?? string.Empty
+        };
 
         if (transformation is not null)
         {
