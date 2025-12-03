@@ -104,22 +104,29 @@ public class TagActions(InvocationContext invocationContext) : ContentfulInvocab
         await ReplaceTags(input.EntryId, input.Environment, entry.SystemProperties.Version, tags);
     }
 
-    [Action("Remove tag from entry", Description = "Remove specific tag from an entry")]
-    public async Task RemoveEntryTag([ActionParameter] EntryTagIdentifier input)
+    [Action("Remove tags from entry", Description = "Remove specific tags from an entry")]
+    public async Task RemoveEntryTag([ActionParameter] EntryTagsIdentifier input)
     {
         var client = new ContentfulClient(Creds, input.Environment);
-        var entry = await client.ExecuteWithErrorHandling(async () => 
-                await client.GetEntry(input.EntryId));
-        
-        var existingTags = entry.Metadata.Tags
-            .Select(x => x.Sys.Id).ToArray();
-        if (!existingTags.Contains(input.TagId))
+
+        var entry = await client.ExecuteWithErrorHandling(async () =>
+            await client.GetEntry(input.EntryId));
+
+        var existingTagIds = entry.Metadata.Tags
+            .Select(x => x.Sys.Id)
+            .ToArray();
+
+        var removeIds = existingTagIds
+            .Where(id => input.TagIds.Contains(id))
+            .ToArray();
+
+        if (!removeIds.Any())
         {
             return;
         }
 
-        var tags = entry.Metadata.Tags
-            .Where(x => x.Sys.Id != input.TagId)
+        var tagsToKeep = entry.Metadata.Tags
+            .Where(x => !removeIds.Contains(x.Sys.Id))
             .Select(x => new PropertiesRequest
             {
                 Sys = new()
@@ -131,7 +138,7 @@ public class TagActions(InvocationContext invocationContext) : ContentfulInvocab
             })
             .ToArray();
 
-        await ReplaceTags(input.EntryId, input.Environment, entry.SystemProperties.Version, tags);
+        await ReplaceTags(input.EntryId, input.Environment, entry.SystemProperties.Version, tagsToKeep );
     }
 
     #endregion
