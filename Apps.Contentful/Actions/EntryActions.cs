@@ -35,6 +35,7 @@ using System.Collections.Specialized;
 using System.Net.Mime;
 using System.Text;
 using System.Web;
+using ContentType = Contentful.Core.Models.ContentType;
 
 namespace Apps.Contentful.Actions;
 
@@ -154,6 +155,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
         var client = new ContentfulClient(Creds, input.Environment);
         var entry = await client.ExecuteWithErrorHandling(async () => await client.GetEntry(input.EntryId));
+        
         var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
         var contentType =
             await client.ExecuteWithErrorHandling(async () => await client.GetContentType(contentTypeId));
@@ -547,62 +549,33 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         }
 
         var client = new ContentfulClient(Creds, input.Environment);
+
         var entry = await client.ExecuteWithErrorHandling(async () => await client.GetEntry(input.EntryId));
 
-        var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
-        var contentType = await client.ExecuteWithErrorHandling(async () => await client.GetContentType(contentTypeId));
+        var rootContentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
+        var rootContentType = await client.ExecuteWithErrorHandling(async () => await client.GetContentType(rootContentTypeId));
 
-        var entryFields = (JObject)entry.Fields;
-        var referencedEntryIds = new List<string>();
+        var directReferencedIds = ExtractReferencedIds(entry, rootContentType, input.FieldIds);
 
-        var referenceFields = contentType.Fields.Where(f => f.LinkType == "Entry" ||
-                                                           (f.Type == "Array" && f.Items?.LinkType == "Entry"));
-        if (input.FieldIds != null && input.FieldIds.Any())
+        List<string> allReferencedIds;
+        if (input.SearchRecursively.HasValue && input.SearchRecursively.Value)
         {
-            referenceFields = referenceFields.Where(f => input.FieldIds.Contains(f.Id));
+            allReferencedIds = await GetAllReferencedIdsRecursive(
+                client,
+                directReferencedIds,
+                new HashSet<string>() 
+            );
         }
-
-        foreach (var field in referenceFields)
+        else
         {
-            if (!entryFields.TryGetValue(field.Id, out var fieldValue))
-                continue;
-
-            if (field.LinkType == "Entry")
-            {
-                foreach (var localeValue in fieldValue.Children<JProperty>())
-                {
-                    var refId = localeValue.Value?["sys"]?["id"]?.ToString();
-                    if (!string.IsNullOrEmpty(refId))
-                    {
-                        referencedEntryIds.Add(refId);
-                    }
-                }
-            }
-            else if (field.Type == "Array" && field.Items?.LinkType == "Entry")
-            {
-                foreach (var localeValue in fieldValue.Children<JProperty>())
-                {
-                    if (localeValue.Value is JArray array)
-                    {
-                        foreach (var item in array)
-                        {
-                            var refId = item?["sys"]?["id"]?.ToString();
-                            if (!string.IsNullOrEmpty(refId))
-                            {
-                                referencedEntryIds.Add(refId);
-                            }
-                        }
-                    }
-                }
-            }
+            allReferencedIds = directReferencedIds.Distinct().ToList();
         }
-
         var referencedEntries = new List<EntryEntity>();
-        foreach (var entryId in referencedEntryIds.Distinct())
+        foreach (var id in allReferencedIds.Distinct())
         {
             try
             {
-                var referencedEntry = await client.ExecuteWithErrorHandling(async () => await client.GetEntry(entryId));
+                var referencedEntry = await client.ExecuteWithErrorHandling(async () => await client.GetEntry(id));
                 referencedEntries.Add(new EntryEntity(referencedEntry));
             }
             catch
@@ -610,11 +583,17 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                 continue;
             }
         }
+        if (input.ContentTypeIds != null && input.ContentTypeIds.Any())
+        {
+            referencedEntries = referencedEntries
+                .Where(e => input.ContentTypeIds.Contains(e.ContentTypeId))
+                .ToList();
+        }
 
         return new GetReferenceEntriesResponse
         {
             ReferencedEntries = referencedEntries,
-            ReferencedEntryIds = referencedEntryIds.Distinct().ToList()
+            ReferencedEntryIds = referencedEntries.Select(e => e.ContentId).ToList()
         };
     }
 
@@ -1080,6 +1059,43 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         }
     }
 
+    private async Task<List<string>> GetAllReferencedIdsRecursive(
+    ContentfulClient client,
+    IEnumerable<string> rootIds,
+    HashSet<string> visited)
+    {
+        var allIds = new List<string>();
+
+        foreach (var id in rootIds)
+        {
+            if (!visited.Add(id))
+                continue; 
+
+            allIds.Add(id);
+
+            Entry<object> entry;
+            try
+            {
+                entry = await client.ExecuteWithErrorHandling(async () => await client.GetEntry(id));
+            }
+            catch
+            {
+                continue;
+            }
+
+            var ctId = entry.SystemProperties.ContentType.SystemProperties.Id;
+            var contentType = await client.ExecuteWithErrorHandling(async () => await client.GetContentType(ctId));
+
+            var children = ExtractReferencedIds(entry, contentType);
+
+            var recursiveIds = await GetAllReferencedIdsRecursive(client, children, visited);
+            allIds.AddRange(recursiveIds);
+        }
+
+        return allIds;
+    }
+
+
     private static void ApplyListEntriesRequestFilters(NameValueCollection queryString, ListEntriesRequest request)
     {
         if (request.ContentModelId != null)
@@ -1123,6 +1139,55 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         }
     }
 
+    private IEnumerable<string> ExtractReferencedIds(
+    Entry<object> entry,
+    ContentType contentType,
+    IEnumerable<string>? allowedFieldIds = null)
+    {
+        var entryFields = (JObject)entry.Fields;
+        var referenced = new List<string>();
+
+        var fields = contentType.Fields
+            .Where(f => f.LinkType == "Entry" ||
+                        (f.Type == "Array" && f.Items?.LinkType == "Entry"));
+
+        if (allowedFieldIds != null && allowedFieldIds.Any())
+            fields = fields.Where(f => allowedFieldIds.Contains(f.Id));
+
+        foreach (var field in fields)
+        {
+            if (!entryFields.TryGetValue(field.Id, out var fieldValue))
+                continue;
+
+            if (field.LinkType == "Entry")
+            {
+                foreach (var localeValue in fieldValue.Children<JProperty>())
+                {
+                    var sysObj = localeValue.Value as JObject;
+                    var refId = sysObj?["sys"]?["id"]?.ToString();
+                    if (!string.IsNullOrEmpty(refId))
+                        referenced.Add(refId);
+                }
+            }
+            else if (field.Type == "Array" && field.Items?.LinkType == "Entry")
+            {
+                foreach (var localeValue in fieldValue.Children<JProperty>())
+                {
+                    if (localeValue.Value is JArray array)
+                    {
+                        foreach (var item in array)
+                        {
+                            var refId = item?["sys"]?["id"]?.ToString();
+                            if (!string.IsNullOrEmpty(refId))
+                                referenced.Add(refId);
+                        }
+                    }
+                }
+            }
+        }
+
+        return referenced;
+    }
     private static void ValidateDates(DateTime? after, DateTime? before, string name)
     {
         if (after.HasValue && before.HasValue && after > before)
