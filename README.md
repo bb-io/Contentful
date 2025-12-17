@@ -58,6 +58,7 @@ Follow [this guide](https://www.contentful.com/help/working-with-translations/) 
 - **Unpublish entry** note that publishing/unpublishing entries in contentful affects all locales.
 - **Download entry** returns all localizable fields of the specified entry as a Blackbird interoperable file.
 - **Upload entires** updates all localizable fields of specified entry.
+- **Publish content** publishes all locales of the entries and assets listed in a Blackbird interoperable file obtained from Download entry action.
 
 **Download entry** and **Upload entires** are intended to be used together in a typical translation flow: you can retrieve an entry's localizable fields as HTML file, put it into TMS, then retrieve a translated HTML file and put it back into Contentful's entry. **Upload entires** expects the same HTML structure as the structure of the file retrieved with **Download entry**.
 

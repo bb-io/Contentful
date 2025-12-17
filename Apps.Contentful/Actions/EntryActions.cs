@@ -692,6 +692,72 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         };
     }
 
+    [Action("Publish content", Description = "Publish all entries and assets of specified entry, and its child entries, from a translated file.")]
+    public async Task<PublishContentOutput> PublishContent(
+        [ActionParameter] PublishContentRequest input)
+    {
+        if (!input.Content.Name.EndsWith(".html") &&
+        !input.Content.Name.EndsWith(".xliff") &&
+        !input.Content.Name.EndsWith(".xlf"))
+        {
+            throw new PluginMisconfigurationException("Only .html, .xliff and .xlf files are supported. Please specify a different file");
+        }
+
+        var errors = new List<ContentProcessingError>();
+        var client = new ContentfulClient(Creds, input.Environment);
+
+        var file = await fileManagementClient.DownloadAsync(input.Content);
+        var content = Encoding.UTF8.GetString(await file.GetByteData());
+
+        var assetsReferenced = await EntryAssetHelper.GetImagesToUpdate(content, client);
+        var publishedAssetIds = new List<string>();
+        var assetActions = new AssetActions(invocationContext, fileManagementClient);
+        foreach (var asset in assetsReferenced)
+        {
+            try
+            {
+                await assetActions.PublishAsset(new() { AssetId = asset.Asset.SystemProperties.Id, Environment = input.Environment });
+                publishedAssetIds.Add(asset.Asset.SystemProperties.Id);
+            }
+            catch (Exception ex)
+            {
+                errors.Add(new()
+                {
+                    EntryId = asset.Asset.SystemProperties.Id,
+                    ErrorMessage = $"Failed to publish asset: {ex.Message}"
+                });
+            }
+        }
+
+        var entriesReferenced = EntryToJsonConverter.GetEntriesInfo(content);
+        var publishedEntryIds = new List<string>();
+        foreach (var entry in entriesReferenced)
+        {
+            try
+            {
+                await PublishEntry(new() { EntryId = entry.EntryId, Environment = input.Environment });
+                publishedEntryIds.Add(entry.EntryId);
+            }
+            catch (Exception ex)
+            {
+                errors.Add(new()
+                {
+                    EntryId = entry.EntryId,
+                    ErrorMessage = $"Failed to publish entry: {ex.Message}"
+                });
+            }
+        }
+
+        return new()
+        {
+            RootEntryId = EntryToJsonConverter.GetMainEntryInfo(content)?.EntryId ?? string.Empty,
+            PublishedEntryIds = publishedEntryIds,
+            PublishedAssetIds = publishedAssetIds,
+            TotalItemsPublished = publishedEntryIds.Count + publishedAssetIds.Count,
+            Errors = errors,
+        };
+    }
+
     #region Utils
 
     private async Task<List<EntryContentDto>> GetLinkedEntriesContent(string entryId, string locale,
