@@ -614,4 +614,28 @@ public class EntryActionsTests : TestBase
         AreEqual(7, response.TotalItemsCloned);
         Console.WriteLine(JsonConvert.SerializeObject(response, Formatting.Indented));
     }
+
+    [TestMethod]
+    public async Task PublishContent_works()
+    {
+        // Arrange
+        var entryActions = new EntryActions(InvocationContext, FileManager);
+        var request = new PublishContentRequest
+        {
+            Content = new()
+            {
+                Name = "Birds_en-US.html",
+                ContentType = "text/html"
+            }
+        };
+
+        // Act
+        var response = await entryActions.PublishContent(request);
+
+        // Assert
+        Console.WriteLine(JsonConvert.SerializeObject(response, Formatting.Indented));
+
+        IsNotNull(response);
+        IsNotNull(response.RootEntryId);
+    }
 }
