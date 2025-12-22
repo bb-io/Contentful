@@ -6,6 +6,7 @@ using Apps.Contentful.Models.Requests;
 using Apps.Contentful.Models.Responses;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
+using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Utils.Extensions.Http;
 using RestSharp;
@@ -137,6 +138,11 @@ public class WorkflowActions(InvocationContext invocationContext) : ContentfulIn
     public async Task<WorkflowResponse> UpdateWorkflowStepAsync(
         [ActionParameter] UpdateWorkflowStepRequest updateRequest)
     {
+        if (string.IsNullOrEmpty(updateRequest.WorkflowId))
+        {
+            throw new PluginMisconfigurationException("The Workflow ID is empty or null. Please check your input and try again");
+        }
+
         var client = new ContentfulRestClient(Creds, updateRequest.Environment);
 
         var workflowResponse = await GetWorkflowAsync(updateRequest);
