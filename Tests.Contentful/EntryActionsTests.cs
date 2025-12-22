@@ -294,15 +294,17 @@ public class EntryActionsTests : TestBase
         {
             Locale = "en-US",
             //ContentId = "6AK7VuXb0nW6a7GyUmvwaG",
-            ContentId = "4vB0BLA5hIxpIKFAtXpSyw",
-            Environment= "master",
+            ContentId = "2osSQJtC3aXddP1e6epiLo",
+            Environment= "develop",
+            
            
         };
         var entry = new GetEntryAsHtmlRequest
         {
             GetReferenceContent = true,
             GetNonLocalizationReferenceContent = true,
-            IgnoredContentTypeIds = ["websitePage"],
+            IgnoredContentTypeIds = ["board", "appCategory"],
+            IgnoredFieldIds = ["slug"],
         };
 
         var response = await entryActions.GetEntryLocalizableFieldsAsHtmlFile(entryIdentifier, entry);
