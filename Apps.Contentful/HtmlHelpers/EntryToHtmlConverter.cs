@@ -14,7 +14,7 @@ namespace Apps.Contentful.HtmlHelpers;
 
 public class EntryToHtmlConverter(InvocationContext invocationContext, string? environment)
 {
-    public string ToHtml(List<EntryContentDto> entriesContent, string locale, string spaceId, string entryTitle, string entryAdminUrl, User updatedBy)
+    public string ToHtml(List<EntryContentDto> entriesContent, string locale, string defaultLocale, string spaceId, string entryTitle, string entryAdminUrl, User updatedBy)
     {
         var entryId = entriesContent.Select(x => x.Id).FirstOrDefault() ?? string.Empty;
         var (doc, bodyNode) = PrepareEmptyHtmlDocument(entryId, locale, entryTitle, entryAdminUrl, updatedBy);
@@ -28,7 +28,7 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
 
                 bodyNode.AppendChild(entryNode);
                 x.ContentTypeFields.ToList()
-                    .ForEach(y => MapFieldToHtml(y, x.EntryFields, locale, spaceId, doc, entryNode, x.Id));
+                    .ForEach(y => MapFieldToHtml(y, x.EntryFields, locale, defaultLocale, spaceId, doc, entryNode, x.Id));
             }
             catch (Exception ex)
             {
@@ -41,12 +41,14 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
         return doc.DocumentNode.OuterHtml;
     }
 
-    private void MapFieldToHtml(Field field, JObject entryFields, string locale, string spaceId, HtmlDocument doc, HtmlNode bodyNode, string entryId)
+    private void MapFieldToHtml(Field field, JObject entryFields, string locale, string defaultLocale, string spaceId, HtmlDocument doc, HtmlNode bodyNode, string entryId)
     {
         if (!entryFields.TryGetValue(field.Id, out var entryField))
             return;
 
-        if (entryField[locale] is null || entryField[locale]!.Type == JTokenType.Null)
+        var effectiveLocale = field.Localized ? locale : defaultLocale;
+
+        if (entryField[effectiveLocale] is null || entryField[effectiveLocale]!.Type == JTokenType.Null)
             return;
 
         var node = field.Type switch

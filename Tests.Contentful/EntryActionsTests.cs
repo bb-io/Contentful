@@ -293,6 +293,7 @@ public class EntryActionsTests : TestBase
         var entryIdentifier = new DownloadContentInput
         {
             Locale = "en-US",
+            //Locale = "es",
             //ContentId = "6AK7VuXb0nW6a7GyUmvwaG",
             ContentId = "2osSQJtC3aXddP1e6epiLo",
             Environment= "develop",

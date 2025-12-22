@@ -282,11 +282,14 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             throw new PluginMisconfigurationException($"Locale {selectedLocale} not found. Available locales: {allLocales}");
         }
 
+        defaultLocale ??= selectedLocale;
+
         var errors = new List<ContentProcessingError>();
 
-        var entriesContent =await GetLinkedEntriesContent(
+        var entriesContent = await GetLinkedEntriesContent(
             entryIdentifier.ContentId,
             selectedLocale,
+            defaultLocale,
             client,
             new(),
             input.GetReferenceContent ?? false,
@@ -317,6 +320,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             var resultHtml = htmlConverter.ToHtml(
                 entriesContent,
                 selectedLocale,
+                defaultLocale,
                 spaceId,
                 originalEntry.Title,
                 client.GetEntryEditorUrl(originalEntry.ContentId),
@@ -769,7 +773,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
     #region Utils
 
-    private async Task<List<EntryContentDto>> GetLinkedEntriesContent(string entryId, string locale,
+    private async Task<List<EntryContentDto>> GetLinkedEntriesContent(string entryId, string locale, string defaultLocale,
         ContentfulClient client,
         List<EntryContentDto> resultList, bool getReferenceContent, bool ignoreReferenceLocalization, bool hyperlinks,
         bool inline, bool blocks, IEnumerable<string> ignoredFieldIds, List<string> ignoredContentTypeIds,
@@ -805,12 +809,12 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
         if (entryContent != null)
         {
-            var linkedIds = GetLinkedEntryIds(entryContent, locale, getReferenceContent, hyperlinks, inline, blocks).Distinct()
+            var linkedIds = GetLinkedEntryIds(entryContent, locale, defaultLocale, getReferenceContent, hyperlinks, inline, blocks).Distinct()
                 .ToList();
 
             resultList.Add(entryContent);
             foreach (var linkedEntryId in linkedIds)
-                await GetLinkedEntriesContent(linkedEntryId, locale, client, resultList, getReferenceContent,
+                await GetLinkedEntriesContent(linkedEntryId, locale, defaultLocale, client, resultList, getReferenceContent,
                     ignoreReferenceLocalization, hyperlinks, inline, blocks, ignoredFieldIds, ignoredContentTypeIds,
                     excludeTags, rootEntryId, maxDepth, currentDepth + 1, errors, entryId);
         }
@@ -924,7 +928,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         return new LinkedIdsEntity(entryIds.Distinct().ToList(), assetIds.Distinct().ToList());
     }
 
-    private IEnumerable<string> GetLinkedEntryIds(EntryContentDto entryContent, string locale, bool getReferenceContent,
+    private IEnumerable<string> GetLinkedEntryIds(EntryContentDto entryContent, string locale, string defaultLocale, bool getReferenceContent,
         bool hyperlinks, bool inline, bool blocks)
     {
         try
@@ -934,32 +938,40 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
             if (getReferenceContent)
             {
+                string ResolveLocale(Field f) => f.Localized ? locale : defaultLocale;
+
                 var linkFieldIds = contentTypeFields
-                    .Where(f => f.LinkType is "Entry")
-                    .Select(f =>
-                    {
-                        var fieldToken = entryContent.EntryFields[f.Id];
-                        if (fieldToken == null)
-                            return null;
+                .Where(f => f.LinkType is "Entry")
+                .Select(f =>
+                {
+                    if (!entryContent.EntryFields.TryGetValue(f.Id, out var fieldToken) || fieldToken == null)
+                        return null;
 
-                        var localeToken = fieldToken[locale];
-                        if (localeToken == null || localeToken.Type != JTokenType.Object)
-                            return null;
+                    var effLocale = ResolveLocale(f);
+                    var localeToken = fieldToken[effLocale];
 
-                        var sys = localeToken["sys"];
-                        if (sys == null)
-                            return null;
+                    if (localeToken == null || localeToken.Type != JTokenType.Object)
+                        return null;
 
-                        return sys["id"]?.ToString();
-                    })
-                    .Where(x => !string.IsNullOrEmpty(x))
-                    .ToList();
+                    var sys = localeToken["sys"];
+                    return sys?["id"]?.ToString();
+                })
+                .Where(x => !string.IsNullOrEmpty(x))
+                .ToList();
 
                 var linkArrayFieldIds = contentTypeFields
-                    .Where(x => x.Items?.LinkType == "Entry")
-                    .SelectMany(x =>
-                        entryContent.EntryFields[x.Id]?[locale]?.Select(x => x["sys"]?["id"]?.ToString()!) ??
-                        Enumerable.Empty<string>())
+                    .Where(f => f.Type == "Array" && f.Items?.LinkType == "Entry")
+                    .SelectMany(f =>
+                    {
+                        if (!entryContent.EntryFields.TryGetValue(f.Id, out var fieldToken) || fieldToken == null)
+                            return Enumerable.Empty<string>();
+
+                        var effLocale = ResolveLocale(f);
+                        var arr = fieldToken[effLocale] as JArray;
+
+                        return arr?.Select(x => x["sys"]?["id"]?.ToString()!)
+                               ?? Enumerable.Empty<string>();
+                    })
                     .Where(x => !string.IsNullOrEmpty(x))
                     .ToList();
 
@@ -969,13 +981,14 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             if (hyperlinks)
             {
                 var richTextFieldEntryHyperlinkIds = contentTypeFields
-                    .Where(x => x.Type is "RichText")
-                    .SelectMany(x => (entryContent.EntryFields[x.Id]?[locale] as JObject)?.Descendants().Where(y =>
-                                         y is JProperty { Name: "nodeType" } jProperty &&
-                                         jProperty.Value.ToString() == "entry-hyperlink") ??
-                                     Enumerable.Empty<JToken>()).Where(x =>
-                        x.Parent?["data"]?["target"]?["sys"]?["linkType"]?.Value<string>() == "Entry")
-                    .Select(x => x.Parent?["data"]?["target"]?["sys"]?["id"]?.Value<string>()).ToList();
+                .Where(x => x.Type is "RichText")
+                .SelectMany(x => (entryContent.EntryFields[x.Id]?[locale] as JObject)?.Descendants().Where(y =>
+                                     y is JProperty { Name: "nodeType" } jProperty &&
+                                     jProperty.Value.ToString() == "entry-hyperlink") ??
+                                 Enumerable.Empty<JToken>())
+                .Where(x => x.Parent?["data"]?["target"]?["sys"]?["linkType"]?.Value<string>() == "Entry")
+                .Select(x => x.Parent?["data"]?["target"]?["sys"]?["id"]?.Value<string>())
+                .ToList();
 
                 result = result.Concat(richTextFieldEntryHyperlinkIds).ToList();
             }
