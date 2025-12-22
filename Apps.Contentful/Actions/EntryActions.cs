@@ -709,6 +709,15 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         var file = await fileManagementClient.DownloadAsync(input.Content);
         var content = Encoding.UTF8.GetString(await file.GetByteData());
 
+        Transformation? transformation = null;
+        if (Xliff2Serializer.IsXliff2(content) || Xliff1Serializer.IsXliff1(content))
+        {
+            transformation = Transformation.Parse(content, input.Content.Name);
+            content = transformation.Target().Serialize();
+            if (content == null)
+                throw new PluginMisconfigurationException("XLIFF did not contain any files");
+        }
+
         var assetsReferenced = await EntryAssetHelper.GetImagesToUpdate(content, client);
         var publishedAssetIds = new List<string>();
         var assetActions = new AssetActions(invocationContext, fileManagementClient);
