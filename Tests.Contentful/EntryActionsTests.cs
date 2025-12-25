@@ -598,6 +598,27 @@ public class EntryActionsTests : TestBase
     }
 
     [TestMethod]
+    public async Task DuplicateEntry_RecursivelyWithAsset_ShouldWork()
+    {
+        // Arrange
+        var entryActions = new EntryActions(InvocationContext, FileManager);
+        var request = new DuplicateEntryRequest
+        {
+            EntryId = "79uhaGYO2BWToFzKLEUF86",
+            DuplicateRecursively = true,
+            DuplicateFromFieldIds = ["sampleImageField"],
+            EnableAssetCloning = true,
+        };
+
+        // Act
+        var response = await entryActions.DuplicateEntry(request);
+
+        // Assert
+        AreEqual(2, response.TotalItemsCloned);
+        Console.WriteLine(JsonConvert.SerializeObject(response, Formatting.Indented));
+    }
+
+    [TestMethod]
     public async Task DuplicateEntry_RecursivelyFromFields_ShouldWork()
     {
         // Arrange
