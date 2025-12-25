@@ -6,6 +6,7 @@ using Contentful.Core.Models;
 using Contentful.Core.Models.Management;
 using Contentful.Core.Search;
 using Newtonsoft.Json.Linq;
+using File = Contentful.Core.Models.File;
 
 namespace Apps.Contentful.Utils;
 
@@ -96,9 +97,53 @@ class EntryCloner(ContentfulClient apiClient)
                     break;
 
                 case ManagementAsset asset:
-                    pair.Value.CloneId = request.EnableAssetCloning == true
-                        ? (await apiClient.CreateAsset(asset)).SystemProperties.Id
-                        : asset.SystemProperties.Id;
+                    if (request.EnableAssetCloning == false)
+                    {
+                        pair.Value.CloneId = asset.SystemProperties.Id;
+                        break;
+                    }
+
+                    // We can't just copy asset references, we need to reupload files to be able to publish those assets later
+                    var reuploadedFiles = new Dictionary<string, File>();
+                    foreach (var file in asset.Files)
+                    {
+                        var currentFileUrl = file.Value.Url.StartsWith("//")
+                            ? "https:" + file.Value.Url
+                            : file.Value.Url;
+                        using var httpClient = new HttpClient();
+                        var fileContent = await httpClient.GetByteArrayAsync(new Uri(currentFileUrl));
+                        var uploadReference = await apiClient.UploadFile(fileContent);
+                        reuploadedFiles.Add(file.Key, new()
+                        {
+                            FileName = file.Value.FileName,
+                            ContentType = file.Value.ContentType,
+                            UploadReference = new UploadReference()
+                            {
+                                // passinng the upload reference object doesn't work,
+                                // as it has wront type/link type values
+                                SystemProperties = new SystemProperties()
+                                {
+                                    Id = uploadReference.SystemProperties.Id,
+                                    Type = "Link",
+                                    LinkType = "Upload",
+                                }
+                            },
+                        });
+                    }
+
+                    var clonedAsset = await apiClient.CreateAsset(new()
+                    {
+                        Title = asset.Title,
+                        Description = asset.Description,
+                        Files = reuploadedFiles,
+                    });
+
+                    foreach (var locale in reuploadedFiles.Keys)
+                    {
+                        await apiClient.ProcessAsset(clonedAsset.SystemProperties.Id, clonedAsset.SystemProperties.Version ?? 1, locale);
+                    }
+
+                    pair.Value.CloneId = clonedAsset.SystemProperties.Id;
                     break;
             }
         }
