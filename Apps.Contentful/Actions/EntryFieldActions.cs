@@ -280,17 +280,49 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
 
     [Action("Set entry's boolean field", Description = "Set entry's boolean field by field ID.")]
     public async Task SetBoolFieldContent(
-        [ActionParameter] EntryLocaleIdentifier entryIdentifier,
-        [ActionParameter] FieldIdentifier fieldIdentifier,
-        [ActionParameter][Display("Boolean")] bool boolean)
+    [ActionParameter] EntryLocaleIdentifier entryIdentifier,
+    [ActionParameter] FieldIdentifier fieldIdentifier,
+    [ActionParameter][Display("Boolean")] bool boolean)
     {
         entryIdentifier.Validate();
 
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
-        var entry = await client.ExecuteWithErrorHandling(async () =>
-            await client.GetEntry(entryIdentifier.EntryId));
+        var entry = await client.ExecuteWithErrorHandling(async () => await client.GetEntry(entryIdentifier.EntryId));
+
+        if (entry == null)
+            throw new PluginMisconfigurationException($"Entry with ID '{entryIdentifier.EntryId}' was not found.");
+
+        if (entry.Fields == null)
+            throw new PluginApplicationException($"Entry '{entryIdentifier.EntryId}' returned no fields – unexpected Contentful response.");
+
         var fields = (JObject)entry.Fields;
-        fields[fieldIdentifier.FieldId][entryIdentifier.Locale] = boolean;
+        var contentTypeId = entry.SystemProperties?.ContentType?.SystemProperties?.Id;
+
+        if (string.IsNullOrEmpty(contentTypeId))
+            throw new PluginApplicationException(
+                $"Could not determine content type for entry '{entryIdentifier.EntryId}'.");
+
+        var contentType = await client.ExecuteWithErrorHandling(async () => await client.GetContentType(contentTypeId));
+        var field = contentType?.Fields?.FirstOrDefault(f => f.Id == fieldIdentifier.FieldId);
+
+        if (field == null)
+            throw new PluginMisconfigurationException(
+                $"Field with ID '{fieldIdentifier.FieldId}' does not exist in content type '{contentTypeId}'.");
+
+        if (!string.Equals(field.Type, "Boolean", StringComparison.OrdinalIgnoreCase))
+            throw new PluginMisconfigurationException(
+                $"Field '{fieldIdentifier.FieldId}' is not a boolean field (type is '{field.Type}').");
+
+        if (fields[fieldIdentifier.FieldId] == null)
+            fields[fieldIdentifier.FieldId] = new JObject();
+
+        var fieldObject = (JObject)fields[fieldIdentifier.FieldId];
+
+        if (string.IsNullOrWhiteSpace(entryIdentifier.Locale))
+            throw new PluginMisconfigurationException("Locale must be provided.");
+
+        fieldObject[entryIdentifier.Locale] = boolean;
+
         await client.ExecuteWithErrorHandling(async () =>
             await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version));
     }
