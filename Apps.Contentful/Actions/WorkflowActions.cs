@@ -97,6 +97,21 @@ public class WorkflowActions(InvocationContext invocationContext) : ContentfulIn
         return new WorkflowsResponse(workflowStepResponses);
     }
 
+    [Action("Find workflow for entry", Description = "Get workflow details for a specific entry")]
+    public async Task<WorkflowDefinitionResponse?> FindWorkflowForEntryAsync(
+    [ActionParameter] FindWorkflowForEntryRequest request)
+    {
+        var workflows = await SearchWorkflowsAsync(new SearchWorkflowsRequest
+        {
+            WorkflowDefinitionId = request.WorkflowDefinitionId,
+            Environment = request.Environment
+        });
+
+        return workflows.Workflows.FirstOrDefault(w =>
+            w.EntryId == request.EntryId &&
+            w.WorkflowDefinitionId == request.WorkflowDefinitionId);
+    }
+
     [Action("Get workflow", Description = "Returns details of a specific workflow based on the workflow ID")]
     public async Task<WorkflowResponse> GetWorkflowAsync([ActionParameter] WorkflowIdentifier workflowRequest)
     {
