@@ -146,6 +146,7 @@ Note, to use the **Entry tasks** actions, you need to install the `Workflows` ap
 ### Workflows
 
 - **Get workflow** returns details of a specific workflow based on the workflow ID.
+- **Find workflow for entry** Get workflow details for a specific entry.
 - **Get workflow definition** returns details of a specific workflow definition based on the workflow definition ID.
 - **Update workflow step** move a workflow to a specific step.
 - **Complete workflow** completes a workflow.
