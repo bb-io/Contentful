@@ -31,7 +31,28 @@ public class AssetActionsTests : TestBase
         
         Console.WriteLine($"Generated HTML file: {fileResponse.File.Name}");
     }
-    
+
+    [TestMethod]
+    public async Task GetAsset_ValidAsset_ShouldReturn()
+    {
+        // Arrange
+        var assetActions = new AssetActions(InvocationContext, FileManager);
+        var assetIdentifier = new AssetLocaleIdentifier
+        {
+            //Environment = "dev",
+            AssetId = "0657846a-dac4-4d58-a23b-c649cf5a05f6",
+            Locale = "en-US"
+        };
+
+        // Act
+        var fileResponse = await assetActions.GetAssetById(assetIdentifier);
+
+        // Assert
+        Assert.IsNotNull(fileResponse);
+
+        Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(fileResponse));
+    }
+
     [TestMethod]
     public async Task UpdateAssetFromHtml_ValidAsset_ShouldNotFail()
     {
