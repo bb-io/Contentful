@@ -31,21 +31,32 @@ public class AssetActions(InvocationContext invocationContext, IFileManagementCl
         [ActionParameter] AssetLocaleIdentifier assetIdentifier)
     {
         var client = new ContentfulClient(Creds, assetIdentifier.Environment);
+
         var asset = await client.ExecuteWithErrorHandling(async () =>
             await client.GetAsset(assetIdentifier.AssetId));
+
+        Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(asset));
+
+        if (asset?.Files == null)
+            throw new PluginApplicationException("Asset response is empty or does not contain files.");
+
         if (!asset.Files.TryGetValue(assetIdentifier.Locale, out var fileData))
-        {
-            throw new PluginMisconfigurationException("No asset with the provided locale found");
-        }
+            throw new PluginApplicationException($"No asset file found for locale '{assetIdentifier.Locale}'.");
+
+        static string? GetLocalizedOrNull(IDictionary<string, string>? dict, string locale)
+            => dict != null && dict.TryGetValue(locale, out var value) ? value : null;
+
+        var title = GetLocalizedOrNull(asset.Title, assetIdentifier.Locale);
+        var description = GetLocalizedOrNull(asset.Description, assetIdentifier.Locale);
 
         var fileContent = await DownloadFileByUrl(fileData);
 
-        return new()
+        return new GetAssetResponse
         {
-            Title = asset.Title?[assetIdentifier.Locale],
-            Description = asset.Description?[assetIdentifier.Locale],
+            Title = title,
+            Description = description,
             File = fileContent,
-            Tags = asset.Metadata.Tags.Select(x => x.Sys.Id),
+            Tags = asset.Metadata?.Tags?.Select(x => x.Sys.Id) ?? Enumerable.Empty<string>(),
             Locale = assetIdentifier.Locale
         };
     }
