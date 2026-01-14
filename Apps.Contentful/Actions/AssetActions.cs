@@ -35,8 +35,6 @@ public class AssetActions(InvocationContext invocationContext, IFileManagementCl
         var asset = await client.ExecuteWithErrorHandling(async () =>
             await client.GetAsset(assetIdentifier.AssetId));
 
-        Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(asset));
-
         if (asset?.Files == null)
             throw new PluginApplicationException("Asset response is empty or does not contain files.");
 
