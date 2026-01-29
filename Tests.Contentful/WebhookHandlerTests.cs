@@ -44,7 +44,7 @@ public class WebhookHandlerTests : TestBase
         
         var webhookInput = new WebhookInput
         {
-            Environment = null
+            Environment = "dev"
         };
 
         var handler = new EntryCreatedHandler(InvocationContext, webhookInput);

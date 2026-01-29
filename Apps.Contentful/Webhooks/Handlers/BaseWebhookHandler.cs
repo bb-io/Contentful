@@ -59,7 +59,7 @@ public class BaseWebhookHandler : BaseInvocable, IWebhookEventHandler
             filters = filters
         };
 
-        var client = new ContentfulRestClient(authenticationCredentialsProvider.ToArray(), _webhookInput.Environment);
+        var client = new ContentfulRestClient(authenticationCredentialsProvider.ToArray(), null);
         var request = new ContentfulRestRequest("/webhook_definitions", Method.Post, authenticationCredentialsProvider)
             .AddJsonBody(JsonConvert.SerializeObject(webhookPayload));
         await client.ExecuteWithErrorHandling(request);
@@ -68,7 +68,7 @@ public class BaseWebhookHandler : BaseInvocable, IWebhookEventHandler
     public async Task UnsubscribeAsync(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProvider,
         Dictionary<string, string> values)
     {
-        var client = new ContentfulRestClient(authenticationCredentialsProvider.ToArray(), _webhookInput.Environment);
+        var client = new ContentfulRestClient(authenticationCredentialsProvider.ToArray(), null);
         var getRequest = new ContentfulRestRequest("/webhook_definitions", Method.Get, authenticationCredentialsProvider);
         
         var response = await client.ExecuteWithErrorHandling(getRequest);
