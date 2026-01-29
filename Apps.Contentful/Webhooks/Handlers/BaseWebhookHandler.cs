@@ -1,4 +1,5 @@
 ﻿using Apps.Contentful.Api;
+using Apps.Contentful.Utils;
 using Apps.Contentful.Webhooks.Models.Inputs;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication;
@@ -33,40 +34,80 @@ public class BaseWebhookHandler : BaseInvocable, IWebhookEventHandler
     public async Task SubscribeAsync(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProvider,
         Dictionary<string, string> values)
     {
-        var filters = _webhookInput.Environment is null
-            ? null
-            : new List<IConstraint>
-            {
-                new EqualsConstraint
-                {
-                    Property = "sys.environment.sys.id",
-                    ValueToEqual = _webhookInput.Environment
-                }
-            };
-
-        var client = new ContentfulClient(authenticationCredentialsProvider, _webhookInput.Environment);
-        var name = InvocationContext.Tenant?.Name ??
-                   $"{_entityName?.ToUpper()}_{_actionName?.ToUpper()}_{Guid.NewGuid()}";
-        
-        await client.CreateWebhook(new Webhook
+        try
         {
-            Name = name,
-            Url = values["payloadUrl"],
-            Topics = _topics ?? [$"{_entityName}.{_actionName}"],
-            Filters = filters
-        });
+            await WebhookLogger.LogAsync(new
+            {
+                message = "Subscribing to webhook",
+                values
+            });
+        
+            var filters = _webhookInput.Environment is null
+                ? null
+                : new List<IConstraint>
+                {
+                    new EqualsConstraint
+                    {
+                        Property = "sys.environment.sys.id",
+                        ValueToEqual = _webhookInput.Environment
+                    }
+                };
+
+            var client = new ContentfulClient(authenticationCredentialsProvider, _webhookInput.Environment);
+            var name = InvocationContext.Tenant?.Name ??
+                       $"{_entityName?.ToUpper()}_{_actionName?.ToUpper()}_{Guid.NewGuid()}";
+        
+            await client.CreateWebhook(new Webhook
+            {
+                Name = name,
+                Url = values["payloadUrl"],
+                Topics = _topics ?? [$"{_entityName}.{_actionName}"],
+                Filters = filters
+            });
+        }
+        catch (Exception e)
+        {
+            await WebhookLogger.LogAsync(new
+            {
+                message = "Error subscribing to webhook",
+                error = e.Message,
+                stack_trace = e.StackTrace,
+                values
+            });
+            throw;
+        }
     }
 
     public async Task UnsubscribeAsync(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProvider,
         Dictionary<string, string> values)
     {
-        var client = new ContentfulClient(authenticationCredentialsProvider, _webhookInput.Environment);
-        var webhooks = await client.GetWebhooksCollection();
-        
-        var webhook = webhooks.FirstOrDefault(w => w.Url == values["payloadUrl"]);
-        if (webhook != null)
+        try
         {
-            await client.DeleteWebhook(webhook.SystemProperties.Id);
+            await WebhookLogger.LogAsync(new
+            {
+                message = "Unsubscribing from webhook",
+                values
+            });
+
+            var client = new ContentfulClient(authenticationCredentialsProvider, _webhookInput.Environment);
+            var webhooks = await client.GetWebhooksCollection();
+
+            var webhook = webhooks.FirstOrDefault(w => w.Url == values["payloadUrl"]);
+            if (webhook != null)
+            {
+                await client.DeleteWebhook(webhook.SystemProperties.Id);
+            }
+        }
+        catch (Exception e)
+        {
+            await WebhookLogger.LogAsync(new
+            {
+                message = "Error unsubscribing from webhook",
+                error = e.Message,
+                stack_trace = e.StackTrace,
+                values
+            });
+            throw;
         }
     }
 }
