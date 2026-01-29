@@ -40,10 +40,10 @@ public class BaseWebhookHandler : BaseInvocable, IWebhookEventHandler
             {
                 new
                 {
-                    @equals = new[]
+                    @equals = new object[]
                     {
                         new { doc = "sys.environment.sys.id" },
-                        new { doc = _webhookInput.Environment }
+                        _webhookInput.Environment
                     }
                 }
             };
