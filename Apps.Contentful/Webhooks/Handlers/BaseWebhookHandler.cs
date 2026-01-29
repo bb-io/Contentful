@@ -63,7 +63,9 @@ public class BaseWebhookHandler : BaseInvocable, IWebhookEventHandler
                 Name = name,
                 Url = values["payloadUrl"],
                 Topics = _topics ?? [$"{_entityName}.{_actionName}"],
-                Filters = filters
+                Filters = filters,
+                HttpBasicUsername = null,
+                HttpBasicPassword = null
             });
         }
         catch (Exception e)
