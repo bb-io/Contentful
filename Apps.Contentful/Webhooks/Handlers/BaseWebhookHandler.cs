@@ -1,11 +1,11 @@
 ﻿using Apps.Contentful.Api;
-using Apps.Contentful.Utils;
 using Apps.Contentful.Webhooks.Models.Inputs;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Common.Webhooks;
-using Contentful.Core.Models.Management;
+using Newtonsoft.Json;
+using RestSharp;
 
 namespace Apps.Contentful.Webhooks.Handlers;
 
@@ -34,84 +34,65 @@ public class BaseWebhookHandler : BaseInvocable, IWebhookEventHandler
     public async Task SubscribeAsync(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProvider,
         Dictionary<string, string> values)
     {
-        try
-        {
-            await WebhookLogger.LogAsync(new
+        var filters = _webhookInput.Environment is null
+            ? null
+            : new List<object>
             {
-                message = "Subscribing to webhook",
-                values,
-                authenticationCredentialsProvider
-            });
-        
-            var filters = _webhookInput.Environment is null
-                ? null
-                : new List<IConstraint>
+                new
                 {
-                    new EqualsConstraint
+                    @equals = new[]
                     {
-                        Property = "sys.environment.sys.id",
-                        ValueToEqual = _webhookInput.Environment
+                        new { doc = "sys.environment.sys.id" },
+                        new { doc = _webhookInput.Environment }
                     }
-                };
+                }
+            };
 
-            var client = new ContentfulClient(authenticationCredentialsProvider, _webhookInput.Environment);
-            var name = InvocationContext.Tenant?.Name ??
-                       $"{_entityName?.ToUpper()}_{_actionName?.ToUpper()}_{Guid.NewGuid()}";
-        
-            await client.CreateWebhook(new Webhook
-            {
-                Name = name,
-                Url = values["payloadUrl"],
-                Topics = _topics ?? [$"{_entityName}.{_actionName}"],
-                Filters = filters,
-                HttpBasicUsername = null,
-                HttpBasicPassword = null
-            });
-        }
-        catch (Exception e)
+        var name = InvocationContext.Tenant?.Name ??
+                   $"{_entityName?.ToUpper()}_{_actionName?.ToUpper()}_{Guid.NewGuid()}";
+            
+        var webhookPayload = new
         {
-            await WebhookLogger.LogAsync(new
-            {
-                message = "Error subscribing to webhook",
-                error = e.Message,
-                stack_trace = e.StackTrace,
-                values
-            });
-            throw;
-        }
+            name = name,
+            url = values["payloadUrl"],
+            topics = _topics ?? new List<string> { $"{_entityName}.{_actionName}" },
+            filters = filters
+        };
+
+        var client = new ContentfulRestClient(authenticationCredentialsProvider.ToArray(), _webhookInput.Environment);
+        var request = new ContentfulRestRequest("/webhook_definitions", Method.Post, authenticationCredentialsProvider)
+            .AddJsonBody(JsonConvert.SerializeObject(webhookPayload));
+        await client.ExecuteWithErrorHandling(request);
     }
 
     public async Task UnsubscribeAsync(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProvider,
         Dictionary<string, string> values)
     {
-        try
+        var client = new ContentfulRestClient(authenticationCredentialsProvider.ToArray(), _webhookInput.Environment);
+        var getRequest = new ContentfulRestRequest("/webhook_definitions", Method.Get, authenticationCredentialsProvider);
+        
+        var response = await client.ExecuteWithErrorHandling(getRequest);
+        if (string.IsNullOrEmpty(response.Content))
+            return;
+            
+        var webhooksData = JsonConvert.DeserializeObject<dynamic>(response.Content);
+        if (webhooksData?.items == null)
+            return;
+        
+        string? webhookId = null;
+        foreach (var webhook in webhooksData.items)
         {
-            await WebhookLogger.LogAsync(new
+            if (webhook?.url?.ToString() == values["payloadUrl"])
             {
-                message = "Unsubscribing from webhook",
-                values,
-                authenticationCredentialsProvider
-            });
-
-            var client = new ContentfulClient(authenticationCredentialsProvider, _webhookInput.Environment);
-            var webhooks = await client.GetWebhooksCollection();
-
-            var webhook = webhooks.FirstOrDefault(w => w.Url == values["payloadUrl"]);
-            if (webhook != null)
-            {
-                await client.DeleteWebhook(webhook.SystemProperties.Id);
+                webhookId = webhook?.sys?.id?.ToString();
+                break;
             }
         }
-        catch (Exception e)
+
+        if (!string.IsNullOrEmpty(webhookId))
         {
-            await WebhookLogger.LogAsync(new
-            {
-                message = "Error unsubscribing from webhook",
-                error = e.Message,
-                stack_trace = e.StackTrace,
-                values
-            });
-            throw;
+            var deleteRequest = new ContentfulRestRequest($"/webhook_definitions/{webhookId}", Method.Delete, authenticationCredentialsProvider);
+            await client.ExecuteWithErrorHandling(deleteRequest);
         }
     }
 }
