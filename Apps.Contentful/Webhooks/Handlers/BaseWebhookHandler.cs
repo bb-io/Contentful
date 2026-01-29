@@ -39,7 +39,8 @@ public class BaseWebhookHandler : BaseInvocable, IWebhookEventHandler
             await WebhookLogger.LogAsync(new
             {
                 message = "Subscribing to webhook",
-                values
+                values,
+                authenticationCredentialsProvider
             });
         
             var filters = _webhookInput.Environment is null
@@ -86,7 +87,8 @@ public class BaseWebhookHandler : BaseInvocable, IWebhookEventHandler
             await WebhookLogger.LogAsync(new
             {
                 message = "Unsubscribing from webhook",
-                values
+                values,
+                authenticationCredentialsProvider
             });
 
             var client = new ContentfulClient(authenticationCredentialsProvider, _webhookInput.Environment);
