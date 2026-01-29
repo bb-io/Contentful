@@ -4,7 +4,8 @@ using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Common.Webhooks;
-using Contentful.Core.Models.Management;
+using Newtonsoft.Json;
+using RestSharp;
 
 namespace Apps.Contentful.Webhooks.Handlers;
 
@@ -35,38 +36,63 @@ public class BaseWebhookHandler : BaseInvocable, IWebhookEventHandler
     {
         var filters = _webhookInput.Environment is null
             ? null
-            : new List<IConstraint>
+            : new List<object>
             {
-                new EqualsConstraint
+                new
                 {
-                    Property = "sys.environment.sys.id",
-                    ValueToEqual = _webhookInput.Environment
+                    @equals = new object[]
+                    {
+                        new { doc = "sys.environment.sys.id" },
+                        _webhookInput.Environment
+                    }
                 }
             };
 
-        var client = new ContentfulClient(authenticationCredentialsProvider, _webhookInput.Environment);
         var name = InvocationContext.Tenant?.Name ??
                    $"{_entityName?.ToUpper()}_{_actionName?.ToUpper()}_{Guid.NewGuid()}";
-        
-        await client.CreateWebhook(new Webhook
+            
+        var webhookPayload = new
         {
-            Name = name,
-            Url = values["payloadUrl"],
-            Topics = _topics ?? [$"{_entityName}.{_actionName}"],
-            Filters = filters
-        });
+            name = name,
+            url = values["payloadUrl"],
+            topics = _topics ?? new List<string> { $"{_entityName}.{_actionName}" },
+            filters = filters
+        };
+
+        var client = new ContentfulRestClient(authenticationCredentialsProvider.ToArray(), null);
+        var request = new ContentfulRestRequest("/webhook_definitions", Method.Post, authenticationCredentialsProvider)
+            .AddJsonBody(JsonConvert.SerializeObject(webhookPayload));
+        await client.ExecuteWithErrorHandling(request);
     }
 
     public async Task UnsubscribeAsync(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProvider,
         Dictionary<string, string> values)
     {
-        var client = new ContentfulClient(authenticationCredentialsProvider, _webhookInput.Environment);
-        var webhooks = await client.GetWebhooksCollection();
+        var client = new ContentfulRestClient(authenticationCredentialsProvider.ToArray(), null);
+        var getRequest = new ContentfulRestRequest("/webhook_definitions", Method.Get, authenticationCredentialsProvider);
         
-        var webhook = webhooks.FirstOrDefault(w => w.Url == values["payloadUrl"]);
-        if (webhook != null)
+        var response = await client.ExecuteWithErrorHandling(getRequest);
+        if (string.IsNullOrEmpty(response.Content))
+            return;
+            
+        var webhooksData = JsonConvert.DeserializeObject<dynamic>(response.Content);
+        if (webhooksData?.items == null)
+            return;
+        
+        string? webhookId = null;
+        foreach (var webhook in webhooksData.items)
         {
-            await client.DeleteWebhook(webhook.SystemProperties.Id);
+            if (webhook?.url?.ToString() == values["payloadUrl"])
+            {
+                webhookId = webhook?.sys?.id?.ToString();
+                break;
+            }
+        }
+
+        if (!string.IsNullOrEmpty(webhookId))
+        {
+            var deleteRequest = new ContentfulRestRequest($"/webhook_definitions/{webhookId}", Method.Delete, authenticationCredentialsProvider);
+            await client.ExecuteWithErrorHandling(deleteRequest);
         }
     }
 }

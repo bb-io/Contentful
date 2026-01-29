@@ -48,7 +48,7 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
     [BlueprintEventDefinition(BlueprintEvent.ContentCreatedOrUpdated)]
     [Webhook("On entry published", typeof(EntryPublishedHandler), Description = "On entry published")]
     public Task<WebhookResponse<EntryEntity>> EntryPublished(WebhookRequest webhookRequest,
-        [WebhookParameter] OptionalEntryIdentifier optionalEntryIdentifier,
+        [WebhookParameter(isSubscriptionDepends: true)] OptionalEntryIdentifier optionalEntryIdentifier,
         [WebhookParameter] OptionalTagListIdentifier tags,
         [WebhookParameter] OptionalMultipleContentTypeIdentifier types,
         [WebhookParameter] OptionalFilterUsersIdentifier users)
