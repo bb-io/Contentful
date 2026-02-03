@@ -335,23 +335,6 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                 MediaTypeNames.Text.Html,
                 $"{fileNameFirstPart}_{selectedLocale}.html");
         }
-        catch (PluginApplicationException ex)
-        {
-            errors.Add(new ContentProcessingError
-            {
-                EntryId = entryIdentifier.ContentId,
-                ParentEntryId = null,
-                ErrorMessage = ex.Message
-            });
-
-            var fallbackHtml =
-                $"<html><body><p>Failed to load root entry '{entryIdentifier.ContentId}': {System.Security.SecurityElement.Escape(ex.Message)}</p></body></html>";
-
-            file = await fileManagementClient.UploadAsync(
-                new MemoryStream(Encoding.UTF8.GetBytes(fallbackHtml)),
-                MediaTypeNames.Text.Html,
-                $"{entryIdentifier.ContentId}_{selectedLocale}.html");
-        }
         catch (Exception ex)
         {
             errors.Add(new ContentProcessingError
@@ -361,13 +344,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                 ErrorMessage = ex.Message
             });
 
-            var fallbackHtml =
-                $"<html><body><p>Failed to load root entry '{entryIdentifier.ContentId}': {System.Security.SecurityElement.Escape(ex.Message)}</p></body></html>";
-
-            file = await fileManagementClient.UploadAsync(
-                new MemoryStream(Encoding.UTF8.GetBytes(fallbackHtml)),
-                MediaTypeNames.Text.Html,
-                $"{entryIdentifier.ContentId}_{selectedLocale}.html");
+            throw new PluginApplicationException($"Failed to download root entry '{entryIdentifier.ContentId}'. {ex.Message}", ex);
         }
 
         return new()
@@ -795,8 +772,6 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         }
         catch (Exception ex)
         {
-
-
             errors?.Add(new ContentProcessingError
             {
                 EntryId = entryId,
