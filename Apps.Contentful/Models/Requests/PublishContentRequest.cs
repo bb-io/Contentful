@@ -10,6 +10,6 @@ public class PublishContentRequest : EnvironmentIdentifier
 {
     public FileReference Content { get; set; }
 
-    [Display("Locales to publish"), DataSource(typeof(EntryLocaleDataSourceHandler))]
+    [Display("Locales to publish"), DataSource(typeof(LocaleDataSourceHandler))]
     public IEnumerable<string>? Locales { get; set; }
 }

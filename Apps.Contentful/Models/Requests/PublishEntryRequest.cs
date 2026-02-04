@@ -6,6 +6,6 @@ namespace Apps.Contentful.Models.Requests;
 
 public class PublishEntryRequest
 {
-    [Display("Locales to publish"), DataSource(typeof(EntryLocaleDataSourceHandler))]
+    [Display("Locales to publish"), DataSource(typeof(LocaleDataSourceHandler))]
     public IEnumerable<string>? Locales { get; set; }
 }
