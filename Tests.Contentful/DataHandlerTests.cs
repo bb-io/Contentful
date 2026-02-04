@@ -1,14 +1,15 @@
-﻿using Apps.Contentful.DataSourceHandlers;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using Tests.Contentful.Base;
+using Apps.Contentful.Models.Identifiers;
+using Apps.Contentful.DataSourceHandlers;
 
 namespace Tests.Contentful;
 
 [TestClass]
-public class FieldDataHandlerTests : TestBase
+public class DataHandlerTests : TestBase
 {
     [TestMethod]
-    public async Task GetDataAsync_ValidRequest_ReturnsFields()
+    public async Task FieldDataHandler_ReturnsFields()
     {
         var dataHandler = new FieldDataHandler(InvocationContext, new()
         {
@@ -25,7 +26,7 @@ public class FieldDataHandlerTests : TestBase
     }
 
     [TestMethod]
-    public async Task GetDataAsync_FromModel_ReturnsFields()
+    public async Task FieldFromModelDataHandler_ReturnsFields()
     {
         var dataHandler = new FieldFromModelDataHandler(InvocationContext, new()
         {
@@ -37,6 +38,21 @@ public class FieldDataHandlerTests : TestBase
         
         Assert.IsNotNull(result);
         Assert.IsTrue(result.Any());
+        Console.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
+    }
+
+    [TestMethod]
+    public async Task LocaleDataSourceHandler_ReturnsLocales()
+    {
+        // Arrange
+        var entry = new EnvironmentIdentifier { Environment = "master" };
+        var handler = new LocaleDataSourceHandler(InvocationContext, entry);
+
+        // Act
+        var result = await handler.GetDataAsync(new(), default);
+
+        // Assert
+        Assert.IsNotNull(result);
         Console.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
     }
 }

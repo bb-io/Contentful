@@ -242,7 +242,7 @@ public class EntryActionsTests : TestBase
         {
             Locale = "nl",
             Content = new() { Name = "Product Acceleration_en-US-en_us-de-QC-C.html" }
-            };
+        };
 
         // Act & Assert
 
@@ -292,20 +292,15 @@ public class EntryActionsTests : TestBase
         var entryActions = new EntryActions(InvocationContext, FileManager);
         var entryIdentifier = new DownloadContentInput
         {
-            Locale = "en-US",
-            //Locale = "es",
-            //ContentId = "6AK7VuXb0nW6a7GyUmvwaG",
-            ContentId = "2osSQJtC3aXddP1e6epiLo",
-            Environment= "develop",
-            
-           
+            ContentId = "6Jc82Tr18MEydvDDI51RjL",
+            Environment = "master",
         };
         var entry = new GetEntryAsHtmlRequest
         {
             GetReferenceContent = true,
             GetNonLocalizationReferenceContent = true,
-            IgnoredContentTypeIds = ["board", "appCategory"],
-            IgnoredFieldIds = ["slug"],
+            //IgnoredContentTypeIds = ["board", "appCategory"],
+            //IgnoredFieldIds = ["slug"],
         };
 
         var response = await entryActions.GetEntryLocalizableFieldsAsHtmlFile(entryIdentifier, entry);
@@ -640,7 +635,7 @@ public class EntryActionsTests : TestBase
     }
 
     [TestMethod]
-    public async Task PublishContent_works()
+    public async Task PublishContent_IsSuccess()
     {
         // Arrange
         var entryActions = new EntryActions(InvocationContext, FileManager);
@@ -648,9 +643,10 @@ public class EntryActionsTests : TestBase
         {
             Content = new()
             {
-                Name = "Birds_en-US.html",
+                Name = "locale publishing1_en-US.html",
                 ContentType = "text/html"
-            }
+            },
+            Locales = ["nl"]
         };
 
         // Act
@@ -661,5 +657,29 @@ public class EntryActionsTests : TestBase
 
         IsNotNull(response);
         IsNotNull(response.RootEntryId);
+    }
+
+    [TestMethod]
+    public async Task PublishEntry_IsSuccess()
+    {
+        // Arrange
+        var actions = new EntryActions(InvocationContext, FileManager);
+        var entry = new EntryIdentifier { EntryId = "6Jc82Tr18MEydvDDI51RjL", Environment = "master" };
+        var input = new PublishEntryRequest { Locales = ["de"] };
+
+        // Act
+        await actions.PublishEntry(entry, input);
+    }
+
+    [TestMethod]
+    public async Task UnpublishEntry_IsSuccess()
+    {
+        // Arrange
+        var actions = new EntryActions(InvocationContext, FileManager);
+        var entry = new EntryIdentifier { EntryId = "6Jc82Tr18MEydvDDI51RjL", Environment = "master" };
+        var input = new UnpublishEntryRequest { Locales = ["de"] };
+
+        // Act
+        await actions.UnpublishEntry(entry, input);
     }
 }

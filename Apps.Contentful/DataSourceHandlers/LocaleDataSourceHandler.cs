@@ -6,23 +6,20 @@ using Blackbird.Applications.Sdk.Common.Invocation;
 
 namespace Apps.Contentful.DataSourceHandlers;
 
-public class LocaleDataSourceHandler : BaseInvocable, IAsyncDataSourceHandler
+public class LocaleDataSourceHandler(
+    InvocationContext invocationContext, 
+    [ActionParameter] EnvironmentIdentifier identifier) 
+    : BaseInvocable(invocationContext), IAsyncDataSourceItemHandler
 {
-    private string? Environment { get; }
-
-    public LocaleDataSourceHandler(InvocationContext invocationContext, [ActionParameter] LocaleIdentifier identifier) :
-        base(invocationContext)
+    public async Task<IEnumerable<DataSourceItem>> GetDataAsync(DataSourceContext context, CancellationToken cancellationToken)
     {
-        Environment = identifier.Environment;
-    }
+        var client = new ContentfulClient(InvocationContext.AuthenticationCredentialsProviders, identifier.Environment);
+        var locales = await client.GetLocalesCollection(cancellationToken: cancellationToken);
 
-    public async Task<Dictionary<string, string>> GetDataAsync(DataSourceContext context,
-        CancellationToken cancellationToken)
-    {
-        var client = new ContentfulClient(InvocationContext.AuthenticationCredentialsProviders, Environment);
-        var locales = (await client.GetLocalesCollection(cancellationToken: cancellationToken))
-            .Where(l => context.SearchString == null ||
-                        l.Code.Contains(context.SearchString, StringComparison.OrdinalIgnoreCase));
-        return locales.ToDictionary(l => l.Code, l => l.Name);
+        var filtered = locales.Where(l => 
+            context.SearchString == null || 
+            l.Code.Contains(context.SearchString, StringComparison.OrdinalIgnoreCase)
+        );
+        return locales.Select(x => new DataSourceItem(x.Code, x.Name)).ToList();
     }
 }
