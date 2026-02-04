@@ -10,7 +10,7 @@ public class LocaleDataSourceHandler : BaseInvocable, IAsyncDataSourceHandler
 {
     private string? Environment { get; }
 
-    public LocaleDataSourceHandler(InvocationContext invocationContext, [ActionParameter] LocaleIdentifier identifier) :
+    public LocaleDataSourceHandler(InvocationContext invocationContext, [ActionParameter] EnvironmentIdentifier identifier) :
         base(invocationContext)
     {
         Environment = identifier.Environment;

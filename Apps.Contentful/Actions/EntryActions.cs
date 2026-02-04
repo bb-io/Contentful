@@ -229,27 +229,49 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     }
 
     [Action("Publish entry", Description = "Publish specified entry.")]
-    public async Task PublishEntry([ActionParameter] EntryIdentifier entryIdentifier)
+    public async Task PublishEntry(
+        [ActionParameter] EntryIdentifier entryIdentifier,
+        [ActionParameter] PublishEntryRequest input)
     {
         ContentfulClientExtensions.ThrowIfNullOrEmpty(entryIdentifier.EntryId, nameof(entryIdentifier.EntryId));
 
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
-        var entry = await client.ExecuteWithErrorHandling(async () =>
-            await client.GetEntry(entryIdentifier.EntryId));
-        await client.ExecuteWithErrorHandling(async () =>
-            await client.PublishEntry(entryIdentifier.EntryId, version: (int)entry.SystemProperties.Version));
+        var entry = await client.ExecuteWithErrorHandling(async () => await client.GetEntry(entryIdentifier.EntryId));
+
+        string entryId = entryIdentifier.EntryId;
+        int entryVersion = (int)entry.SystemProperties.Version!;
+
+        if (input.Locales == null)
+            await client.ExecuteWithErrorHandling(async () => await client.PublishEntry(entryId, entryVersion));
+        else
+        {
+            await client.ExecuteWithErrorHandling(async () => 
+                await client.PublishEntryLocales(entryId, entryVersion, input.Locales.ToArray())
+            );
+        }
     }
 
     [Action("Unpublish entry", Description = "Unpublish specified entry.")]
-    public async Task UnpublishEntry([ActionParameter] EntryIdentifier entryIdentifier)
+    public async Task UnpublishEntry(
+        [ActionParameter] EntryIdentifier entryIdentifier,
+        [ActionParameter] UnpublishEntryRequest input)
     {
         ContentfulClientExtensions.ThrowIfNullOrEmpty(entryIdentifier.EntryId, nameof(entryIdentifier.EntryId));
 
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
-        var entry = await client.ExecuteWithErrorHandling(async () =>
-            await client.GetEntry(entryIdentifier.EntryId));
-        await client.ExecuteWithErrorHandling(async () =>
-            await client.UnpublishEntry(entryIdentifier.EntryId, version: (int)entry.SystemProperties.Version));
+        var entry = await client.ExecuteWithErrorHandling(async () => await client.GetEntry(entryIdentifier.EntryId));
+
+        string entryId = entryIdentifier.EntryId;
+        int entryVersion = (int)entry.SystemProperties.Version!;
+
+        if (input.Locales == null)
+            await client.ExecuteWithErrorHandling(async () => await client.UnpublishEntry(entryId, entryVersion));
+        else
+        {
+            await client.ExecuteWithErrorHandling(async () =>
+                await client.UnPublishEntryLocales(entryId, entryVersion, input.Locales.ToArray())
+            );
+        }
     }
 
     [BlueprintActionDefinition(BlueprintAction.DownloadContent)]
@@ -725,7 +747,9 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         {
             try
             {
-                await PublishEntry(new() { EntryId = entry.EntryId, Environment = input.Environment });
+                var entryIdentifier = new EntryIdentifier { EntryId = entry.EntryId, Environment = input.Environment };
+                var publishRequest = new PublishEntryRequest { Locales = input.Locales };
+                await PublishEntry(entryIdentifier, publishRequest);
                 publishedEntryIds.Add(entry.EntryId);
             }
             catch (Exception ex)
