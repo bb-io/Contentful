@@ -1,17 +1,19 @@
-﻿using System.Net;
-using Apps.Contentful.Actions;
+﻿using Apps.Contentful.Actions;
 using Apps.Contentful.Invocables;
 using Apps.Contentful.Models.Entities;
 using Apps.Contentful.Models.Identifiers;
 using Apps.Contentful.Models.Responses;
 using Apps.Contentful.Webhooks.Handlers.EntryHandlers;
 using Apps.Contentful.Webhooks.Models.Inputs;
+using Apps.Contentful.Webhooks.Models.Outputs;
 using Apps.Contentful.Webhooks.Models.Payload;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Common.Webhooks;
 using Blackbird.Applications.SDK.Blueprints;
+using Contentful.Core.Models;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System.Net;
 using WebhookRequest = Blackbird.Applications.Sdk.Common.Webhooks.WebhookRequest;
 
 namespace Apps.Contentful.Webhooks;
@@ -47,12 +49,13 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
 
     [BlueprintEventDefinition(BlueprintEvent.ContentCreatedOrUpdated)]
     [Webhook("On entry published", typeof(EntryPublishedHandler), Description = "On entry published")]
-    public Task<WebhookResponse<EntryEntity>> EntryPublished(WebhookRequest webhookRequest,
+    public Task<WebhookResponse<EntryWithPublishedLocales>> EntryPublished(WebhookRequest webhookRequest,
         [WebhookParameter(isSubscriptionDepends: true)] OptionalEntryIdentifier optionalEntryIdentifier,
         [WebhookParameter] OptionalTagListIdentifier tags,
         [WebhookParameter] OptionalMultipleContentTypeIdentifier types,
-        [WebhookParameter] OptionalFilterUsersIdentifier users)
-        => HandleEntryWebhookResponse(webhookRequest, tags, types, optionalEntryIdentifier, users);
+        [WebhookParameter] OptionalFilterUsersIdentifier users,
+        [WebhookParameter] OptionalLocaleListIdentifier localesInput)
+        => HandleEntryPublishedWebhookResponse(webhookRequest, tags, types, optionalEntryIdentifier, users, localesInput);
 
     [Webhook("On entry unpublished", typeof(EntryUnpublishedHandler), Description = "On entry unpublished")]
     public Task<WebhookResponse<EntityWebhookResponse>> EntryUnpublished(WebhookRequest webhookRequest)
@@ -83,6 +86,50 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
             HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
             Result = new() { Id = payload.Sys.Id }
         });
+    }
+
+    private async Task<WebhookResponse<EntryWithPublishedLocales>> HandleEntryPublishedWebhookResponse(WebhookRequest webhookRequest,
+        OptionalTagListIdentifier tagsInput,
+        OptionalMultipleContentTypeIdentifier types,
+        OptionalEntryIdentifier optionalEntryIdentifier,
+        OptionalFilterUsersIdentifier users,
+        OptionalLocaleListIdentifier localesInput
+        )
+    {
+        var publishedLocales = new List<string>();
+        if (webhookRequest.Headers.TryGetValue("x-contentful-partial-published-locales", out string? localesHeader))
+        {
+            publishedLocales = [.. localesHeader.Split(',')];
+        }
+
+        if (localesInput.Locales != null && !localesInput.Locales.Any(x => publishedLocales.Contains(x)))
+        {
+            return new()
+            {
+                HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
+                Result = null,
+                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
+            };
+        }
+
+        if (localesInput.ExcludeLocales != null && localesInput.ExcludeLocales.Any(x => publishedLocales.Contains(x)))
+        {
+            return new()
+            {
+                HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
+                Result = null,
+                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
+            };
+        }
+
+        var result = await HandleEntryWebhookResponse(webhookRequest, tagsInput, types, optionalEntryIdentifier, users);
+
+        return new()
+        {
+            HttpResponseMessage = result.HttpResponseMessage,
+            ReceivedWebhookRequestType = result.ReceivedWebhookRequestType,
+            Result = result.Result is not null ? new EntryWithPublishedLocales(result.Result) {  PublishedLocales = publishedLocales } : null,
+        };
     }
 
     private async Task<WebhookResponse<EntryEntity>> HandleEntryWebhookResponse(WebhookRequest webhookRequest,
