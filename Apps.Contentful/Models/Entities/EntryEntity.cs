@@ -1,7 +1,6 @@
 ﻿using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.SDK.Blueprints.Interfaces.CMS;
 using Contentful.Core.Models;
-using Newtonsoft.Json;
 
 namespace Apps.Contentful.Models.Entities;
 
@@ -36,5 +35,16 @@ public class EntryEntity : IDownloadContentInput
         UpdatedAt = entry.SystemProperties.UpdatedAt;
         Version = entry.SystemProperties.Version ?? default;
         UpdatedBy = entry.SystemProperties.UpdatedBy.SystemProperties.Id;
+    }
+
+    public EntryEntity(EntryEntity other)
+    {
+        ContentId = other.ContentId;
+        TagIds = other.TagIds;
+        ContentTypeId = other.ContentTypeId;
+        CreatedAt = other.CreatedAt;
+        UpdatedAt = other.UpdatedAt;
+        Version = other.Version;
+        UpdatedBy = other.UpdatedBy;
     }
 }
