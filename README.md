@@ -159,7 +159,7 @@ Note, to use the **Entry tasks** actions, you need to install the `Workflows` ap
 ## Events
 
 ### Entries
-- **On entry published** is the most useful event. It's triggered when any entry is published and could be the perfect trigger for sending the entry for translation based on the missing translations (see example). You can optionally also filter these events by tags. If you do so, the event will only be triggered if all of the tags you input are present on the entry.
+- **On entry published** is the most useful event. It's triggered when any entry is published and could be the perfect trigger for sending the entry for translation based on the missing translations (see example). You can optionally also filter these events by tags. If you do so, the event will only be triggered if all of the tags you input are present on the entry. Another way to filter this event is by the 'Published locales'. This value is returned from the event but you can also filter by events including or excluding certain locales.
 - **On entry task created** and **On entry task saved** are useful if you prefer to work using the 'Workflows' extension of Blackbird. You can use the extension to assign an entry to a workflow, creating a task. these events can even filter based on assigned User ID and task description. See the example below.
 - **On entry created**
 - **On entry auto saved** this event triggers any time an update is made in the UI. It therefore triggers a lot.
@@ -167,6 +167,8 @@ Note, to use the **Entry tasks** actions, you need to install the `Workflows` ap
 - **On entry archived**
 - **On entry unarchived**
 - **On entry deleted**
+
+> TIP: Triggering certain Birds on publish events where the published language is your source language is useful for continuous localizaiton workflows.
 
 ### Workflows
 
