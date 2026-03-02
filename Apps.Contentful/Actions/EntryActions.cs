@@ -348,14 +348,18 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                 client.GetEntryEditorUrl(originalEntry.ContentId),
                 updatedByUser);
 
-            fileNameFirstPart = string.IsNullOrEmpty(originalEntry.Title)
-                ? entryIdentifier.ContentId
-                : originalEntry.Title;
+            var rawName = string.IsNullOrWhiteSpace(originalEntry.Title)
+               ? entryIdentifier.ContentId
+               : originalEntry.Title;
+
+            var safeName = FileNameSanitizer.Sanitize(rawName, entryIdentifier.ContentId);
+
+            var fileName = $"{safeName}_{selectedLocale}.html";
 
             file = await fileManagementClient.UploadAsync(
                 new MemoryStream(Encoding.UTF8.GetBytes(resultHtml)),
                 MediaTypeNames.Text.Html,
-                $"{fileNameFirstPart}_{selectedLocale}.html");
+                fileName);
         }
         catch (Exception ex)
         {
