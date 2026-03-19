@@ -13,10 +13,10 @@ public class ListEntriesRequest : ContentModelOptionalIdentifier
     [Display("Exclude tags"), DataSource(typeof(ListEntriesTagDataHandler))]
     public IEnumerable<string>? ExcludeTags { get; set; }
 
-    [Display("Updated from")]
+    [Display("Updated after")]
     public DateTime? UpdatedFrom { get; set; }
 
-    [Display("Updated to")]
+    [Display("Updated before")]
     public DateTime? UpdatedTo { get; set; }
 
     [Display("Published before")]
