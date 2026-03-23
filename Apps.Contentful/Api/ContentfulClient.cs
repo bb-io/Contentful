@@ -4,7 +4,6 @@ using Blackbird.Applications.Sdk.Common.Exceptions;
 using Contentful.Core;
 using Contentful.Core.Configuration;
 using Contentful.Core.Errors;
-using Contentful.Core.Models;
 using Newtonsoft.Json;
 using Polly;
 using Polly.Retry;
@@ -14,18 +13,18 @@ namespace Apps.Contentful.Api;
 public class ContentfulClient : ContentfulManagementClient
 {
     private const int Limit = 100;
-    private const int RetryCount = 5;
+    private const int RetryCount = 7;
 
     private readonly AsyncRetryPolicy _retryPolicy;
 
     public ContentfulClient(IEnumerable<AuthenticationCredentialsProvider> creds, string? environment)
-        : base(new HttpClient { Timeout=TimeSpan.FromMinutes(5)}, new ContentfulOptions
+        : base(new HttpClient { Timeout = TimeSpan.FromMinutes(5) }, new ContentfulOptions
         {
             ManagementApiKey = creds.First(p => p.KeyName == "Authorization").Value,
             SpaceId = creds.First(p => p.KeyName == "spaceId").Value,
             Environment = environment,
             ManagementBaseUrl = creds.First(p => p.KeyName == CredNames.BaseUrl).Value + "/spaces/",
-            MaxNumberOfRateLimitRetries = RetryCount,            
+            MaxNumberOfRateLimitRetries = RetryCount,
         })
     {
         _retryPolicy = Policy
