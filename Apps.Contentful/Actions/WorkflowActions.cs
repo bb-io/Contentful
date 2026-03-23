@@ -115,6 +115,8 @@ public class WorkflowActions(InvocationContext invocationContext) : ContentfulIn
     [Action("Get workflow", Description = "Returns details of a specific workflow based on the workflow ID")]
     public async Task<WorkflowResponse> GetWorkflowAsync([ActionParameter] WorkflowIdentifier workflowRequest)
     {
+        workflowRequest.Validate();
+
         var client = new ContentfulRestClient(Creds, workflowRequest.Environment);
         var request = new ContentfulRestRequest($"/workflows/{workflowRequest.WorkflowId}", Method.Get, Creds);
         var workflow = await client.ExecuteWithErrorHandling<WorkflowDto>(request);
@@ -185,6 +187,8 @@ public class WorkflowActions(InvocationContext invocationContext) : ContentfulIn
     [Action("Complete workflow", Description = "Complete a workflow")]
     public async Task CompleteWorkflowAsync([ActionParameter] WorkflowIdentifier workflowRequest)
     {
+        workflowRequest.Validate();
+
         var client = new ContentfulRestClient(Creds, workflowRequest.Environment);
 
         var workflowResponse = await GetWorkflowAsync(workflowRequest);
@@ -196,6 +200,8 @@ public class WorkflowActions(InvocationContext invocationContext) : ContentfulIn
     [Action("Cancel workflow", Description = "Cancel a workflow")]
     public async Task CancelWorkflowAsync([ActionParameter] WorkflowIdentifier workflowRequest)
     {
+        workflowRequest.Validate();
+
         var client = new ContentfulRestClient(Creds, workflowRequest.Environment);
 
         var workflowResponse = await GetWorkflowAsync(workflowRequest);
