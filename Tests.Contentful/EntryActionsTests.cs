@@ -3,6 +3,8 @@ using Apps.Contentful.Models.Identifiers;
 using Apps.Contentful.Models.Requests;
 using Apps.Contentful.Models.Requests.Tags;
 using Blackbird.Applications.Sdk.Common.Exceptions;
+using Blackbird.Applications.Sdk.Common.Files;
+using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Filters.Coders;
 using Newtonsoft.Json;
 using Tests.Contentful.Base;
@@ -250,6 +252,30 @@ public class EntryActionsTests : TestBase
             async () => await entryActions.SetEntryLocalizableFieldsFromHtmlFile(entryIdentifier)
         );
         Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(response));
+    }
+
+    [TestMethod]
+    public async Task SetEntryLocalizableFieldsFromHtmlFile_WithExceededCustomSize_ShouldFailBeforeContentfulCall()
+    {
+        var entryActions = new EntryActions(new InvocationContext(), new FileManager());
+        var entryIdentifier = new UploadEntryRequest
+        {
+            Locale = "fr-FR",
+            Content = new FileReference
+            {
+                Name = "MyRepairs.Online_en-US_fr-FR.html",
+                ContentType = "text/html"
+            }
+        };
+
+        var response = await ThrowsExceptionAsync<PluginMisconfigurationException>(
+            async () => await entryActions.SetEntryLocalizableFieldsFromHtmlFile(entryIdentifier)
+        );
+
+        StringAssert.Contains(response.Message, "Field 'description'");
+        StringAssert.Contains(response.Message, "entry '3uACdsR62YrTMkBY3T6geU'");
+        StringAssert.Contains(response.Message, "Maximum allowed length: 256");
+        Console.WriteLine(JsonConvert.SerializeObject(response, Formatting.Indented));
     }
 
     [TestMethod]
