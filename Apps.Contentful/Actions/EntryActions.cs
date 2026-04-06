@@ -10,6 +10,7 @@ using Apps.Contentful.Models.Identifiers;
 using Apps.Contentful.Models.Requests;
 using Apps.Contentful.Models.Requests.Tags;
 using Apps.Contentful.Models.Responses;
+using Apps.Contentful.Services;
 using Apps.Contentful.Utils;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
@@ -43,6 +44,8 @@ namespace Apps.Contentful.Actions;
 public class EntryActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient)
     : BaseInvocable(invocationContext)
 {
+    private readonly CustomSizeValidationService _customSizeValidationService = new();
+
     private IEnumerable<AuthenticationCredentialsProvider> Creds =>
         InvocationContext.AuthenticationCredentialsProviders;
 
@@ -393,17 +396,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             throw new PluginMisconfigurationException("Only .html, .xliff and .xlf files are supported. Please specify a different file");
         }
 
-        var client = new ContentfulClient(Creds, input.Environment);
         var errors = new List<ContentProcessingError>();
-
-        var locales = await client.ExecuteWithErrorHandling(async () => await client.GetLocalesCollection());
-        if (locales.All(x => x.Code != input.Locale))
-        {
-            var allLocales = string.Join(", ", locales.Select(x => x.Code));
-            throw new PluginMisconfigurationException(
-                $"Locale {input.Locale} not found. Please specify a valid locale. " +
-                $"Available locales: {allLocales}");
-        }
 
         var file = await fileManagementClient.DownloadAsync(input.Content);
         var content = Encoding.UTF8.GetString(await file.GetByteData());
@@ -415,6 +408,19 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             content = transformation.Target().Serialize();
             if (content == null)
                 throw new PluginMisconfigurationException("XLIFF did not contain any files");
+        }
+
+        errors.AddRange(_customSizeValidationService.Validate(content, input.Locale, input.SkipCustomValidationStep == true));
+
+        var client = new ContentfulClient(Creds, input.Environment);
+
+        var locales = await client.ExecuteWithErrorHandling(async () => await client.GetLocalesCollection());
+        if (locales.All(x => x.Code != input.Locale))
+        {
+            var allLocales = string.Join(", ", locales.Select(x => x.Code));
+            throw new PluginMisconfigurationException(
+                $"Locale {input.Locale} not found. Please specify a valid locale. " +
+                $"Available locales: {allLocales}");
         }
 
         var mainEntryInfo = EntryToJsonConverter.GetMainEntryInfo(content);

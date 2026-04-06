@@ -19,4 +19,7 @@ public class UploadEntryRequest : EnvironmentIdentifier, IUploadContentInput
 
     [Display("Don't update reference fields")]
     public bool? DontUpdateReferenceFields { get; set; }
+
+    [Display("Skip custom validation step")]
+    public bool? SkipCustomValidationStep { get; set; }
 }
