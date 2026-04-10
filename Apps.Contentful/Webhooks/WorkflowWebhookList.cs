@@ -34,8 +34,18 @@ public class WorkflowWebhookList(InvocationContext invocationContext) : Contentf
     {
         var content = webhookRequest.Body.ToString()!;
         var workflowDto = JsonConvert.DeserializeObject<WorkflowDto>(content)!;
+        var workflowDefinitionId = workflowDto.Sys.WorkflowDefinition.Sys.Id;
+
+        if (request.WorkflowDefinitionId?.Any() == true &&
+            request.WorkflowDefinitionId.Contains(workflowDefinitionId) == false)
+        {
+            return new WebhookResponse<WorkflowDefinitionResponse>
+            {
+                ReceivedWebhookRequestType = WebhookRequestType.Preflight
+            };
+        }
         
-        var workflowDefinitionRequest = new ContentfulRestRequest($"/workflow_definitions/{workflowDto.Sys.WorkflowDefinition.Sys.Id}", Method.Get, Creds);
+        var workflowDefinitionRequest = new ContentfulRestRequest($"/workflow_definitions/{workflowDefinitionId}", Method.Get, Creds);
         var client = new ContentfulRestClient(Creds, environmentIdentifier.Environment);
         var workflowDefinition = await client.ExecuteWithErrorHandling<WorkflowDefinitionDto>(workflowDefinitionRequest);
 
@@ -44,16 +54,9 @@ public class WorkflowWebhookList(InvocationContext invocationContext) : Contentf
         var nextStep = nextStepIndex < workflowDefinition.Steps.Count ? workflowDefinition.Steps[nextStepIndex] : null;
         
         var previousStep = workflowDefinition.Steps.FirstOrDefault(x => x.StepId == workflowDto.PreviousStepId);
-        
-        if (request.CurrentStepId != null && request.CurrentStepId != workflowDto.StepId)
-        {
-            return new WebhookResponse<WorkflowDefinitionResponse>
-            {
-                ReceivedWebhookRequestType = WebhookRequestType.Preflight
-            };
-        }
-        
-        if (request.CurrentStepName != null && request.CurrentStepName != currentStep.Name)
+
+        if (request.CurrentStepName?.Any() == true &&
+            request.CurrentStepName.Contains(currentStep.Name) == false)
         {
             return new WebhookResponse<WorkflowDefinitionResponse>
             {

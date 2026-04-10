@@ -7,5 +7,5 @@ namespace Apps.Contentful.Models.Identifiers;
 public class WorkflowDefinitionOptionalIdentifier
 {
     [Display("Workflow definition ID"), DataSource(typeof(WorkflowDefinitionDataHandler))]
-    public string? WorkflowDefinitionId { get; set; }
+    public IEnumerable<string>? WorkflowDefinitionId { get; set; }
 }

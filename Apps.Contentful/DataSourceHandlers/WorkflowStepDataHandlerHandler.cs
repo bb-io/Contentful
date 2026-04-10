@@ -18,13 +18,15 @@ public class WorkflowStepDataHandler(
     public async Task<Dictionary<string, string>> GetDataAsync(DataSourceContext context,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrEmpty(workflowStepFilterRequest.WorkflowDefinitionId))
+        var workflowDefinitionId = workflowStepFilterRequest.WorkflowDefinitionId?.FirstOrDefault();
+
+        if (string.IsNullOrEmpty(workflowDefinitionId))
         {
             throw new InvalidOperationException("You should provide a workflow definition ID first");
         }
         
         var client = new ContentfulRestClient(Creds, identifier.Environment);
-        var request = new ContentfulRestRequest($"/workflow_definitions/{workflowStepFilterRequest.WorkflowDefinitionId}", Method.Get, Creds);
+        var request = new ContentfulRestRequest($"/workflow_definitions/{workflowDefinitionId}", Method.Get, Creds);
         var workflowDefinition = await client.ExecuteWithErrorHandling<WorkflowDefinitionDto>(request);
 
         return workflowDefinition.Steps
