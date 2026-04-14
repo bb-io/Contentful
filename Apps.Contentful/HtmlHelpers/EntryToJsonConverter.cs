@@ -360,7 +360,11 @@ public static class EntryToJsonConverter
             return ParseUlAsArray(ulChild);
         }
 
-        var textValue = System.Web.HttpUtility.HtmlDecode(node.InnerText.Trim());
+        var textValue = HttpUtility.HtmlDecode(node.InnerText.Trim());
+
+        if (bool.TryParse(textValue, out var boolValue))
+            return JValue.FromObject(boolValue);
+
         return JValue.FromObject(textValue);
     }
 
@@ -387,8 +391,12 @@ public static class EntryToJsonConverter
                     continue;
                 }
 
-                var textValue = System.Web.HttpUtility.HtmlDecode(li.InnerText.Trim());
-                array.Add(JValue.FromObject(textValue));
+                var textValue = HttpUtility.HtmlDecode(li.InnerText.Trim());
+
+                if (bool.TryParse(textValue, out var boolValue))
+                    array.Add(JValue.FromObject(boolValue));
+                else
+                    array.Add(JValue.FromObject(textValue));
             }
         }
 
