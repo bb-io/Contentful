@@ -46,8 +46,7 @@ public class EntryActionsTests : TestBase
         var entryActions = new EntryActions(InvocationContext, FileManager);
         var listEntriesRequest = new ListEntriesRequest
         {
-            PublishedAfter = new DateTime(2025, 10, 01),
-            PublishedBefore = new DateTime(2025, 10, 04)
+           Tags = ["danDemo"],
         };
 
         // Act
@@ -56,7 +55,7 @@ public class EntryActionsTests : TestBase
         // Assert
         foreach (var entry in result.Entries)
         {
-            Console.WriteLine($"{entry.ContentId}");
+            Console.WriteLine($"Id: {entry.ContentId}  -  Name: {entry.ContentTypeId}");
         }
         IsNotNull(result);
     }

@@ -108,16 +108,6 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             entries = entries.Where(e => e.SystemProperties.PublishedVersion.HasValue == false);
         }
 
-        if (request.Tags is not null && request.Tags.Any())
-        {
-            entries = entries.Where(e => e.Metadata.Tags.Any(t => request.Tags.Contains(t.Sys.Id)));
-        }
-
-        if (request.ExcludeTags is not null && request.ExcludeTags.Any())
-        {
-            entries = entries.Where(e => e.Metadata.Tags.All(t => !request.ExcludeTags.Contains(t.Sys.Id)));
-        }
-
         var entriesResponse = entries.Select(e => new EntryEntity(e)).ToArray();
         return new ListEntriesResponse(entriesResponse, entriesResponse.Length);
     }
@@ -1233,6 +1223,16 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         if (!string.IsNullOrWhiteSpace(request.SearchTerm))
         {
             queryString.Add("query", request.SearchTerm);
+        }
+
+        if (request.Tags is not null && request.Tags.Any())
+        {
+            queryString.Add("metadata.tags.sys.id[in]", string.Join(",", request.Tags));
+        }
+
+        if (request.ExcludeTags is not null && request.ExcludeTags.Any())
+        {
+            queryString.Add("metadata.tags.sys.id[nin]", string.Join(",", request.ExcludeTags));
         }
     }
 

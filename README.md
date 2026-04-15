@@ -46,7 +46,7 @@ Follow [this guide](https://www.contentful.com/help/working-with-translations/) 
 
 ### Entries
 
-- **Search entries** returns a list of entries. Optionally filter by content model, environment, tags and the last updated date.
+- **Search entries** returns a list of entries. Optionally filter by content model, environment, tags, excluded tags and the last updated date.
 - **Search refereced entries** returns a list of all entries that are referenced by the specified entry.
 - **Search links to entry** returns a list of all entries that link to the specified entry.
 - **Find entry by field value** Given a field and a desired value for the field, the first matching entry will be returned.
