@@ -12,7 +12,10 @@ using System.Text;
 
 namespace Apps.Contentful.HtmlHelpers;
 
-public class EntryToHtmlConverter(InvocationContext invocationContext, string? environment)
+public class EntryToHtmlConverter(
+    InvocationContext invocationContext,
+    string? environment,
+    bool includeReferencedAssets = true)
 {
     public string ToHtml(List<EntryContentDto> entriesContent, string locale, string defaultLocale, string spaceId, string entryTitle, string entryAdminUrl, User updatedBy)
     {
@@ -260,6 +263,18 @@ public class EntryToHtmlConverter(InvocationContext invocationContext, string? e
 
         if (linkType == "Asset")
         {
+            if (!includeReferencedAssets)
+            {
+                var assetAttributes = new Dictionary<string, string>
+                {
+                    { "data-contentful-link-type", linkType! },
+                    { "data-contentful-link-id", linkId! },
+                    { "data-contentful-localized", field.Localized.ToString() }
+                };
+
+                return WrapFieldInDiv(doc, entryId, field, additionalAttributes: assetAttributes);
+            }
+
             var client = new ContentfulClient(invocationContext.AuthenticationCredentialsProviders, environment);
             ManagementAsset? asset = null;
 

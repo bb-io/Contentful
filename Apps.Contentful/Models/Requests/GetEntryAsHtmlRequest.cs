@@ -22,6 +22,9 @@ public class GetEntryAsHtmlRequest
     [Display("Include embedded block entries", Description = "Recursively include content of entries that are referenced as embedded block entries in 'Rich text' fields")]
     public bool? GetEmbeddedBlockContent { get; set; }
 
+    [Display("Include referenced assets", Description = "Include asset content referenced from entry fields")]
+    public bool? IncludeReferencedAssets { get; set; } = true;
+
     [Display("Exclude field IDs", Description = "All field IDs in this collection will be omitted from the exported content")]
     public IEnumerable<string>? IgnoredFieldIds { get; set; }
     
