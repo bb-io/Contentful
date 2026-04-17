@@ -318,7 +318,10 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             entryIdentifier.ContentId,
             input.MaxDepth, 0, errors);
 
-        var htmlConverter = new EntryToHtmlConverter(InvocationContext, entryIdentifier.Environment);
+        var htmlConverter = new EntryToHtmlConverter(
+            InvocationContext,
+            entryIdentifier.Environment,
+            input.IncludeReferencedAssets ?? true);
 
         FileReference file;
         string fileNameFirstPart = entryIdentifier.ContentId;
