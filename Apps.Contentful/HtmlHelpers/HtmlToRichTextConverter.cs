@@ -81,6 +81,9 @@ public class HtmlToRichTextConverter
                     case "a":
                         content = CreateHyperlink(childNode);
                         break;
+                    case "img":
+                        content = CreateAssetFromImage(childNode);
+                        break;
                     default:
                         ParseHtmlToContentful(childNode, contentList);
                         break;
@@ -513,6 +516,78 @@ public class HtmlToRichTextConverter
         }
     }
 
+    private IContent? CreateAssetFromImage(HtmlNode node)
+    {
+        var assetId = node.GetAttributeValue("data-contentful-link-id", "");
+        var nodeType = node.GetAttributeValue("data-contentful-rich-text-node-type", "");
+
+        if (string.IsNullOrEmpty(assetId))
+        {
+            var id = node.GetAttributeValue("id", "");
+            if (TryParseRichTextAssetId(id, out nodeType, out assetId) == false)
+                return null;
+        }
+
+        if (string.IsNullOrEmpty(nodeType))
+            nodeType = "embedded-asset-block";
+
+        if (nodeType != "embedded-asset-block" && nodeType != "embedded-asset-inline")
+            return null;
+
+        return new AssetHyperlink
+        {
+            NodeType = nodeType,
+            Content = new List<IContent>(),
+            Data = new AssetHyperlinkData
+            {
+                Target = new Asset
+                {
+                    SystemProperties = new SystemProperties
+                    {
+                        Id = assetId,
+                        Type = "Link",
+                        LinkType = "Asset"
+                    }
+                }
+            }
+        };
+    }
+
+    private static bool TryParseRichTextAssetId(string id, out string nodeType, out string assetId)
+    {
+        nodeType = "";
+        assetId = "";
+
+        const string blockPrefix = "embedded-asset-block_";
+        const string inlinePrefix = "embedded-asset-inline_";
+
+        if (id.StartsWith(blockPrefix))
+        {
+            nodeType = "embedded-asset-block";
+            assetId = id[blockPrefix.Length..];
+            return !string.IsNullOrEmpty(assetId);
+        }
+
+        if (id.StartsWith(inlinePrefix))
+        {
+            nodeType = "embedded-asset-inline";
+            assetId = id[inlinePrefix.Length..];
+            return !string.IsNullOrEmpty(assetId);
+        }
+
+        return false;
+    }
+
+    private static string GetAssetNodeTypeFromImage(HtmlNode node)
+    {
+        var nodeType = node.GetAttributeValue("data-contentful-rich-text-node-type", "");
+        if (!string.IsNullOrEmpty(nodeType))
+            return nodeType;
+
+        var id = node.GetAttributeValue("id", "");
+        return TryParseRichTextAssetId(id, out nodeType, out _) ? nodeType : "embedded-asset-block";
+    }
+
     private string GetHyperlinkTextWithNewlines(HtmlNode node)
     {
         var text = new StringBuilder();
@@ -649,6 +724,21 @@ public class HtmlToRichTextConverter
                     else
                     {
                         parentContentList.Add(CreateHyperlink(child));
+                    }
+                }
+                else if (child.Name == "img")
+                {
+                    var assetContent = CreateAssetFromImage(child);
+                    if (assetContent == null)
+                        continue;
+
+                    if (GetAssetNodeTypeFromImage(child) == "embedded-asset-block")
+                    {
+                        parentContentList.Add(assetContent);
+                    }
+                    else
+                    {
+                        paragraph.Content.Add(assetContent);
                     }
                 }
                 else

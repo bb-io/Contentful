@@ -377,7 +377,19 @@ public class EntryToHtmlConverter(
         if (content is null)
             return default;
 
-        var richTextToHtmlConverter = new RichTextToHtmlConverter(content, spaceId);
+        Func<string, ManagementAsset?>? assetResolver = null;
+        if (includeReferencedAssets)
+        {
+            var client = new ContentfulClient(invocationContext.AuthenticationCredentialsProviders, environment);
+            assetResolver = assetId =>
+            {
+                var assetTask = client.GetAsset(assetId);
+                assetTask.Wait();
+                return assetTask.Result;
+            };
+        }
+
+        var richTextToHtmlConverter = new RichTextToHtmlConverter(content, spaceId, assetResolver);
         var fieldContent = richTextToHtmlConverter.ToHtml();
 
         return WrapFieldInDiv(doc, entryId, field, fieldContent);
