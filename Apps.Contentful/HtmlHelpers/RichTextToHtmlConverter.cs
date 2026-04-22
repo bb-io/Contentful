@@ -1,10 +1,14 @@
 ﻿using System.Text;
+using Contentful.Core.Models.Management;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace Apps.Contentful.HtmlHelpers;
 
-public class RichTextToHtmlConverter(JArray content, string spaceId)
+public class RichTextToHtmlConverter(
+    JArray content,
+    string spaceId,
+    Func<string, ManagementAsset?>? assetResolver = null)
 {
     public string ToHtml()
     {
@@ -80,11 +84,82 @@ public class RichTextToHtmlConverter(JArray content, string spaceId)
             case "embedded-asset-block":
                 assetId = jsonObject["data"]["target"]["sys"]["id"].ToString();
                 uri = $"https://app.contentful.com/spaces/{spaceId}/assets/{assetId}";
+                var imageHtml = ConvertEmbeddedAssetToImageHtml(assetId, nodeType);
+                if (imageHtml != null)
+                {
+                    return imageHtml;
+                }
+
                 return $"<a id=\"{nodeType}_{assetId}\" href=\"{uri}\">Asset {assetId}</a>";
             default:
                 return ConvertContentToHtml(jsonObject["content"]);
         }
     }
+
+    private string? ConvertEmbeddedAssetToImageHtml(string assetId, string nodeType)
+    {
+        if (assetResolver == null)
+            return null;
+
+        ManagementAsset? asset;
+        try
+        {
+            asset = assetResolver(assetId);
+        }
+        catch
+        {
+            return null;
+        }
+
+        if (asset?.Files == null)
+            return null;
+
+        foreach (var fileEntry in asset.Files)
+        {
+            var file = fileEntry.Value;
+            if (!file.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var imageUrl = NormalizeImageUrl(file.Url);
+            var htmlBuilder = new StringBuilder();
+            htmlBuilder.Append($"<img id=\"{nodeType}_{assetId}\"");
+            htmlBuilder.Append($" src=\"{HtmlEncode(imageUrl)}\"");
+            htmlBuilder.Append(" data-contentful-link-type=\"Asset\"");
+            htmlBuilder.Append($" data-contentful-link-id=\"{HtmlEncode(assetId)}\"");
+            htmlBuilder.Append($" data-contentful-rich-text-node-type=\"{HtmlEncode(nodeType)}\"");
+
+            var fileLocale = fileEntry.Key;
+            var altText = asset.Title?.ContainsKey(fileLocale) ?? false
+                ? asset.Title[fileLocale]
+                : "";
+            if (!string.IsNullOrWhiteSpace(altText))
+            {
+                htmlBuilder.Append($" alt=\"{HtmlEncode(altText)}\"");
+            }
+
+            htmlBuilder.Append(" />");
+            return htmlBuilder.ToString();
+        }
+
+        return null;
+    }
+
+    private static string NormalizeImageUrl(string imageUrl)
+    {
+        if (imageUrl.StartsWith("//"))
+        {
+            return "https:" + imageUrl;
+        }
+
+        if (imageUrl.StartsWith("/"))
+        {
+            return "https://images.ctfassets.net" + imageUrl;
+        }
+
+        return imageUrl;
+    }
+
+    private static string HtmlEncode(string value) => System.Net.WebUtility.HtmlEncode(value);
 
     private string ConvertHeadingToHtml(JObject jsonObject, string nodeType)
     {
