@@ -397,10 +397,13 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         Transformation? transformation = null;
         if (Xliff2Serializer.IsXliff2(content) || Xliff1Serializer.IsXliff1(content))
         {
-            transformation = Transformation.Parse(content, input.Content.Name);
-            content = transformation.Target().Serialize();
-            if (content == null)
-                throw new PluginMisconfigurationException("XLIFF did not contain any files");
+            content = ErrorHandler.ExecuteWithErrorHandling(() =>
+            {
+                transformation = Transformation.Parse(content, input.Content.Name);
+                return 
+                    transformation.Target().Serialize() ?? 
+                    throw new PluginMisconfigurationException("XLIFF did not contain any files");
+            });
         }
 
         errors.AddRange(_customSizeValidationService.Validate(content, input.Locale, input.SkipCustomValidationStep == true));
