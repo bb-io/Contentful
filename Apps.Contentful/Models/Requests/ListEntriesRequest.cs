@@ -1,4 +1,5 @@
-﻿using Apps.Contentful.DataSourceHandlers.Tags;
+﻿using Apps.Contentful.DataSourceHandlers;
+using Apps.Contentful.DataSourceHandlers.Tags;
 using Apps.Contentful.Models.Identifiers;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Dynamic;
@@ -42,4 +43,7 @@ public class ListEntriesRequest : ContentModelOptionalIdentifier
 
     [Display("Search term", Description = "Full‑text search across all text and symbol fields")]
     public string? SearchTerm { get; set; }
+
+    [Display("Updated by"), DataSource(typeof(UserDataSourceHandler))]
+    public string? UpdatedBy { get; set; }
 }
