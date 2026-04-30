@@ -23,8 +23,11 @@ public class EntryTranslationTests : TestBase
     public async Task Translate_standard_html_file()
     {
         var actions = new EntryActions(InvocationContext, FileManager);
-        await actions.SetEntryLocalizableFieldsFromHtmlFile(new Apps.Contentful.Models.Requests.Tags.UploadEntryRequest { Content = new FileReference { Name = "contentful-pseudo.html" }, Locale = "de" });
-
+        await actions.SetEntryLocalizableFieldsFromHtmlFile(
+            new Apps.Contentful.Models.Requests.Tags.UploadEntryRequest
+            {
+                Content = new FileReference { Name = "json_fields.html" }, Locale = "en-US"
+            });
     }
 
     [TestMethod]

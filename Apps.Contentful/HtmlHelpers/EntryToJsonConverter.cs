@@ -364,6 +364,9 @@ public static class EntryToJsonConverter
 
         if (bool.TryParse(textValue, out var boolValue))
             return JValue.FromObject(boolValue);
+        
+        if (decimal.TryParse(textValue, out var decimalValue))
+            return JValue.FromObject(decimalValue);
 
         return JValue.FromObject(textValue);
     }
