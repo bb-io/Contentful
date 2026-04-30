@@ -55,4 +55,18 @@ public class DataHandlerTests : TestBase
         Assert.IsNotNull(result);
         Console.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
     }
+
+    [TestMethod]
+    public async Task UserDataSourceHandler_ReturnsUsers()
+    {
+        // Arrange
+        var handler = new UserDataSourceHandler(InvocationContext);
+
+        // Act
+        var result = await handler.GetDataAsync(new(), default);
+
+        // Assert
+        Assert.IsNotNull(result);
+        PrintJsonResult(result);
+    }
 }

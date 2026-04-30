@@ -29,14 +29,11 @@ public class EntryActionsTests : TestBase
     public async Task ListEntries_ValidEnvironment_ShouldReturnAllEntries()
     {
         var entryActions = new EntryActions(InvocationContext, FileManager);
-        var listEntriesRequest = new ListEntriesRequest { Environment = "dev", SearchTerm = "The perfect partner" };
+        var listEntriesRequest = new ListEntriesRequest { Environment = "master", UpdatedBy = "5UuNOI1TXxCkHgBChqQP9z" };
 
         var entriesResponse = await entryActions.ListEntries(listEntriesRequest);
 
-        foreach (var entry in entriesResponse.Entries)
-        {
-            Console.WriteLine($"{entry.ContentId}");
-        }
+        PrintJsonResult(entriesResponse);
     }
 
     [TestMethod]
