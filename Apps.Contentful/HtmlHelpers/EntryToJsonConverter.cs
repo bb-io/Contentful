@@ -119,10 +119,10 @@ public static class EntryToJsonConverter
                 SetEntryFieldValue(fieldId, finalValue);
                 break;
             case "Symbol":
-                SetEntryFieldValue(fieldId, HttpUtility.HtmlDecode(htmlNode.InnerText));
+                SetEntryFieldValue(fieldId, GetPrimitiveTextValue(htmlNode));
                 break;
             case "Text":
-                SetEntryFieldValue(fieldId, HttpUtility.HtmlDecode(htmlNode.InnerText));
+                SetEntryFieldValue(fieldId, GetPrimitiveTextValue(htmlNode));
                 break;
             case "Object":
                 var parsedObject = ParseJsonObjectFromHtmlNode(htmlNode);
@@ -235,6 +235,15 @@ public static class EntryToJsonConverter
 
                 break;
         }
+    }
+
+    private static string GetPrimitiveTextValue(HtmlNode htmlNode)
+    {
+        var isHtmlContent = htmlNode.Attributes["data-contentful-html"]?.Value
+            ?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
+
+        var value = isHtmlContent ? htmlNode.InnerHtml : htmlNode.InnerText;
+        return HttpUtility.HtmlDecode(value);
     }
 
     private static JToken ParseJsonObjectFromHtmlNode(HtmlNode htmlNode)

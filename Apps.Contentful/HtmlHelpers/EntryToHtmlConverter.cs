@@ -89,7 +89,7 @@ public class EntryToHtmlConverter(
         if(jsonToken != null && jsonToken.Type == JTokenType.Array)
         {
             var jArray = jsonToken as JArray;
-            var arrayHtml = ConvertArrayCustomFieldToHtml(jArray!);
+            var arrayHtml = ConvertArrayCustomFieldToHtml(jArray!, entryId, field.Id);
             if (string.IsNullOrEmpty(arrayHtml))
             {
                 return null;
@@ -199,17 +199,18 @@ public class EntryToHtmlConverter(
         return containerNode;
     }
     
-    private string ConvertArrayCustomFieldToHtml(JArray jArray)
+    private string ConvertArrayCustomFieldToHtml(JArray jArray, string entryId, string fieldId)
     {
         var htmlBuilder = new StringBuilder();
         foreach (var item in jArray)
         {
-            var customFieldHtml = ConvertCustomFieldToHtml(item, _ignoredJsonKeys);
+            var customFieldHtml = ConvertCustomFieldToHtml(item, _ignoredJsonKeys, entryId, fieldId);
             if (!string.IsNullOrEmpty(customFieldHtml))
             {
                 var divNode = new HtmlDocument().CreateElement("div");
                 divNode.SetAttributeValue("data-field", "customField");
                 divNode.SetAttributeValue("data-path", item.Path);
+                divNode.SetAttributeValue(ConvertConstants.BlackbirdKey, BuildJsonBlackbirdKey(entryId, fieldId, item.Path));
                 divNode.SetAttributeValue("data-contentful-json-value", item.ToString(Formatting.None));
                 divNode.InnerHtml = customFieldHtml;
                 htmlBuilder.Append(divNode.OuterHtml);
@@ -219,7 +220,11 @@ public class EntryToHtmlConverter(
         return htmlBuilder.ToString();
     }
 
-    private string ConvertCustomFieldToHtml(JToken quoteToken, HashSet<string>? ignoredKeys = null)
+    private string ConvertCustomFieldToHtml(
+        JToken quoteToken,
+        HashSet<string>? ignoredKeys = null,
+        string entryId = "",
+        string fieldId = "")
     {
         ignoredKeys ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var htmlBuilder = new StringBuilder();
@@ -234,7 +239,8 @@ public class EntryToHtmlConverter(
                 string value = property.Value.ToString();
                 if (!string.IsNullOrEmpty(value) && !excludedFieldPathes.Any(property.Path.Contains))
                 {
-                    htmlBuilder.Append($"<div data-field=\"{property.Name}\" data-path=\"{property.Path}\">{value}</div>");
+                    htmlBuilder.Append(
+                        $"<div data-field=\"{property.Name}\" data-path=\"{property.Path}\" data-blackbird-key=\"{EncodeAttribute(BuildJsonBlackbirdKey(entryId, fieldId, property.Path))}\">{value}</div>");
                 }
             }
             if (property.Value.Type == JTokenType.Object)
@@ -248,13 +254,13 @@ public class EntryToHtmlConverter(
                         var richHtml = richTextConverter.ToHtml();
 
                         htmlBuilder.Append(
-                            $"<div data-field=\"{property.Name}\" data-path=\"{property.Path}\" data-rich-text=\"true\">{richHtml}</div>");
+                            $"<div data-field=\"{property.Name}\" data-path=\"{property.Path}\" data-blackbird-key=\"{EncodeAttribute(BuildJsonBlackbirdKey(entryId, fieldId, property.Path))}\" data-rich-text=\"true\">{richHtml}</div>");
                     }
 
                     continue;
                 }
 
-                var innerHtml = ConvertCustomFieldToHtml(property.Value, ignoredKeys);
+                var innerHtml = ConvertCustomFieldToHtml(property.Value, ignoredKeys, entryId, fieldId);
                 if (!string.IsNullOrEmpty(innerHtml) && !excludedFieldPathes.Any(property.Path.Contains))
                 {
                     htmlBuilder.Append(innerHtml);
@@ -264,7 +270,7 @@ public class EntryToHtmlConverter(
             {
                 foreach (var item in property.Value.Children())
                 {
-                    var innerHtml = ConvertCustomFieldToHtml(item, ignoredKeys);
+                    var innerHtml = ConvertCustomFieldToHtml(item, ignoredKeys, entryId, fieldId);
                     if (!string.IsNullOrEmpty(innerHtml) && !excludedFieldPathes.Any(property.Path.Contains))
                     {
                         htmlBuilder.Append(innerHtml);
@@ -471,7 +477,16 @@ public class EntryToHtmlConverter(
             tagName = "h2";
         }
 
-        return WrapFieldInDiv(doc, entryId, field, fieldContent, tagName: tagName);
+        Dictionary<string, string>? additionalAttributes = null;
+        if (IsHtmlContent(fieldContent))
+        {
+            additionalAttributes = new Dictionary<string, string>
+            {
+                { "data-contentful-html", "true" }
+            };
+        }
+
+        return WrapFieldInDiv(doc, entryId, field, fieldContent, additionalAttributes, tagName);
     }
 
     private HtmlNode WrapFieldInDiv(HtmlDocument doc, string entryId, Field field, string fieldContent = "",
@@ -507,7 +522,11 @@ public class EntryToHtmlConverter(
             node.SetAttributeValue("data-blackbird-size", serialized);
         }
 
-        if (fieldContent.Contains("\n"))
+        if (node.GetAttributeValue("data-contentful-html", string.Empty).Equals("true", StringComparison.OrdinalIgnoreCase))
+        {
+            node.InnerHtml = fieldContent;
+        }
+        else if (fieldContent.Contains("\n"))
         {
             var paragraphs = fieldContent.Split("\n");
             var stringBuilder = new StringBuilder();
@@ -533,6 +552,25 @@ public class EntryToHtmlConverter(
 
         return node;
     }
+
+    private static bool IsHtmlContent(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return false;
+
+        return System.Text.RegularExpressions.Regex.IsMatch(
+            value,
+            @"</?[a-z][\w:-]*(\s[^>]*)?>",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+    }
+
+    private static string BuildJsonBlackbirdKey(string entryId, string fieldId, string path)
+    {
+        var suffix = string.IsNullOrWhiteSpace(path) ? "customField" : path;
+        return $"{entryId}-{fieldId}-{suffix}";
+    }
+
+    private static string EncodeAttribute(string value) => System.Net.WebUtility.HtmlEncode(value);
 
     private HtmlNode WrapFieldInList(HtmlDocument doc, string fieldType, string fieldId, JArray fieldContent,
         Dictionary<string, string>? additionalAttributes = null)
