@@ -46,4 +46,7 @@ public class ListEntriesRequest : ContentModelOptionalIdentifier
 
     [Display("Updated by"), DataSource(typeof(UserDataSourceHandler))]
     public string? UpdatedBy { get; set; }
+
+    [Display("Exclude updated by"), DataSource(typeof(UserDataSourceHandler))]
+    public string? ExcludeUpdatedBy { get; set; }
 }

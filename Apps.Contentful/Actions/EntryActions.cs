@@ -1242,6 +1242,11 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             queryString.Add("sys.updatedBy.sys.id", request.UpdatedBy);
         }
 
+        if (!string.IsNullOrWhiteSpace(request.ExcludeUpdatedBy))
+        {
+            queryString.Add("sys.updatedBy.sys.id[ne]", request.ExcludeUpdatedBy);
+        }
+
         if (request.ExcludeTags is not null && request.ExcludeTags.Any())
         {
             queryString.Add("metadata.tags.sys.id[nin]", string.Join(",", request.ExcludeTags));
