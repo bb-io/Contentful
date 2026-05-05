@@ -15,8 +15,14 @@ namespace Apps.Contentful.HtmlHelpers;
 public class EntryToHtmlConverter(
     InvocationContext invocationContext,
     string? environment,
-    bool includeReferencedAssets = true)
+    bool includeReferencedAssets = true,
+    IEnumerable<string>? ignoredJsonKeys = null)
 {
+    private readonly HashSet<string> _ignoredJsonKeys = ignoredJsonKeys?
+        .Where(key => !string.IsNullOrWhiteSpace(key))
+        .Select(key => key.Trim())
+        .ToHashSet(StringComparer.OrdinalIgnoreCase) ?? new(StringComparer.OrdinalIgnoreCase);
+
     public string ToHtml(List<EntryContentDto> entriesContent, string locale, string defaultLocale, string spaceId, string entryTitle, string entryAdminUrl, User updatedBy)
     {
         var entryId = entriesContent.Select(x => x.Id).FirstOrDefault() ?? string.Empty;
@@ -198,7 +204,7 @@ public class EntryToHtmlConverter(
         var htmlBuilder = new StringBuilder();
         foreach (var item in jArray)
         {
-            var customFieldHtml = ConvertCustomFieldToHtml(item);
+            var customFieldHtml = ConvertCustomFieldToHtml(item, _ignoredJsonKeys);
             if (!string.IsNullOrEmpty(customFieldHtml))
             {
                 var divNode = new HtmlDocument().CreateElement("div");
@@ -213,12 +219,16 @@ public class EntryToHtmlConverter(
         return htmlBuilder.ToString();
     }
 
-    private string ConvertCustomFieldToHtml(JToken quoteToken)
+    private string ConvertCustomFieldToHtml(JToken quoteToken, HashSet<string>? ignoredKeys = null)
     {
+        ignoredKeys ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var htmlBuilder = new StringBuilder();
         var excludedFieldPathes = new[] { "target.sys", "nodeType", "result" };
         foreach (var property in quoteToken.Children<JProperty>())
         {
+            if (ignoredKeys.Contains(property.Name))
+                continue;
+
             if (property.Value.Type == JTokenType.String)
             {
                 string value = property.Value.ToString();
@@ -229,7 +239,22 @@ public class EntryToHtmlConverter(
             }
             if (property.Value.Type == JTokenType.Object)
             {
-                var innerHtml = ConvertCustomFieldToHtml(property.Value);
+                var jsonObject = (JObject)property.Value;
+                if (jsonObject["nodeType"]?.ToString() == "document")
+                {
+                    if (jsonObject["content"] is JArray contentArray)
+                    {
+                        var richTextConverter = new RichTextToHtmlConverter(contentArray, string.Empty);
+                        var richHtml = richTextConverter.ToHtml();
+
+                        htmlBuilder.Append(
+                            $"<div data-field=\"{property.Name}\" data-path=\"{property.Path}\" data-rich-text=\"true\">{richHtml}</div>");
+                    }
+
+                    continue;
+                }
+
+                var innerHtml = ConvertCustomFieldToHtml(property.Value, ignoredKeys);
                 if (!string.IsNullOrEmpty(innerHtml) && !excludedFieldPathes.Any(property.Path.Contains))
                 {
                     htmlBuilder.Append(innerHtml);
@@ -239,7 +264,7 @@ public class EntryToHtmlConverter(
             {
                 foreach (var item in property.Value.Children())
                 {
-                    var innerHtml = ConvertCustomFieldToHtml(item);
+                    var innerHtml = ConvertCustomFieldToHtml(item, ignoredKeys);
                     if (!string.IsNullOrEmpty(innerHtml) && !excludedFieldPathes.Any(property.Path.Contains))
                     {
                         htmlBuilder.Append(innerHtml);

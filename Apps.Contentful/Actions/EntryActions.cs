@@ -321,7 +321,8 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         var htmlConverter = new EntryToHtmlConverter(
             InvocationContext,
             entryIdentifier.Environment,
-            input.IncludeReferencedAssets ?? true);
+            input.IncludeReferencedAssets ?? true,
+            input.IgnoredJsonKeys);
 
         FileReference file;
         string fileNameFirstPart = entryIdentifier.ContentId;
