@@ -321,7 +321,8 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         var htmlConverter = new EntryToHtmlConverter(
             InvocationContext,
             entryIdentifier.Environment,
-            input.IncludeReferencedAssets ?? true);
+            input.IncludeReferencedAssets ?? true,
+            input.IgnoredJsonKeys);
 
         FileReference file;
         string fileNameFirstPart = entryIdentifier.ContentId;
@@ -1239,6 +1240,11 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         if (!string.IsNullOrWhiteSpace(request.UpdatedBy))
         {
             queryString.Add("sys.updatedBy.sys.id", request.UpdatedBy);
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.ExcludeUpdatedBy))
+        {
+            queryString.Add("sys.updatedBy.sys.id[ne]", request.ExcludeUpdatedBy);
         }
 
         if (request.ExcludeTags is not null && request.ExcludeTags.Any())

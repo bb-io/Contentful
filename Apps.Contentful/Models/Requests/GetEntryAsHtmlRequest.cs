@@ -27,6 +27,9 @@ public class GetEntryAsHtmlRequest
 
     [Display("Exclude field IDs", Description = "All field IDs in this collection will be omitted from the exported content")]
     public IEnumerable<string>? IgnoredFieldIds { get; set; }
+
+    [Display("Ignore JSON keys", Description = "All matching keys inside JSON object array fields will be preserved but omitted from exported translatable content")]
+    public IEnumerable<string>? IgnoredJsonKeys { get; set; }
     
     [Display("Excluded content type IDs", Description = "All content type IDs in this collection will be omitted from the exported content"), DataSource(typeof(ContentModelDataSourceHandler))]
     public IEnumerable<string>? IgnoredContentTypeIds { get; set; }

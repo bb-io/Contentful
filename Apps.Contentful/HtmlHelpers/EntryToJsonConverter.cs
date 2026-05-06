@@ -119,10 +119,10 @@ public static class EntryToJsonConverter
                 SetEntryFieldValue(fieldId, finalValue);
                 break;
             case "Symbol":
-                SetEntryFieldValue(fieldId, HttpUtility.HtmlDecode(htmlNode.InnerText));
+                SetEntryFieldValue(fieldId, GetPrimitiveTextValue(htmlNode));
                 break;
             case "Text":
-                SetEntryFieldValue(fieldId, HttpUtility.HtmlDecode(htmlNode.InnerText));
+                SetEntryFieldValue(fieldId, GetPrimitiveTextValue(htmlNode));
                 break;
             case "Object":
                 var parsedObject = ParseJsonObjectFromHtmlNode(htmlNode);
@@ -130,7 +130,7 @@ public static class EntryToJsonConverter
                 break;
             case "Location":
                 var jsonValue = htmlNode.Attributes["data-contentful-json-value"].Value;
-                var jsonObject = JToken.Parse(HttpUtility.HtmlDecode(jsonValue));
+                var jsonObject = ParseJsonAttribute(jsonValue);
                 SetEntryFieldValue(fieldId, jsonObject);
                 break;
             case "Boolean":
@@ -237,6 +237,15 @@ public static class EntryToJsonConverter
         }
     }
 
+    private static string GetPrimitiveTextValue(HtmlNode htmlNode)
+    {
+        var isHtmlContent = htmlNode.Attributes["data-contentful-html"]?.Value
+            ?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
+
+        var value = isHtmlContent ? htmlNode.InnerHtml : htmlNode.InnerText;
+        return HttpUtility.HtmlDecode(value);
+    }
+
     private static JToken ParseJsonObjectFromHtmlNode(HtmlNode htmlNode)
     {
         var richTextAttribute = htmlNode.Attributes["data-rich-text"];
@@ -276,7 +285,7 @@ public static class EntryToJsonConverter
                 var jsonValue = customFieldNode.Attributes["data-contentful-json-value"]?.Value;
                 if (jsonValue != null)
                 {
-                    var baseJsonObject = JObject.Parse(HttpUtility.HtmlDecode(jsonValue));
+                    var baseJsonObject = (JObject)ParseJsonAttribute(jsonValue);
                     var childElements = customFieldNode.SelectNodes(".//div[@data-path]");
                     if (childElements != null)
                     {
@@ -285,17 +294,25 @@ public static class EntryToJsonConverter
                             var path = childElement.Attributes["data-path"]?.Value;
                             if (path != null)
                             {
-                                var spitedPath = path.Split('.');
-                                var skipedFirstTwo = spitedPath.Skip(2).ToList();
-                                var pathSegments = string.Join(".", skipedFirstTwo);
+                                var token = SelectArrayItemToken(baseJsonObject, path);
 
-                                var token = baseJsonObject.SelectToken(pathSegments);
                                 if (token != null)
                                 {
-                                    var newValue = childElement.InnerText.Trim();
-                                    if (!string.IsNullOrEmpty(newValue))
+                                    var isRichText = childElement.Attributes["data-rich-text"]?.Value
+                                        ?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
+
+                                    if (isRichText)
                                     {
-                                        token.Replace(newValue);
+                                        var richTextJObject = ParseToRichText(childElement);
+                                        token.Replace(richTextJObject);
+                                    }
+                                    else
+                                    {
+                                        var newValue = childElement.InnerText.Trim();
+                                        if (!string.IsNullOrEmpty(newValue))
+                                        {
+                                            token.Replace(newValue);
+                                        }
                                     }
                                 }
                             }
@@ -308,6 +325,127 @@ public static class EntryToJsonConverter
         }
 
         return jsonArray;
+    }
+
+    private static JToken ParseJsonAttribute(string jsonValue)
+    {
+        var decodedJson = HttpUtility.HtmlDecode(jsonValue).Trim();
+
+        try
+        {
+            return JToken.Parse(decodedJson);
+        }
+        catch (JsonReaderException)
+        {
+            var recoveredJson = TryRecoverJsonWithTrailingQuote(decodedJson);
+            if (recoveredJson != null)
+                return JToken.Parse(recoveredJson);
+
+            throw;
+        }
+    }
+
+    private static string? TryRecoverJsonWithTrailingQuote(string value)
+    {
+        var endIndex = FindJsonTokenEnd(value);
+        if (endIndex == null || endIndex.Value >= value.Length - 1)
+            return null;
+
+        var suffix = value[(endIndex.Value + 1)..].Trim();
+        if (suffix.Length == 0 || suffix.Any(x => x != '"'))
+            return null;
+
+        return value[..(endIndex.Value + 1)];
+    }
+
+    private static int? FindJsonTokenEnd(string value)
+    {
+        var startIndex = 0;
+        while (startIndex < value.Length && char.IsWhiteSpace(value[startIndex]))
+            startIndex++;
+
+        if (startIndex >= value.Length)
+            return null;
+
+        if (value[startIndex] is not ('{' or '['))
+            return null;
+
+        var expectedClosings = new Stack<char>();
+        var inString = false;
+        var escaped = false;
+
+        for (var i = startIndex; i < value.Length; i++)
+        {
+            var current = value[i];
+
+            if (inString)
+            {
+                if (escaped)
+                {
+                    escaped = false;
+                    continue;
+                }
+
+                if (current == '\\')
+                {
+                    escaped = true;
+                    continue;
+                }
+
+                if (current == '"')
+                    inString = false;
+
+                continue;
+            }
+
+            if (current == '"')
+            {
+                inString = true;
+                continue;
+            }
+
+            if (current == '{')
+            {
+                expectedClosings.Push('}');
+                continue;
+            }
+
+            if (current == '[')
+            {
+                expectedClosings.Push(']');
+                continue;
+            }
+
+            if (current is '}' or ']')
+            {
+                if (expectedClosings.Count == 0 || expectedClosings.Pop() != current)
+                    return null;
+
+                if (expectedClosings.Count == 0)
+                    return i;
+            }
+        }
+
+        return null;
+    }
+
+    private static JToken? SelectArrayItemToken(JObject baseJsonObject, string path)
+    {
+        var splitPath = path.Split('.');
+        var candidatePaths = new[]
+        {
+            string.Join(".", splitPath.Skip(2)),
+            string.Join(".", splitPath.Skip(1))
+        };
+
+        foreach (var candidatePath in candidatePaths.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct())
+        {
+            var token = baseJsonObject.SelectToken(candidatePath);
+            if (token != null)
+                return token;
+        }
+
+        return null;
     }
 
     private static JObject ParseToRichText(HtmlNode htmlNode)
