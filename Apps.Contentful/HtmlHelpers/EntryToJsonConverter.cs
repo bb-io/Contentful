@@ -130,7 +130,7 @@ public static class EntryToJsonConverter
                 break;
             case "Location":
                 var jsonValue = htmlNode.Attributes["data-contentful-json-value"].Value;
-                var jsonObject = JToken.Parse(HttpUtility.HtmlDecode(jsonValue));
+                var jsonObject = ParseJsonAttribute(jsonValue);
                 SetEntryFieldValue(fieldId, jsonObject);
                 break;
             case "Boolean":
@@ -285,7 +285,7 @@ public static class EntryToJsonConverter
                 var jsonValue = customFieldNode.Attributes["data-contentful-json-value"]?.Value;
                 if (jsonValue != null)
                 {
-                    var baseJsonObject = JObject.Parse(HttpUtility.HtmlDecode(jsonValue));
+                    var baseJsonObject = (JObject)ParseJsonAttribute(jsonValue);
                     var childElements = customFieldNode.SelectNodes(".//div[@data-path]");
                     if (childElements != null)
                     {
@@ -325,6 +325,108 @@ public static class EntryToJsonConverter
         }
 
         return jsonArray;
+    }
+
+    private static JToken ParseJsonAttribute(string jsonValue)
+    {
+        var decodedJson = HttpUtility.HtmlDecode(jsonValue).Trim();
+
+        try
+        {
+            return JToken.Parse(decodedJson);
+        }
+        catch (JsonReaderException)
+        {
+            var recoveredJson = TryRecoverJsonWithTrailingQuote(decodedJson);
+            if (recoveredJson != null)
+                return JToken.Parse(recoveredJson);
+
+            throw;
+        }
+    }
+
+    private static string? TryRecoverJsonWithTrailingQuote(string value)
+    {
+        var endIndex = FindJsonTokenEnd(value);
+        if (endIndex == null || endIndex.Value >= value.Length - 1)
+            return null;
+
+        var suffix = value[(endIndex.Value + 1)..].Trim();
+        if (suffix.Length == 0 || suffix.Any(x => x != '"'))
+            return null;
+
+        return value[..(endIndex.Value + 1)];
+    }
+
+    private static int? FindJsonTokenEnd(string value)
+    {
+        var startIndex = 0;
+        while (startIndex < value.Length && char.IsWhiteSpace(value[startIndex]))
+            startIndex++;
+
+        if (startIndex >= value.Length)
+            return null;
+
+        if (value[startIndex] is not ('{' or '['))
+            return null;
+
+        var expectedClosings = new Stack<char>();
+        var inString = false;
+        var escaped = false;
+
+        for (var i = startIndex; i < value.Length; i++)
+        {
+            var current = value[i];
+
+            if (inString)
+            {
+                if (escaped)
+                {
+                    escaped = false;
+                    continue;
+                }
+
+                if (current == '\\')
+                {
+                    escaped = true;
+                    continue;
+                }
+
+                if (current == '"')
+                    inString = false;
+
+                continue;
+            }
+
+            if (current == '"')
+            {
+                inString = true;
+                continue;
+            }
+
+            if (current == '{')
+            {
+                expectedClosings.Push('}');
+                continue;
+            }
+
+            if (current == '[')
+            {
+                expectedClosings.Push(']');
+                continue;
+            }
+
+            if (current is '}' or ']')
+            {
+                if (expectedClosings.Count == 0 || expectedClosings.Pop() != current)
+                    return null;
+
+                if (expectedClosings.Count == 0)
+                    return i;
+            }
+        }
+
+        return null;
     }
 
     private static JToken? SelectArrayItemToken(JObject baseJsonObject, string path)
