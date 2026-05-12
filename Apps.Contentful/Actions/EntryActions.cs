@@ -12,6 +12,7 @@ using Apps.Contentful.Models.Requests.Tags;
 using Apps.Contentful.Models.Responses;
 using Apps.Contentful.Services;
 using Apps.Contentful.Utils;
+using User = Contentful.Core.Models.Management.User;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Authentication;
@@ -33,6 +34,7 @@ using HtmlAgilityPack;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Collections.Specialized;
+using System.Net.Http.Headers;
 using System.Net.Mime;
 using System.Text;
 using System.Web;
@@ -333,8 +335,13 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                 new() { EntryId = entryIdentifier.ContentId, Environment = entryIdentifier.Environment },
                 new LocaleOptionalIdentifier { Locale = selectedLocale }));
 
-            var updatedByUser = await client.ExecuteWithErrorHandling(async () =>
+            User updatedByUser = null;
+            try
+            {
+                updatedByUser = await client.ExecuteWithErrorHandling(async () =>
                 await client.GetUser(originalEntry.UpdatedBy));
+            }
+            catch { }
 
             var resultHtml = htmlConverter.ToHtml(
                 entriesContent,
@@ -1048,7 +1055,9 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         var entry = await client.GetEntryWithErrorHandling(entryId);
         if (entry == null) return null;
 
-        var user = await client.GetUser(entry.SystemProperties.UpdatedBy.SystemProperties.Id);
+        User user = null;
+        try { user = await client.GetUser(entry.SystemProperties.UpdatedBy.SystemProperties.Id); } 
+        catch { }
 
         if (rootEntryId != entry.SystemProperties.Id &&
             ignoredContentTypeIds.Contains(entry.SystemProperties.ContentType.SystemProperties.Id))

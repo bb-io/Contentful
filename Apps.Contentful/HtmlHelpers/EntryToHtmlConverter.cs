@@ -628,7 +628,7 @@ public class EntryToHtmlConverter(
 
         bodyNode.SetAttributeValue("its-rev-tool", "Contentful");
         bodyNode.SetAttributeValue("its-rev-tool-ref", "https://www.contentful.com");
-        bodyNode.SetAttributeValue("its-rev-person", $"{updatedBy.FirstName} {updatedBy.LastName}");
+        bodyNode.SetAttributeValue("its-rev-person", $"{updatedBy?.FirstName} {updatedBy?.LastName}");
 
         return (htmlDoc, bodyNode);
     }
