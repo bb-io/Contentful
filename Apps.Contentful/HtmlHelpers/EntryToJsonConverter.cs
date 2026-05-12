@@ -509,36 +509,18 @@ public static class EntryToJsonConverter
         return JValue.FromObject(textValue);
     }
 
-    private static JToken ParseUlAsArray(HtmlNode ulNode)
+    private static JArray ParseUlAsArray(HtmlNode ulNode)
     {
         var array = new JArray();
         var liNodes = ulNode.SelectNodes("./li");
-        if (liNodes != null)
+
+        if (liNodes == null) 
+            return array;
+        
+        foreach (var li in liNodes)
         {
-            foreach (var li in liNodes)
-            {
-                var dlChild = li.SelectSingleNode("./dl[@data-contentful-json-object='true']")
-                              ?? li.SelectSingleNode("./dl");
-                if (dlChild != null)
-                {
-                    array.Add(ParseDlAsObject(dlChild));
-                    continue;
-                }
-
-                var ulChild = li.SelectSingleNode("./ul");
-                if (ulChild != null)
-                {
-                    array.Add(ParseUlAsArray(ulChild));
-                    continue;
-                }
-
-                var textValue = HttpUtility.HtmlDecode(li.InnerText.Trim());
-
-                if (bool.TryParse(textValue, out var boolValue))
-                    array.Add(JValue.FromObject(boolValue));
-                else
-                    array.Add(JValue.FromObject(textValue));
-            }
+            var itemToken = ParseValueFromNode(li);
+            array.Add(itemToken);
         }
 
         return array;
