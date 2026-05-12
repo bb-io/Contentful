@@ -147,7 +147,10 @@ public class EntryActionsTests : TestBase
             ContentId = "4phPDNKF6oE6x7bexnmgGS",
             Locale = "en-US"
         };
-        var request = new GetEntryAsHtmlRequest();
+        var request = new GetEntryAsHtmlRequest
+        {
+            IgnoredJsonKeys = ["testText"]
+        };
 
         var fileResponse = await entryActions.GetEntryLocalizableFieldsAsHtmlFile(entryIdentifier, request);
 

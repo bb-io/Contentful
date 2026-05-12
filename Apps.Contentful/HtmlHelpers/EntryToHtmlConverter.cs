@@ -112,6 +112,7 @@ public class EntryToHtmlConverter(
         containerNode.SetAttributeValue(ConvertConstants.FieldTypeAttribute, field.Type);
         containerNode.SetAttributeValue(ConvertConstants.FieldIdAttribute, field.Id);
         containerNode.SetAttributeValue("data-contentful-json-object", "true");
+        containerNode.SetAttributeValue(ConvertConstants.JsonValue, jsonToken.ToString(Formatting.None));
 
         var dlNode = doc.CreateElement("dl");
         containerNode.AppendChild(dlNode);
@@ -126,6 +127,9 @@ public class EntryToHtmlConverter(
 
                     foreach (var prop in ((JObject)token).Properties())
                     {
+                        if (_ignoredJsonKeys.Contains(prop.Name)) 
+                            continue;
+                        
                         HtmlNode? ddNode = doc.CreateElement("dd");
                         ddNode.SetAttributeValue("data-json-key", prop.Name);
 
@@ -180,6 +184,9 @@ public class EntryToHtmlConverter(
         var rootObject = (JObject)jsonToken;
         foreach (var prop in rootObject.Properties())
         {
+            if (_ignoredJsonKeys.Contains(prop.Name)) 
+                continue;
+            
             HtmlNode? ddNode = doc.CreateElement("dd");
             ddNode.SetAttributeValue("data-json-key", prop.Name);
 
@@ -220,7 +227,7 @@ public class EntryToHtmlConverter(
         return htmlBuilder.ToString();
     }
 
-    private string ConvertCustomFieldToHtml(
+    private static string ConvertCustomFieldToHtml(
         JToken quoteToken,
         HashSet<string>? ignoredKeys = null,
         string entryId = "",
