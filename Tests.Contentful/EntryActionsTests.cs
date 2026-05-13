@@ -144,12 +144,17 @@ public class EntryActionsTests : TestBase
         var entryIdentifier = new DownloadContentInput()
         {
             Environment = "master",
-            ContentId = "4phPDNKF6oE6x7bexnmgGS",
+            ContentId = "7zY9YZJvhlPpUWifvCWlY3",
             Locale = "en-US"
         };
         var request = new GetEntryAsHtmlRequest
         {
-            IgnoredJsonKeys = ["testText"]
+            GetReferenceContent = true,
+            GetNonLocalizationReferenceContent = false,
+            GetEmbeddedInlineContent = true,
+            GetEmbeddedBlockContent = true,
+            IgnoredContentTypeIds = ["specialty","whitepaper","webinar","video","vpPositioningRestricted","technology","supportPages","serviceDetails","researchreport","procedure","preEvent","postEvent","podcast","level3Catalog","level2Catalog","legal","level1Catalog","templateHome","gatedWatchClp","gatedDownloadClp","formsScreen","forms","family","productDetailsPage","dynamicHub","demandGenTopicClp","demandGenProductClp","demandGenNpiClp","customerStory","clinicalArticle","caseStudy","awarenessTopicClp","article"],
+            IgnoredFieldIds = ["ctaUrl","productUrl","secondaryCtaUrl","primaryCtaUrl","url","value","ctaUrl1","ctaUrl2","platformUrl","stickyCtaUrl","introductionCtaUrl","mastheadCtaUrl","categoryUrl"],
         };
 
         var fileResponse = await entryActions.GetEntryLocalizableFieldsAsHtmlFile(entryIdentifier, request);

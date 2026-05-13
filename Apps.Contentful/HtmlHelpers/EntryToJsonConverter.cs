@@ -46,10 +46,25 @@ public static class EntryToJsonConverter
 
     public static void ToJson(Entry<object> entry, HtmlNode html, string locale, ContentType contentType, bool doNotUpdateReferenceFields)
     {
-        var entryFields = (JObject)entry.Fields;
+        var entryFields = entry.Fields as JObject ?? new JObject();
+        entry.Fields = entryFields;
 
-        var elements = html.ChildNodes.Where(n => n.NodeType == HtmlNodeType.Element).ToList();
-        elements.ForEach(x => UpdateEntryFieldFromHtml(x, entryFields, locale, contentType, doNotUpdateReferenceFields));
+        var validFieldNodes = html.Descendants()
+            .Where(node => node.NodeType == HtmlNodeType.Element &&
+                           node.Attributes.Contains(ConvertConstants.FieldIdAttribute) &&
+                           node.Attributes.Contains(ConvertConstants.FieldTypeAttribute))
+            .ToList();
+
+        foreach (var fieldNode in validFieldNodes)
+        {
+            var fieldId = fieldNode.Attributes[ConvertConstants.FieldIdAttribute].Value;
+            var fieldType = fieldNode.Attributes[ConvertConstants.FieldTypeAttribute].Value;
+
+            if (string.IsNullOrWhiteSpace(fieldId) || string.IsNullOrWhiteSpace(fieldType))
+                continue;
+            
+            UpdateEntryFieldFromHtml(fieldNode, entryFields, locale, contentType, doNotUpdateReferenceFields);
+        }
     }
 
     private static void UpdateEntryFieldFromHtml(HtmlNode htmlNode, JObject entryFields, string locale, ContentType contentType, bool doNotUpdateReferenceFields)
