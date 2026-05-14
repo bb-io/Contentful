@@ -140,7 +140,15 @@ public static class EntryToJsonConverter
                 SetEntryFieldValue(fieldId, GetPrimitiveTextValue(htmlNode));
                 break;
             case "Object":
-                var parsedObject = ParseJsonObjectFromHtmlNode(htmlNode);
+                JToken? existingLocaleData = null;
+    
+                if (entryFields.TryGetValue(fieldId, out var existingFieldProp) && existingFieldProp is JObject fieldJObj)
+                {
+                    if (fieldJObj.TryGetValue(locale, out var localeJToken))
+                        existingLocaleData = localeJToken;
+                }
+
+                var parsedObject = ParseJsonObjectFromHtmlNode(htmlNode, existingLocaleData);
                 SetEntryFieldValue(fieldId, parsedObject);
                 break;
             case "Location":
@@ -261,7 +269,7 @@ public static class EntryToJsonConverter
         return HttpUtility.HtmlDecode(value);
     }
 
-    private static JToken ParseJsonObjectFromHtmlNode(HtmlNode htmlNode)
+    private static JToken ParseJsonObjectFromHtmlNode(HtmlNode htmlNode, JToken? existingTargetData = null)
     {
         var richTextAttribute = htmlNode.Attributes["data-rich-text"];
         if (richTextAttribute != null && richTextAttribute.Value.Equals("true", StringComparison.OrdinalIgnoreCase))
@@ -276,16 +284,21 @@ public static class EntryToJsonConverter
         }
         
         JObject? baseObject = null;
-        var jsonValueAttribute = htmlNode.Attributes[ConvertConstants.JsonValue]?.Value;
-        if (!string.IsNullOrEmpty(jsonValueAttribute))
+        if (existingTargetData is JObject existingObj && existingObj.HasValues)
+            baseObject = (JObject)existingObj.DeepClone();
+        else
         {
-            try
+            var jsonValueAttribute = htmlNode.Attributes[ConvertConstants.JsonValue]?.Value;
+            if (!string.IsNullOrEmpty(jsonValueAttribute))
             {
-                baseObject = ParseJsonAttribute(jsonValueAttribute) as JObject;
-            }
-            catch
-            {
-                baseObject = null;
+                try
+                {
+                    baseObject = ParseJsonAttribute(jsonValueAttribute) as JObject;
+                }
+                catch
+                {
+                    baseObject = null;
+                }
             }
         }
 
@@ -303,18 +316,25 @@ public static class EntryToJsonConverter
         return ParseDlAsObject(dlNode, baseObject);
     }
 
-    private static JToken ParseArrayJsonObject(HtmlNode htmlNode)
+    private static JToken ParseArrayJsonObject(HtmlNode htmlNode, JArray? existingTargetArray = null)
     {
         var jsonArray = new JArray();
         var customFieldNodes = htmlNode.SelectNodes(".//div[@data-field='customField']");
         if (customFieldNodes != null)
         {
-            foreach (var customFieldNode in customFieldNodes)
+            for (int i = 0; i < customFieldNodes.Count; i++)
             {
+                var customFieldNode = customFieldNodes[i];
                 var jsonValue = customFieldNode.Attributes["data-contentful-json-value"]?.Value;
+        
                 if (jsonValue != null)
                 {
-                    var baseJsonObject = (JObject)ParseJsonAttribute(jsonValue);
+                    JObject baseJsonObject;
+                    if (existingTargetArray != null && i < existingTargetArray.Count && existingTargetArray[i] is JObject existingItem)
+                        baseJsonObject = (JObject)existingItem.DeepClone();
+                    else
+                        baseJsonObject = (JObject)ParseJsonAttribute(jsonValue);
+                    
                     var childElements = customFieldNode.SelectNodes(".//div[@data-path]");
                     if (childElements != null)
                     {
@@ -338,10 +358,7 @@ public static class EntryToJsonConverter
                                     else
                                     {
                                         var newValue = childElement.InnerText.Trim();
-                                        if (!string.IsNullOrEmpty(newValue))
-                                        {
-                                            token.Replace(newValue);
-                                        }
+                                        token.Replace(new JValue(newValue));
                                     }
                                 }
                             }
