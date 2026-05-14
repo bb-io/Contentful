@@ -26,6 +26,18 @@ public class EntryEntity : IDownloadContentInput
 
     public int Version { get; set; }
 
+    [Display("Is draft?")]
+    public bool IsDraft {  get; set; }
+
+    [Display("Is changed?")]
+    public bool IsChanged { get; set; }
+
+    [Display("Is published?")]
+    public bool IsPublished { get; set; }
+    
+    [Display("Is archived?")]
+    public bool IsArchived { get; set; }
+
     public EntryEntity(Entry<object> entry)
     {
         ContentId = entry.SystemProperties.Id;
@@ -35,6 +47,13 @@ public class EntryEntity : IDownloadContentInput
         UpdatedAt = entry.SystemProperties.UpdatedAt;
         Version = entry.SystemProperties.Version ?? default;
         UpdatedBy = entry.SystemProperties.UpdatedBy.SystemProperties.Id;
+
+        // see docs about state: https://www.contentful.com/developers/docs/tutorials/general/determine-entry-asset-state/
+        var publishedVersion = entry.SystemProperties.PublishedVersion ?? 0;
+        IsDraft = publishedVersion < 1;
+        IsChanged = publishedVersion > 0 && entry.SystemProperties.Version == publishedVersion + 2;
+        IsPublished = publishedVersion > 0 && entry.SystemProperties.Version == publishedVersion + 1;
+        IsArchived = (entry.SystemProperties.ArchivedVersion ?? 0) > 0;
     }
 
     public EntryEntity(EntryEntity other)
@@ -46,5 +65,9 @@ public class EntryEntity : IDownloadContentInput
         UpdatedAt = other.UpdatedAt;
         Version = other.Version;
         UpdatedBy = other.UpdatedBy;
+        IsDraft = other.IsDraft;
+        IsChanged = other.IsChanged;
+        IsPublished = other.IsPublished;
+        IsArchived = other.IsArchived;
     }
 }
