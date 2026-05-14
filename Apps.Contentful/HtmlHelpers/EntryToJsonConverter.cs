@@ -140,7 +140,15 @@ public static class EntryToJsonConverter
                 SetEntryFieldValue(fieldId, GetPrimitiveTextValue(htmlNode));
                 break;
             case "Object":
-                var parsedObject = ParseJsonObjectFromHtmlNode(htmlNode);
+                JToken? existingLocaleData = null;
+    
+                if (entryFields.TryGetValue(fieldId, out var existingFieldProp) && existingFieldProp is JObject fieldJObj)
+                {
+                    if (fieldJObj.TryGetValue(locale, out var localeJToken))
+                        existingLocaleData = localeJToken;
+                }
+
+                var parsedObject = ParseJsonObjectFromHtmlNode(htmlNode, existingLocaleData);
                 SetEntryFieldValue(fieldId, parsedObject);
                 break;
             case "Location":
@@ -261,7 +269,7 @@ public static class EntryToJsonConverter
         return HttpUtility.HtmlDecode(value);
     }
 
-    private static JToken ParseJsonObjectFromHtmlNode(HtmlNode htmlNode)
+    private static JToken ParseJsonObjectFromHtmlNode(HtmlNode htmlNode, JToken? existingTargetData = null)
     {
         var richTextAttribute = htmlNode.Attributes["data-rich-text"];
         if (richTextAttribute != null && richTextAttribute.Value.Equals("true", StringComparison.OrdinalIgnoreCase))
@@ -276,16 +284,21 @@ public static class EntryToJsonConverter
         }
         
         JObject? baseObject = null;
-        var jsonValueAttribute = htmlNode.Attributes[ConvertConstants.JsonValue]?.Value;
-        if (!string.IsNullOrEmpty(jsonValueAttribute))
+        if (existingTargetData is JObject existingObj && existingObj.HasValues)
+            baseObject = (JObject)existingObj.DeepClone();
+        else
         {
-            try
+            var jsonValueAttribute = htmlNode.Attributes[ConvertConstants.JsonValue]?.Value;
+            if (!string.IsNullOrEmpty(jsonValueAttribute))
             {
-                baseObject = ParseJsonAttribute(jsonValueAttribute) as JObject;
-            }
-            catch
-            {
-                baseObject = null;
+                try
+                {
+                    baseObject = ParseJsonAttribute(jsonValueAttribute) as JObject;
+                }
+                catch
+                {
+                    baseObject = null;
+                }
             }
         }
 
@@ -303,18 +316,25 @@ public static class EntryToJsonConverter
         return ParseDlAsObject(dlNode, baseObject);
     }
 
-    private static JToken ParseArrayJsonObject(HtmlNode htmlNode)
+    private static JToken ParseArrayJsonObject(HtmlNode htmlNode, JArray? existingTargetArray = null)
     {
         var jsonArray = new JArray();
         var customFieldNodes = htmlNode.SelectNodes(".//div[@data-field='customField']");
         if (customFieldNodes != null)
         {
-            foreach (var customFieldNode in customFieldNodes)
+            for (int i = 0; i < customFieldNodes.Count; i++)
             {
+                var customFieldNode = customFieldNodes[i];
                 var jsonValue = customFieldNode.Attributes["data-contentful-json-value"]?.Value;
+        
                 if (jsonValue != null)
                 {
-                    var baseJsonObject = (JObject)ParseJsonAttribute(jsonValue);
+                    JObject baseJsonObject;
+                    if (existingTargetArray != null && i < existingTargetArray.Count && existingTargetArray[i] is JObject existingItem)
+                        baseJsonObject = (JObject)existingItem.DeepClone();
+                    else
+                        baseJsonObject = (JObject)ParseJsonAttribute(jsonValue);
+                    
                     var childElements = customFieldNode.SelectNodes(".//div[@data-path]");
                     if (childElements != null)
                     {
@@ -338,10 +358,7 @@ public static class EntryToJsonConverter
                                     else
                                     {
                                         var newValue = childElement.InnerText.Trim();
-                                        if (!string.IsNullOrEmpty(newValue))
-                                        {
-                                            token.Replace(newValue);
-                                        }
+                                        token.Replace(new JValue(newValue));
                                     }
                                 }
                             }
@@ -491,49 +508,78 @@ public static class EntryToJsonConverter
         return richTextValue;
     }
 
-    private static JObject ParseDlAsObject(HtmlNode dlNode, JObject? baseObj = null)
+    private static JObject ParseDlAsObject(HtmlNode dlNode, JObject? baseTemplate)
     {
-        var obj = baseObj ?? new JObject();
+        var resultObject = baseTemplate != null ? (JObject)baseTemplate.DeepClone() : new JObject();
 
-        var ddNodes = dlNode.SelectNodes("./dd[@data-json-key]");
-        if (ddNodes == null)
+        var propertyNodes = dlNode.ChildNodes
+            .Where(n => n.Name == "dd" && n.Attributes.Contains("data-json-key"));
+
+        foreach (var ddNode in propertyNodes)
         {
-            return obj;
-        }
+            var jsonKey = ddNode.Attributes["data-json-key"].Value;
+            if (string.IsNullOrEmpty(jsonKey)) 
+                continue;
 
-        foreach (var dd in ddNodes)
-        {
-            var key = dd.GetAttributeValue("data-json-key", "");
-        
-            var nestedDl = dd.SelectSingleNode("./dl[@data-contentful-json-object='true']") ?? 
-                           dd.SelectSingleNode("./dl");
+            var innerDl = ddNode.SelectSingleNode("./dl");
+            var innerUl = ddNode.SelectSingleNode("./ul");
 
-            if (nestedDl != null)
+            if (innerDl != null)
             {
-                var existingSubObject = obj[key] as JObject;
-                obj[key] = ParseDlAsObject(nestedDl, existingSubObject);
+                var subTemplate = resultObject[jsonKey] as JObject;
+                resultObject[jsonKey] = ParseDlAsObject(innerDl, subTemplate);
+            }
+            else if (innerUl != null)
+            {
+                var listItems = innerUl.SelectNodes("./li");
+                var targetArray = resultObject[jsonKey] as JArray ?? [];
+                var newArray = new JArray();
+
+                if (listItems != null)
+                {
+                    for (int i = 0; i < listItems.Count; i++)
+                    {
+                        var liNode = listItems[i];
+                        var itemDl = liNode.SelectSingleNode("./dl");
+
+                        if (itemDl != null)
+                        {
+                            var itemTemplate = targetArray.Count > i ? targetArray[i] as JObject : null;
+                            newArray.Add(ParseDlAsObject(itemDl, itemTemplate));
+                        }
+                        else
+                        {
+                            var decodedText = HttpUtility.HtmlDecode(liNode.InnerText.Trim());
+                            newArray.Add(new JValue(decodedText));
+                        }
+                    }
+                }
+                resultObject[jsonKey] = newArray;
             }
             else
-                obj[key] = ParseValueFromNode(dd);
+            {
+                var decodedValue = HttpUtility.HtmlDecode(ddNode.InnerText.Trim());
+                resultObject[jsonKey] = new JValue(decodedValue);
+            }
         }
-
-        return obj;
+        
+        return resultObject;
     }
 
-    private static JToken ParseValueFromNode(HtmlNode node)
+    private static JToken ParseValueFromNode(HtmlNode node, JToken? baseTemplate = null)
     {
         var dlChild = node.SelectSingleNode("./dl[@data-contentful-json-object='true']")
                       ?? node.SelectSingleNode("./dl");
 
         if (dlChild != null)
         {
-            return ParseDlAsObject(dlChild);
+            return ParseDlAsObject(dlChild, baseTemplate as JObject);
         }
 
         var ulChild = node.SelectSingleNode("./ul");
         if (ulChild != null)
         {
-            return ParseUlAsArray(ulChild);
+            return ParseUlAsArray(ulChild, baseTemplate as JArray);
         }
 
         var textValue = HttpUtility.HtmlDecode(node.InnerText.Trim());
@@ -547,7 +593,7 @@ public static class EntryToJsonConverter
         return JValue.FromObject(textValue);
     }
 
-    private static JArray ParseUlAsArray(HtmlNode ulNode)
+    private static JArray ParseUlAsArray(HtmlNode ulNode, JArray? baseTemplateArray = null)
     {
         var array = new JArray();
         var liNodes = ulNode.SelectNodes("./li");
@@ -555,10 +601,16 @@ public static class EntryToJsonConverter
         if (liNodes == null) 
             return array;
         
-        foreach (var li in liNodes)
+        for (int i = 0; i < liNodes.Count; i++)
         {
-            var itemToken = ParseValueFromNode(li);
-            array.Add(itemToken);
+            var liNode = liNodes[i];
+        
+            JToken? itemTemplate = null;
+            if (baseTemplateArray != null && i < baseTemplateArray.Count)
+                itemTemplate = baseTemplateArray[i];
+
+            var parsedItem = ParseValueFromNode(liNode, itemTemplate);
+            array.Add(parsedItem);
         }
 
         return array;
