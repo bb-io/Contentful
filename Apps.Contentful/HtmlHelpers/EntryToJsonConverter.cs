@@ -280,42 +280,41 @@ public static class EntryToJsonConverter
         var arrayJsonAttribute = htmlNode.Attributes["data-array-json-object"];
         if (arrayJsonAttribute != null && arrayJsonAttribute.Value.Equals("true", StringComparison.OrdinalIgnoreCase))
         {
-            return ParseArrayJsonObject(htmlNode);
+            return ParseArrayJsonObject(htmlNode, existingTargetData as JArray);
         }
         
-        JObject? baseObject = null;
-        if (existingTargetData is JObject existingObj && existingObj.HasValues)
-            baseObject = (JObject)existingObj.DeepClone();
-        else
+        JObject baseObject = new JObject();
+        
+        var jsonValueAttribute = htmlNode.Attributes[ConvertConstants.JsonValue]?.Value;
+        if (!string.IsNullOrEmpty(jsonValueAttribute))
         {
-            var jsonValueAttribute = htmlNode.Attributes[ConvertConstants.JsonValue]?.Value;
-            if (!string.IsNullOrEmpty(jsonValueAttribute))
+            try
             {
-                try
-                {
-                    baseObject = ParseJsonAttribute(jsonValueAttribute) as JObject;
-                }
-                catch
-                {
-                    baseObject = null;
-                }
+                baseObject = ParseJsonAttribute(jsonValueAttribute) as JObject ?? new JObject();
+            }
+            catch
+            {
+                // We'll fallback to empty object if parsing fails
             }
         }
 
-        var dlNode = htmlNode.SelectSingleNode("./dl[@data-contentful-json-object='true']");
-        if (dlNode == null)
+        if (existingTargetData is JObject existingObj && existingObj.HasValues)
         {
-            dlNode = htmlNode.SelectSingleNode("./dl");
+            baseObject.Merge(existingObj, new JsonMergeSettings
+            {
+                MergeArrayHandling = MergeArrayHandling.Merge,
+                MergeNullValueHandling = MergeNullValueHandling.Ignore
+            });
         }
 
-        if (dlNode == null)
-        {
-            return new JObject();
-        }
+        var dlNode = htmlNode.SelectSingleNode("./dl[@data-contentful-json-object='true']") 
+                  ?? htmlNode.SelectSingleNode("./dl");
 
-        return ParseDlAsObject(dlNode, baseObject);
+        return dlNode == null 
+            ? baseObject 
+            : ParseDlAsObject(dlNode, baseObject);
     }
-
+    
     private static JToken ParseArrayJsonObject(HtmlNode htmlNode, JArray? existingTargetArray = null)
     {
         var jsonArray = new JArray();
