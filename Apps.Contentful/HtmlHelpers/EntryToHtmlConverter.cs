@@ -222,7 +222,7 @@ public class EntryToHtmlConverter(
         containerNode.SetAttributeValue(ConvertConstants.FieldTypeAttribute, field.Type);
         containerNode.SetAttributeValue(ConvertConstants.FieldIdAttribute, field.Id);
         containerNode.SetAttributeValue(ConvertConstants.BlackbirdKey, $"{entryId}-{field.Id}");
-        containerNode.SetAttributeValue("data-nested-rt-json-object", "true");
+        containerNode.SetAttributeValue(ConvertConstants.DataNestedRtJsonObject, "true");
         containerNode.SetAttributeValue(ConvertConstants.JsonValue, localeObject.ToString(Formatting.None));
 
         foreach (var prop in localeObject.Properties())
