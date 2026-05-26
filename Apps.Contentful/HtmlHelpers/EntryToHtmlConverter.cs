@@ -18,6 +18,10 @@ public class EntryToHtmlConverter(
     bool includeReferencedAssets = true,
     IEnumerable<string>? ignoredJsonKeys = null)
 {
+    
+    private static readonly HashSet<string> StandardRtSchemaKeys =
+        new(StringComparer.OrdinalIgnoreCase) { "nodeType", "data", "content" };
+    
     private readonly HashSet<string> _ignoredJsonKeys = ignoredJsonKeys?
         .Where(key => !string.IsNullOrWhiteSpace(key))
         .Select(key => key.Trim())
@@ -80,6 +84,12 @@ public class EntryToHtmlConverter(
     {
         if (entryField[locale] is JObject localeObject && localeObject["nodeType"]?.ToString() == "document")
         {
+            var hasExtraKeys = localeObject.Properties()
+                .Any(p => !StandardRtSchemaKeys.Contains(p.Name) && !_ignoredJsonKeys.Contains(p.Name));
+
+            if (hasExtraKeys)
+                return ConvertNestedRtJsonObjectToHtml(doc, field, localeObject, entryId);
+
             var htmlNode = ConvertRichTextToHtml(doc, field, entryField, locale, spaceId, entryId);
             htmlNode?.SetAttributeValue("data-rich-text", "true");
             return htmlNode;
@@ -206,6 +216,40 @@ public class EntryToHtmlConverter(
         return containerNode;
     }
     
+    private HtmlNode? ConvertNestedRtJsonObjectToHtml(HtmlDocument doc, Field field, JObject localeObject, string entryId)
+    {
+        var containerNode = doc.CreateElement("div");
+        containerNode.SetAttributeValue(ConvertConstants.FieldTypeAttribute, field.Type);
+        containerNode.SetAttributeValue(ConvertConstants.FieldIdAttribute, field.Id);
+        containerNode.SetAttributeValue(ConvertConstants.BlackbirdKey, $"{entryId}-{field.Id}");
+        containerNode.SetAttributeValue("data-nested-rt-json-object", "true");
+        containerNode.SetAttributeValue(ConvertConstants.JsonValue, localeObject.ToString(Formatting.None));
+
+        foreach (var prop in localeObject.Properties())
+        {
+            if (StandardRtSchemaKeys.Contains(prop.Name) || _ignoredJsonKeys.Contains(prop.Name))
+                continue;
+
+            if (prop.Value is not JObject nestedDoc || nestedDoc["nodeType"]?.ToString() != "document")
+                continue;
+
+            var content = nestedDoc["content"] as JArray;
+            if (content == null)
+                continue;
+
+            var richHtml = new RichTextToHtmlConverter(content, string.Empty).ToHtml();
+
+            var childNode = doc.CreateElement("div");
+            childNode.SetAttributeValue("data-field", prop.Name);
+            childNode.SetAttributeValue(ConvertConstants.BlackbirdKey, $"{entryId}-{field.Id}-{prop.Name}");
+            childNode.SetAttributeValue("data-rich-text", "true");
+            childNode.InnerHtml = richHtml;
+            containerNode.AppendChild(childNode);
+        }
+
+        return containerNode;
+    }
+
     private string ConvertArrayCustomFieldToHtml(JArray jArray, string entryId, string fieldId)
     {
         var htmlBuilder = new StringBuilder();

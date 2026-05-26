@@ -282,7 +282,13 @@ public static class EntryToJsonConverter
         {
             return ParseArrayJsonObject(htmlNode, existingTargetData as JArray);
         }
-        
+
+        var nestedRtAttribute = htmlNode.Attributes["data-nested-rt-json-object"];
+        if (nestedRtAttribute != null && nestedRtAttribute.Value.Equals("true", StringComparison.OrdinalIgnoreCase))
+        {
+            return ParseNestedRtJsonObject(htmlNode, existingTargetData as JObject);
+        }
+
         JObject baseObject = new JObject();
         
         var jsonValueAttribute = htmlNode.Attributes[ConvertConstants.JsonValue]?.Value;
@@ -370,6 +376,38 @@ public static class EntryToJsonConverter
         }
 
         return jsonArray;
+    }
+
+    private static JToken ParseNestedRtJsonObject(HtmlNode htmlNode, JObject? existingTargetObject = null)
+    {
+        var jsonValueAttribute = htmlNode.Attributes[ConvertConstants.JsonValue]?.Value;
+
+        JObject baseJsonObject;
+        if (existingTargetObject != null && existingTargetObject.HasValues)
+            baseJsonObject = (JObject)existingTargetObject.DeepClone();
+        else if (!string.IsNullOrEmpty(jsonValueAttribute))
+            baseJsonObject = ParseJsonAttribute(jsonValueAttribute) as JObject ?? new JObject();
+        else
+            baseJsonObject = new JObject();
+
+        var childDivs = htmlNode.SelectNodes("./div[@data-field]");
+        if (childDivs != null)
+        {
+            foreach (var childDiv in childDivs)
+            {
+                var fieldName = childDiv.Attributes["data-field"]?.Value;
+                if (string.IsNullOrEmpty(fieldName))
+                    continue;
+
+                var isRichText = childDiv.Attributes["data-rich-text"]?.Value
+                    ?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
+
+                if (isRichText)
+                    baseJsonObject[fieldName] = ParseToRichText(childDiv);
+            }
+        }
+
+        return baseJsonObject;
     }
 
     private static JToken ParseJsonAttribute(string jsonValue)
