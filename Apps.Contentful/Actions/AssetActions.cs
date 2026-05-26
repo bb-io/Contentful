@@ -43,7 +43,6 @@ public class AssetActions(InvocationContext invocationContext, IFileManagementCl
 
         static string? GetLocalizedOrNull(IDictionary<string, string>? dict, string locale)
             => dict != null && dict.TryGetValue(locale, out var value) ? value : null;
-
         var title = GetLocalizedOrNull(asset.Title, assetIdentifier.Locale);
         var description = GetLocalizedOrNull(asset.Description, assetIdentifier.Locale);
 
