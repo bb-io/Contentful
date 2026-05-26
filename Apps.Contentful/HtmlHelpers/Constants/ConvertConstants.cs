@@ -8,4 +8,5 @@ public class ConvertConstants
     public const string AssetIdAttribute = "data-contentful-asset-id";
     public const string BlackbirdKey = "data-blackbird-key";
     public const string JsonValue = "data-contentful-json-value";
+    public const string DataNestedRtJsonObject = "data-nested-rt-json-object";
 }
