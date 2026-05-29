@@ -231,7 +231,21 @@ public class EntryToHtmlConverter(
                 continue;
 
             if (prop.Value is not JObject nestedDoc || nestedDoc["nodeType"]?.ToString() != "document")
+            {
+                if (prop.Value.Type == JTokenType.Array)
+                {
+                    var innerHtml = ConvertArrayCustomFieldToHtml((JArray)prop.Value, entryId, field.Id);
+                    if (!string.IsNullOrEmpty(innerHtml))
+                    {
+                        var arrayNode = doc.CreateElement("div");
+                        arrayNode.SetAttributeValue("data-field", prop.Name);
+                        arrayNode.SetAttributeValue("data-array-json-object", "true");
+                        arrayNode.InnerHtml = innerHtml;
+                        containerNode.AppendChild(arrayNode);
+                    }
+                }
                 continue;
+            }
 
             var content = nestedDoc["content"] as JArray;
             if (content == null)
@@ -283,6 +297,9 @@ public class EntryToHtmlConverter(
         foreach (var property in quoteToken.Children<JProperty>())
         {
             if (ignoredKeys.Contains(property.Name))
+                continue;
+
+            if (property.Name.Equals("sys", StringComparison.OrdinalIgnoreCase))
                 continue;
 
             if (property.Value.Type == JTokenType.String)

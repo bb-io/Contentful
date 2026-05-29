@@ -401,9 +401,13 @@ public static class EntryToJsonConverter
 
                 var isRichText = childDiv.Attributes["data-rich-text"]?.Value
                     ?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
+                var isArrayJson = childDiv.Attributes["data-array-json-object"]?.Value
+                    ?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
 
                 if (isRichText)
                     baseJsonObject[fieldName] = ParseToRichText(childDiv);
+                else if (isArrayJson)
+                    baseJsonObject[fieldName] = ParseArrayJsonObject(childDiv, baseJsonObject[fieldName] as JArray);
             }
         }
 
@@ -515,17 +519,16 @@ public static class EntryToJsonConverter
     private static JToken? SelectArrayItemToken(JObject baseJsonObject, string path)
     {
         var splitPath = path.Split('.');
-        var candidatePaths = new[]
-        {
-            string.Join(".", splitPath.Skip(2)),
-            string.Join(".", splitPath.Skip(1))
-        };
 
-        foreach (var candidatePath in candidatePaths.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct())
+        for (var skip = 0; skip < splitPath.Length; skip++)
         {
-            var token = baseJsonObject.SelectToken(candidatePath);
-            if (token != null)
-                return token;
+            var candidatePath = string.Join(".", splitPath.Skip(skip));
+            if (!string.IsNullOrWhiteSpace(candidatePath))
+            {
+                var token = baseJsonObject.SelectToken(candidatePath);
+                if (token != null)
+                    return token;
+            }
         }
 
         return null;
