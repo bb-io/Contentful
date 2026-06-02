@@ -145,9 +145,9 @@ public class EntryToHtmlConverter(
 
                         if (prop.Value.Type == JTokenType.String)
                         {
-                            ddNode.InnerHtml = System.Net.WebUtility.HtmlEncode(prop.Value.ToString());
+                            SetDdHtmlContent(ddNode, prop.Value.ToString());
                         }
-                        else 
+                        else
                         {
                             var childNode = RenderToken(prop.Value);
                             ddNode.AppendChild(childNode);
@@ -166,7 +166,7 @@ public class EntryToHtmlConverter(
                         var liNode = doc.CreateElement("li");
                         if (item.Type == JTokenType.String)
                         {
-                            liNode.InnerHtml = System.Net.WebUtility.HtmlEncode(item.ToString());
+                            SetDdHtmlContent(liNode, item.ToString());
                         }
                         else
                         {
@@ -202,7 +202,7 @@ public class EntryToHtmlConverter(
 
             if (prop.Value.Type == JTokenType.String)
             {
-                ddNode.InnerHtml = System.Net.WebUtility.HtmlEncode(prop.Value.ToString());
+                SetDdHtmlContent(ddNode, prop.Value.ToString());
             }
             else
             {
@@ -619,6 +619,19 @@ public class EntryToHtmlConverter(
         }
 
         return node;
+    }
+
+    private static void SetDdHtmlContent(HtmlNode node, string value)
+    {
+        if (IsHtmlContent(value))
+        {
+            node.SetAttributeValue("data-contentful-html", "true");
+            node.InnerHtml = value;
+        }
+        else
+        {
+            node.InnerHtml = System.Net.WebUtility.HtmlEncode(value);
+        }
     }
 
     private static bool IsHtmlContent(string value)
