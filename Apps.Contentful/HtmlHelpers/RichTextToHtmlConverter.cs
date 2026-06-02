@@ -40,7 +40,7 @@ public class RichTextToHtmlConverter(
                 return ConvertHeadingToHtml(jsonObject, nodeType);
             case "paragraph":
                 var content = ConvertContentToHtml(jsonObject["content"]);
-                content = content.Replace(@"\n", "<br>");
+                content = content.Replace("\n", "<br>");
                 return string.IsNullOrWhiteSpace(content) ? "<br>" : $"<p>{content}</p>";
             case "blockquote":
                 return $"<blockquote>{ConvertContentToHtml(jsonObject["content"])}</blockquote>";

@@ -594,7 +594,7 @@ public class EntryToHtmlConverter(
         {
             node.InnerHtml = fieldContent;
         }
-        else if (fieldContent.Contains("\n"))
+        else if (fieldContent.Contains("\n") && !IsHtmlContent(fieldContent))
         {
             var paragraphs = fieldContent.Split("\n");
             var stringBuilder = new StringBuilder();

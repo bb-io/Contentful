@@ -714,8 +714,8 @@ public class HtmlToRichTextConverter
                 if (child.Name == "a")
                 {
                     var id = child.GetAttributeValue("id", "");
-                    if (string.IsNullOrEmpty(id) || 
-                        id.Contains("embedded-entry-inline") || 
+                    if (string.IsNullOrEmpty(id) ||
+                        id.Contains("embedded-entry-inline") ||
                         id.Contains("embedded-asset-inline") ||
                         id.Contains("entry-hyperlink"))
                     {
@@ -740,6 +740,16 @@ public class HtmlToRichTextConverter
                     {
                         paragraph.Content.Add(assetContent);
                     }
+                }
+                else if (child.Name == "br")
+                {
+                    paragraph.Content.Add(new Text
+                    {
+                        NodeType = "text",
+                        Value = "\n",
+                        Data = new GenericStructureData(),
+                        Marks = new List<Mark>()
+                    });
                 }
                 else
                 {
