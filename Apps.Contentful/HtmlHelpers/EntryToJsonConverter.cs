@@ -558,8 +558,17 @@ public static class EntryToJsonConverter
         foreach (var ddNode in propertyNodes)
         {
             var jsonKey = ddNode.Attributes["data-json-key"].Value;
-            if (string.IsNullOrEmpty(jsonKey)) 
+            if (string.IsNullOrEmpty(jsonKey))
                 continue;
+
+            var isHtmlValue = ddNode.Attributes["data-contentful-html"]?.Value
+                ?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
+
+            if (isHtmlValue)
+            {
+                resultObject[jsonKey] = new JValue(HttpUtility.HtmlDecode(ddNode.InnerHtml));
+                continue;
+            }
 
             var innerDl = ddNode.SelectSingleNode("./dl");
             var innerUl = ddNode.SelectSingleNode("./ul");
@@ -589,7 +598,11 @@ public static class EntryToJsonConverter
                         }
                         else
                         {
-                            var decodedText = HttpUtility.HtmlDecode(liNode.InnerText.Trim());
+                            var isHtmlItem = liNode.Attributes["data-contentful-html"]?.Value
+                                ?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
+                            var decodedText = isHtmlItem
+                                ? HttpUtility.HtmlDecode(liNode.InnerHtml)
+                                : HttpUtility.HtmlDecode(liNode.InnerText.Trim());
                             newArray.Add(new JValue(decodedText));
                         }
                     }
