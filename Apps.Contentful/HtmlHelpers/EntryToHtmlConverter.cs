@@ -244,6 +244,33 @@ public class EntryToHtmlConverter(
                         containerNode.AppendChild(arrayNode);
                     }
                 }
+                else if (prop.Value is JObject plainObject)
+                {
+                    var objectNode = doc.CreateElement("div");
+                    objectNode.SetAttributeValue("data-field", prop.Name);
+                    objectNode.SetAttributeValue(ConvertConstants.DataPlainJsonObject, "true");
+                    objectNode.SetAttributeValue(ConvertConstants.BlackbirdKey, $"{entryId}-{field.Id}-{prop.Name}");
+                    objectNode.SetAttributeValue(ConvertConstants.JsonValue, prop.Value.ToString(Formatting.None));
+
+                    var dlNode = doc.CreateElement("dl");
+                    objectNode.AppendChild(dlNode);
+
+                    foreach (var innerProp in plainObject.Properties())
+                    {
+                        if (_ignoredJsonKeys.Contains(innerProp.Name))
+                            continue;
+                        if (innerProp.Value.Type != JTokenType.String)
+                            continue;
+
+                        var ddNode = doc.CreateElement("dd");
+                        ddNode.SetAttributeValue("data-json-key", innerProp.Name);
+                        SetDdHtmlContent(ddNode, innerProp.Value.ToString());
+                        dlNode.AppendChild(ddNode);
+                    }
+
+                    if (dlNode.ChildNodes.Any())
+                        containerNode.AppendChild(objectNode);
+                }
                 continue;
             }
 
