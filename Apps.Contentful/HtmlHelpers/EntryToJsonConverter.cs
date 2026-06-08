@@ -403,11 +403,21 @@ public static class EntryToJsonConverter
                     ?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
                 var isArrayJson = childDiv.Attributes["data-array-json-object"]?.Value
                     ?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
+                var isPlainJson = childDiv.Attributes[ConvertConstants.DataPlainJsonObject]?.Value
+                    ?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
 
                 if (isRichText)
                     baseJsonObject[fieldName] = ParseToRichText(childDiv);
                 else if (isArrayJson)
                     baseJsonObject[fieldName] = ParseArrayJsonObject(childDiv, baseJsonObject[fieldName] as JArray);
+                else if (isPlainJson)
+                {
+                    var dlNode = childDiv.SelectSingleNode("./dl");
+                    var subTemplate = baseJsonObject[fieldName] as JObject;
+                    baseJsonObject[fieldName] = dlNode != null
+                        ? ParseDlAsObject(dlNode, subTemplate)
+                        : (JToken?)subTemplate ?? new JObject();
+                }
             }
         }
 
