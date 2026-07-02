@@ -840,42 +840,46 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         var doc = new HtmlDocument();
         doc.LoadHtml(html);
 
-        var entryIds = new List<string>();
-        var assetIds = new List<string>();
+        var entryIds = new HashSet<string>(StringComparer.Ordinal);
+        var assetIds = new HashSet<string>(StringComparer.Ordinal);
 
-        var entryIdNodes = doc.DocumentNode.SelectNodes("//div[@data-contentful-link-id]");
+        void AddLinkedId(string? id, string? type)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+                return;
+
+            if (string.Equals(type, "Asset", StringComparison.OrdinalIgnoreCase))
+            {
+                assetIds.Add(id);
+                return;
+            }
+
+            entryIds.Add(id);
+        }
+
+        var entryIdNodes = doc.DocumentNode.SelectNodes("//*[@data-contentful-link-id]");
         if (entryIdNodes != null)
         {
             foreach (var node in entryIdNodes)
             {
                 var id = node.GetAttributeValue("data-contentful-link-id", string.Empty);
                 var type = node.GetAttributeValue("data-contentful-link-type", string.Empty);
-
-                if (type == "Asset")
-                {
-                    assetIds.Add(id);
-                }
-                else if (!string.IsNullOrEmpty(id))
-                {
-                    entryIds.Add(id);
-                }
+                AddLinkedId(id, type);
             }
         }
 
-        var linkIdNodes = doc.DocumentNode.SelectNodes("//div[@data-contentful-link-ids]");
+        var linkIdNodes = doc.DocumentNode.SelectNodes("//*[@data-contentful-link-ids]");
         if (linkIdNodes != null)
         {
             foreach (var node in linkIdNodes)
             {
+                var type = node.GetAttributeValue("data-contentful-link-type", string.Empty);
                 var ids = node.GetAttributeValue("data-contentful-link-ids", string.Empty);
                 if (!string.IsNullOrEmpty(ids))
                 {
                     foreach (var id in ids.Split(','))
                     {
-                        if (assetIds.Contains(id.Trim()))
-                            continue;
-
-                        entryIds.Add(id.Trim());
+                        AddLinkedId(id.Trim(), type);
                     }
                 }
             }
@@ -892,10 +896,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                 if (!string.IsNullOrEmpty(idAttr) && idAttr.StartsWith(prefix))
                 {
                     var extractedId = idAttr.Substring(prefix.Length);
-                    if (!string.IsNullOrEmpty(extractedId))
-                    {
-                        entryIds.Add(extractedId);
-                    }
+                    AddLinkedId(extractedId, "Entry");
                 }
             }
         }
@@ -911,10 +912,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                 if (!string.IsNullOrEmpty(idAttr) && idAttr.StartsWith(prefix))
                 {
                     var extractedId = idAttr.Substring(prefix.Length);
-                    if (!string.IsNullOrEmpty(extractedId))
-                    {
-                        entryIds.Add(extractedId);
-                    }
+                    AddLinkedId(extractedId, "Entry");
                 }
             }
         }
@@ -930,15 +928,12 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                 if (!string.IsNullOrEmpty(idAttr) && idAttr.StartsWith(prefix))
                 {
                     var extractedId = idAttr.Substring(prefix.Length);
-                    if (!string.IsNullOrEmpty(extractedId))
-                    {
-                        entryIds.Add(extractedId);
-                    }
+                    AddLinkedId(extractedId, "Entry");
                 }
             }
         }
 
-        return new LinkedIdsEntity(entryIds.Distinct().ToList(), assetIds.Distinct().ToList());
+        return new LinkedIdsEntity(entryIds.ToList(), assetIds.ToList());
     }
 
     private IEnumerable<string> GetLinkedEntryIds(EntryContentDto entryContent, string locale, string defaultLocale, bool getReferenceContent,

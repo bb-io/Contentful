@@ -322,8 +322,8 @@ public class EntryActionsTests : TestBase
         var entryActions = new EntryActions(InvocationContext, FileManager);
         var entryIdentifier = new DownloadContentInput
         {
-            ContentId = "6Jc82Tr18MEydvDDI51RjL",
-            Environment = "master",
+            ContentId = "4mU9rHq6fiJwfLO5UPaZES",
+            //Environment = "master",
         };
         var entry = new GetEntryAsHtmlRequest
         {
