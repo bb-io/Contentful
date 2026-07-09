@@ -27,8 +27,6 @@ using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using Blackbird.Filters.Constants;
 using Blackbird.Filters.Extensions;
 using Blackbird.Filters.Transformations;
-using Blackbird.Filters.Xliff.Xliff1;
-using Blackbird.Filters.Xliff.Xliff2;
 using Contentful.Core.Models;
 using HtmlAgilityPack;
 using Newtonsoft.Json;
@@ -39,6 +37,7 @@ using System.Net.Mime;
 using System.Text;
 using System.Web;
 using ContentType = Contentful.Core.Models.ContentType;
+using Blackbird.Filters.Enums;
 
 namespace Apps.Contentful.Actions;
 
@@ -400,19 +399,19 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         var errors = new List<ContentProcessingError>();
 
         var file = await fileManagementClient.DownloadAsync(input.Content);
-        var content = Encoding.UTF8.GetString(await file.GetByteData());
+        string? content = null;
 
-        Transformation? transformation = null;
-        if (Xliff2Serializer.IsXliff2(content) || Xliff1Serializer.IsXliff1(content))
+        var transformationResult = Transformation.Load(file, input.Content.Name, input.Content.ContentType);
+        var contentResult = transformationResult.Target();
+        if (contentResult.Success)
         {
-            content = ErrorHandler.ExecuteWithErrorHandling(() =>
-            {
-                transformation = Transformation.Parse(content, input.Content.Name);
-                return 
-                    transformation.Target().Serialize() ?? 
-                    throw new PluginMisconfigurationException("XLIFF did not contain any files");
-            });
+            content = contentResult.Value.ToStream().ReadString();
         }
+        else
+        {
+            InvocationContext.Logger?.LogInformation($"Not a Blackbird interoperable file: {transformationResult.Error}", []);
+            content = file.ReadString();
+        }        
 
         errors.AddRange(_customSizeValidationService.Validate(content, input.Locale, input.SkipCustomValidationStep == true));
 
@@ -463,6 +462,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                     ParentEntryId = mainEntryInfo?.EntryId,
                     ErrorMessage = $"Field conversion error: {ex.Message}"
                 });
+                InvocationContext.Logger?.LogError($"Field conversion error: {ex.Message}", []);
             }
             catch (Exception ex)
             {
@@ -476,6 +476,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                         ParentEntryId = mainEntryInfo?.EntryId,
                         ErrorMessage = "Entry is archived"
                     });
+                    InvocationContext.Logger?.LogError("Entry is archived", []);
                     continue;
                 }
 
@@ -490,9 +491,11 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                         ParentEntryId = mainEntryInfo?.EntryId,
                         ErrorMessage = message
                     });
+                    InvocationContext.Logger?.LogError(message, []);
                     continue;
                 }
 
+                InvocationContext.Logger?.LogError($"Unexpected error while converting entry to JSON. Message: {message}; Locale: {input.Locale}", []);
                 errors.Add(new ContentProcessingError
                 {
                     EntryId = entryToUpdate.EntryId,
@@ -510,8 +513,10 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             RootEntryId = input.ContentId ?? mainEntryInfo?.EntryId ?? string.Empty
         };
 
-        if (transformation is not null)
+        if (transformationResult.Success)
         {
+
+            var transformation = transformationResult.Value;
             try
             {
                 var originalEntry = await GetEntry(new()
@@ -530,6 +535,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             }
             catch (Exception ex)
             {
+                InvocationContext.Logger?.LogError($"Failed to update transformation metadata: {ex.Message}", []);
                 errors.Add(new ContentProcessingError
                 {
                     EntryId = input.ContentId ?? mainEntryInfo?.EntryId ?? string.Empty,
@@ -538,10 +544,31 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                 });
             }
 
-            output.Content = await fileManagementClient.UploadAsync(
-                transformation.Serialize().ToStream(),
-                MediaTypes.Xliff,
-                transformation.XliffFileName);
+            if (transformationResult.WasBilingual)
+            {
+                output.Content = await fileManagementClient.UploadAsync(
+                    transformation.ToStream(),
+                    MediaTypes.Xliff2,
+                    transformation.BilingualFileName);
+            }
+            else
+            {
+                var targetResult = transformation.Target();
+                if (!targetResult.Success)
+                {
+                    output.Content = input.Content;
+                    InvocationContext.Logger?.LogError($"Failed to load target file: {targetResult.Error}", []);
+                } else
+                {
+                    var target = targetResult.Value;
+                    target.SystemReference = transformation.TargetSystemReference;
+
+                    output.Content = await fileManagementClient.UploadAsync(
+                        target.ToStream(),
+                        target.OriginalMediaType,
+                        target.OriginalName);
+                }                    
+            }
         }
         else
         {
@@ -724,15 +751,18 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         var client = new ContentfulClient(Creds, input.Environment);
 
         var file = await fileManagementClient.DownloadAsync(input.Content);
-        var content = Encoding.UTF8.GetString(await file.GetByteData());
+        string? content = null;
 
-        Transformation? transformation = null;
-        if (Xliff2Serializer.IsXliff2(content) || Xliff1Serializer.IsXliff1(content))
+        var transformationResult = Transformation.Load(file, input.Content.Name, input.Content.ContentType);
+        var contentResult = transformationResult.Target();
+        if (contentResult.Success)
         {
-            transformation = Transformation.Parse(content, input.Content.Name);
-            content = transformation.Target().Serialize();
-            if (content == null)
-                throw new PluginMisconfigurationException("XLIFF did not contain any files");
+            content = contentResult.Value.ToStream().ReadString();
+        }
+        else
+        {
+            InvocationContext.Logger?.LogInformation($"Not a Blackbird interoperable file: {transformationResult.Error}", []);
+            content = file.ReadString();
         }
 
         var assetsReferenced = await EntryAssetHelper.GetImagesToUpdate(content, client);

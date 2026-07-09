@@ -362,7 +362,7 @@ public class EntryActionsTests : TestBase
         var response = await entryActions.GetEntryLocalizableFieldsAsHtmlFile(entryIdentifier, entry);
 
         var contentString = FileManager.ReadOutputAsString(response.Content);
-        var codedContent = (new HtmlContentCoder()).Deserialize(contentString, response.Content.Name);
+        var codedContent = (new HtmlCoder()).Deserialize(contentString, response.Content.Name);
 
         foreach (var unit in codedContent.TextUnits.Where(x => x.Key is null))
         {
@@ -407,7 +407,7 @@ public class EntryActionsTests : TestBase
         var response = await entryActions.GetEntryLocalizableFieldsAsHtmlFile(entryIdentifier, entry);
 
         var contentString = FileManager.ReadOutputAsString(response.Content);
-        var codedContent = (new HtmlContentCoder()).Deserialize(contentString, response.Content.Name);
+        var codedContent = (new HtmlCoder()).Deserialize(contentString, response.Content.Name);
 
         foreach (var unit in codedContent.TextUnits.Where(x => x.Key is null))
         {
@@ -453,7 +453,7 @@ public class EntryActionsTests : TestBase
 
         Console.WriteLine(response.Content.Name);
         var contentString = FileManager.ReadOutputAsString(response.Content);
-        var codedContent = (new HtmlContentCoder()).Deserialize(contentString, response.Content.Name);
+        var codedContent = (new HtmlCoder()).Deserialize(contentString, response.Content.Name);
 
         Console.WriteLine(contentString);
 
