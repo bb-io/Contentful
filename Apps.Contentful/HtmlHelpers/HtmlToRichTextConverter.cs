@@ -124,7 +124,7 @@ public class HtmlToRichTextConverter
                     Data = new GenericStructureData(),
                     Content = new List<IContent>()
                 };
-                ParseHtmlToContentful(node, heading1.Content);
+                ParseInlineToContentful(node, heading1.Content);
                 return heading1;
             case 2:
                 var heading2 = new Heading2
@@ -133,7 +133,7 @@ public class HtmlToRichTextConverter
                     Data = new GenericStructureData(),
                     Content = new List<IContent>()
                 };
-                ParseHtmlToContentful(node, heading2.Content);
+                ParseInlineToContentful(node, heading2.Content);
                 return heading2;
             case 3:
                 var heading3 = new Heading3
@@ -142,7 +142,7 @@ public class HtmlToRichTextConverter
                     Data = new GenericStructureData(),
                     Content = new List<IContent>()
                 };
-                ParseHtmlToContentful(node, heading3.Content);
+                ParseInlineToContentful(node, heading3.Content);
                 return heading3;
             case 4:
                 var heading4 = new Heading1
@@ -151,7 +151,7 @@ public class HtmlToRichTextConverter
                     Data = new GenericStructureData(),
                     Content = new List<IContent>()
                 };
-                ParseHtmlToContentful(node, heading4.Content);
+                ParseInlineToContentful(node, heading4.Content);
                 return heading4;
             case 5:
                 var heading5 = new Heading5
@@ -160,7 +160,7 @@ public class HtmlToRichTextConverter
                     Data = new GenericStructureData(),
                     Content = new List<IContent>()
                 };
-                ParseHtmlToContentful(node, heading5.Content);
+                ParseInlineToContentful(node, heading5.Content);
                 return heading5;
             case 6:
                 var heading6 = new Heading6
@@ -169,7 +169,7 @@ public class HtmlToRichTextConverter
                     Data = new GenericStructureData(),
                     Content = new List<IContent>()
                 };
-                ParseHtmlToContentful(node, heading6.Content);
+                ParseInlineToContentful(node, heading6.Content);
                 return heading6;
             default:
                 throw new Exception();
@@ -197,16 +197,10 @@ public class HtmlToRichTextConverter
             Content = new List<IContent>()
         };
 
-        ParseHtmlToContentful(node, paragraph.Content);
+        ParseInlineToContentful(node, paragraph.Content);
         if (!node.ChildNodes.Any())
         {
-            paragraph.Content.Add(new Text
-            {
-                NodeType = "text",
-                Marks = new(),
-                Data = new(),
-                Value = string.Empty
-            });
+            paragraph.Content.Add(CreateTextNode(string.Empty));
         }
 
         return paragraph;
@@ -450,7 +444,7 @@ public class HtmlToRichTextConverter
                 };
 
                 if (nodeType == "asset-hyperlink")
-                    ParseHtmlToContentful(node, assetHyperlink.Content);
+                    ParseInlineToContentful(node, assetHyperlink.Content);
 
                 return assetHyperlink;
 
@@ -477,7 +471,7 @@ public class HtmlToRichTextConverter
                 };
 
                 if (nodeType == "entry-hyperlink")
-                    ParseHtmlToContentful(node, entryHyperlink.Content);
+                    ParseInlineToContentful(node, entryHyperlink.Content);
 
                 return entryHyperlink;
 
@@ -509,7 +503,7 @@ public class HtmlToRichTextConverter
                 }
                 else
                 {
-                    ParseHtmlToContentful(node, hyperlink.Content);
+                    ParseInlineToContentful(node, hyperlink.Content);
                 }
                 
                 return hyperlink;
@@ -640,7 +634,7 @@ public class HtmlToRichTextConverter
                 }
                 else
                 {
-                    ParseHtmlToContentful(child, contentList);
+                    ParseInlineToContentful(child, contentList);
                 }
             }
             else if (child.NodeType == HtmlNodeType.Text)
@@ -652,16 +646,72 @@ public class HtmlToRichTextConverter
                 var marks = new List<string>();
                 GetMarksFromHtmlNode(child, marks);
 
-                var textNode = new Text
-                {
-                    NodeType = "text",
-                    Value = HttpUtility.HtmlDecode(text),
-                    Data = new GenericStructureData(),
-                    Marks = marks.Select(mark => new Mark { Type = mark }).ToList()
-                };
-                contentList.Add(textNode);
+                contentList.Add(CreateTextNode(HttpUtility.HtmlDecode(text), marks));
             }
         }
+    }
+
+    private void ParseInlineToContentful(HtmlNode node, List<IContent> contentList)
+    {
+        foreach (var childNode in node.ChildNodes)
+        {
+            if (childNode.NodeType == HtmlNodeType.Element)
+            {
+                switch (childNode.Name)
+                {
+                    case "br":
+                        contentList.Add(CreateTextNode("\n"));
+                        break;
+                    case "span":
+                        if (childNode.ChildNodes.Any())
+                        {
+                            ParseInlineToContentful(childNode, contentList);
+                        }
+                        else
+                        {
+                            contentList.Add(CreateTextNode(string.Empty));
+                        }
+                        break;
+                    case "a":
+                        contentList.Add(CreateHyperlink(childNode));
+                        break;
+                    case "img":
+                        var assetContent = CreateAssetFromImage(childNode);
+                        if (assetContent != null && GetAssetNodeTypeFromImage(childNode) != "embedded-asset-block")
+                        {
+                            contentList.Add(assetContent);
+                        }
+                        break;
+                    default:
+                        ParseInlineToContentful(childNode, contentList);
+                        break;
+                }
+            }
+            else if (childNode.NodeType == HtmlNodeType.Text)
+            {
+                var text = childNode.InnerText;
+                if (string.IsNullOrWhiteSpace(text))
+                    continue;
+
+                var marks = new List<string>();
+                GetMarksFromHtmlNode(childNode, marks);
+
+                contentList.Add(CreateTextNode(HttpUtility.HtmlDecode(text), marks));
+            }
+        }
+    }
+
+    private Text CreateTextNode(string value, List<string>? marks = null)
+    {
+        marks ??= [];
+
+        return new Text
+        {
+            NodeType = "text",
+            Value = value,
+            Data = new GenericStructureData(),
+            Marks = marks.Select(mark => new Mark { Type = mark }).ToList()
+        };
     }
 
     private void GetMarksFromHtmlNode(HtmlNode node, List<string> marks)
@@ -743,17 +793,11 @@ public class HtmlToRichTextConverter
                 }
                 else if (child.Name == "br")
                 {
-                    paragraph.Content.Add(new Text
-                    {
-                        NodeType = "text",
-                        Value = "\n",
-                        Data = new GenericStructureData(),
-                        Marks = new List<Mark>()
-                    });
+                    paragraph.Content.Add(CreateTextNode("\n"));
                 }
                 else
                 {
-                    ParseHtmlToContentful(child, paragraph.Content);
+                    ParseInlineToContentful(child, paragraph.Content);
                 }
             }
             else if (child.NodeType == HtmlNodeType.Text)
@@ -765,14 +809,7 @@ public class HtmlToRichTextConverter
                 var marks = new List<string>();
                 GetMarksFromHtmlNode(child, marks);
 
-                var textNode = new Text
-                {
-                    NodeType = "text",
-                    Value = HttpUtility.HtmlDecode(text),
-                    Data = new GenericStructureData(),
-                    Marks = marks.Select(mark => new Mark { Type = mark }).ToList()
-                };
-                paragraph.Content.Add(textNode);
+                paragraph.Content.Add(CreateTextNode(HttpUtility.HtmlDecode(text), marks));
             }
         }
 

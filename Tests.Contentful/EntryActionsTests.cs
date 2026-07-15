@@ -143,18 +143,18 @@ public class EntryActionsTests : TestBase
         var entryActions = new EntryActions(InvocationContext, FileManager);
         var entryIdentifier = new DownloadContentInput()
         {
-            Environment = "master",
-            ContentId = "7zY9YZJvhlPpUWifvCWlY3",
+            //Environment = "master",
+            ContentId = "4mU9rHq6fiJwfLO5UPaZES",
             Locale = "en-US"
         };
         var request = new GetEntryAsHtmlRequest
         {
-            GetReferenceContent = true,
-            GetNonLocalizationReferenceContent = false,
-            GetEmbeddedInlineContent = true,
-            GetEmbeddedBlockContent = true,
-            IgnoredContentTypeIds = ["specialty","whitepaper","webinar","video","vpPositioningRestricted","technology","supportPages","serviceDetails","researchreport","procedure","preEvent","postEvent","podcast","level3Catalog","level2Catalog","legal","level1Catalog","templateHome","gatedWatchClp","gatedDownloadClp","formsScreen","forms","family","productDetailsPage","dynamicHub","demandGenTopicClp","demandGenProductClp","demandGenNpiClp","customerStory","clinicalArticle","caseStudy","awarenessTopicClp","article"],
-            IgnoredFieldIds = ["ctaUrl","productUrl","secondaryCtaUrl","primaryCtaUrl","url","value","ctaUrl1","ctaUrl2","platformUrl","stickyCtaUrl","introductionCtaUrl","mastheadCtaUrl","categoryUrl"],
+            //GetReferenceContent = true,
+            //GetNonLocalizationReferenceContent = false,
+            //GetEmbeddedInlineContent = true,
+            //GetEmbeddedBlockContent = true,
+            //IgnoredContentTypeIds = ["specialty","whitepaper","webinar","video","vpPositioningRestricted","technology","supportPages","serviceDetails","researchreport","procedure","preEvent","postEvent","podcast","level3Catalog","level2Catalog","legal","level1Catalog","templateHome","gatedWatchClp","gatedDownloadClp","formsScreen","forms","family","productDetailsPage","dynamicHub","demandGenTopicClp","demandGenProductClp","demandGenNpiClp","customerStory","clinicalArticle","caseStudy","awarenessTopicClp","article"],
+            //IgnoredFieldIds = ["ctaUrl","productUrl","secondaryCtaUrl","primaryCtaUrl","url","value","ctaUrl1","ctaUrl2","platformUrl","stickyCtaUrl","introductionCtaUrl","mastheadCtaUrl","categoryUrl"],
         };
 
         var fileResponse = await entryActions.GetEntryLocalizableFieldsAsHtmlFile(entryIdentifier, request);
