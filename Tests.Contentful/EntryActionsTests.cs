@@ -144,7 +144,7 @@ public class EntryActionsTests : TestBase
         var entryIdentifier = new DownloadContentInput()
         {
             //Environment = "master",
-            ContentId = "4mU9rHq6fiJwfLO5UPaZES",
+            ContentId = "2vNzDADO1kGPB9LZRfD5y6",
             Locale = "en-US"
         };
         var request = new GetEntryAsHtmlRequest

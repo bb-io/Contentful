@@ -55,13 +55,7 @@ public class HtmlToRichTextConverter
                         content = CreateEmptyParagraph();
                         break;
                     case "span":
-                        content = new Text
-                        {
-                            NodeType = "text",
-                            Marks = new(),
-                            Data = new(),
-                            Value = string.Empty
-                        };
+                        content = CreateTextNode(string.Empty);
                         break;
                     case "ul":
                         content = CreateUnorderedList(childNode);
@@ -101,14 +95,7 @@ public class HtmlToRichTextConverter
                 var marks = new List<string>();
                 GetMarksFromHtmlNode(childNode, marks);
 
-                var textNode = new Text
-                {
-                    NodeType = "text",
-                    Value = HttpUtility.HtmlDecode(text),
-                    Data = new GenericStructureData(),
-                    Marks = new List<Mark>(marks.Select(mark => new Mark { Type = mark }))
-                };
-                contentList.Add(textNode);
+                contentList.Add(CreateTextNode(HttpUtility.HtmlDecode(text), marks));
             }
         }
     }

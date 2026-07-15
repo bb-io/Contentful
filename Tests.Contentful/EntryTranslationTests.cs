@@ -26,7 +26,7 @@ public class EntryTranslationTests : TestBase
         var result = await actions.SetEntryLocalizableFieldsFromHtmlFile(
             new Apps.Contentful.Models.Requests.Tags.UploadEntryRequest
             {
-                Content = new FileReference { Name = "Test assets and entry ids_en-US.html" }, 
+                Content = new FileReference { Name = "Discover the booze of the Loire (Copy for test)_en-US.html" }, 
                 Locale = "en-US",
                 SkipCustomValidationStep = true
             });
