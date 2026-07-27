@@ -322,15 +322,17 @@ public class EntryActionsTests : TestBase
         var entryActions = new EntryActions(InvocationContext, FileManager);
         var entryIdentifier = new DownloadContentInput
         {
-            ContentId = "4mU9rHq6fiJwfLO5UPaZES",
-            //Environment = "master",
+            ContentId = "7kVNPq5PQDneUSldkshqJz",
+            Locale = "en-US",
         };
         var entry = new GetEntryAsHtmlRequest
         {
             GetReferenceContent = true,
             GetNonLocalizationReferenceContent = true,
-            //IgnoredContentTypeIds = ["board", "appCategory"],
-            //IgnoredFieldIds = ["slug"],
+            GetEmbeddedBlockContent = true,
+            MaxDepth = 4,
+            ExcludeTags = ["launchContentNotToAutoPublish"],
+            IgnoredContentTypeIds = ["helpArticle", "guide", "template", "caseStudy"]
         };
 
         var response = await entryActions.GetEntryLocalizableFieldsAsHtmlFile(entryIdentifier, entry);
@@ -711,5 +713,33 @@ public class EntryActionsTests : TestBase
 
         // Act
         await actions.UnpublishEntry(entry, input);
+    }
+
+    [TestMethod]
+    public async Task GetIdsFromHtmlFile_WithEmptyEntryDivs_ReturnsEntryIdsWithNonEmptyDivs()
+    {
+        // Arrange
+        var actions = new EntryActions(InvocationContext, FileManager);
+        var input = new GetIdsFromFileRequest
+        {
+            File = new FileReference { Name = "id extraction.html" }
+        };
+
+        // Act
+        var result = await actions.GetIdsFromHtmlFile(input);
+
+        // Assert
+        string[] expectedEntryIds =
+        [
+            "7kVNPq5PQDneUSldkshqJz", 
+            "2twq5LZZhlZgPIzVl72kGb", 
+            "2eVRdhPhhLFOPzV3Lnsb0r", 
+            "1yVb6kM7Lf6hkYjyU3BBVt"
+        ];
+        
+        PrintJsonResult(result);
+        CollectionAssert.AreEquivalent(expectedEntryIds, result.LinkedEntryIds.ToArray());
+        AreEqual(2, result.LinkedAssetIds.Count, "Assets must not be filtered");
+        IsNotNull(result);
     }
 }

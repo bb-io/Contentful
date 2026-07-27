@@ -32,12 +32,11 @@ using HtmlAgilityPack;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Collections.Specialized;
-using System.Net.Http.Headers;
 using System.Net.Mime;
 using System.Text;
 using System.Web;
+using Apps.Contentful.HtmlHelpers.Constants;
 using ContentType = Contentful.Core.Models.ContentType;
-using Blackbird.Filters.Enums;
 
 namespace Apps.Contentful.Actions;
 
@@ -326,8 +325,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             input.IgnoredJsonKeys);
 
         FileReference file;
-        string fileNameFirstPart = entryIdentifier.ContentId;
-
+        
         try
         {
             var originalEntry = await client.ExecuteWithErrorHandling(async () => await GetEntry(
@@ -865,10 +863,17 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         return resultList;
     }
 
-    private LinkedIdsEntity GetLinkedEntryIdsFromFile(string html)
+    private static LinkedIdsEntity GetLinkedEntryIdsFromFile(string html)
     {
         var doc = new HtmlDocument();
         doc.LoadHtml(html);
+        
+        var includedEntryIds = new HashSet<string>(
+            doc.DocumentNode.SelectNodes($"//*[@{ConvertConstants.EntryIdAttribute}]")?
+                .Select(n => n.GetAttributeValue(ConvertConstants.EntryIdAttribute, string.Empty))
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+            ?? [],
+            StringComparer.Ordinal);
 
         var entryIds = new HashSet<string>(StringComparer.Ordinal);
         var assetIds = new HashSet<string>(StringComparer.Ordinal);
@@ -962,7 +967,9 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                 }
             }
         }
-
+        
+        entryIds.IntersectWith(includedEntryIds);
+        
         return new LinkedIdsEntity(entryIds.ToList(), assetIds.ToList());
     }
 
