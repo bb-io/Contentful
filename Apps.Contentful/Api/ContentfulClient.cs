@@ -6,16 +6,13 @@ using Contentful.Core.Configuration;
 using Contentful.Core.Errors;
 using Newtonsoft.Json;
 using Polly;
-using Polly.Retry;
 
 namespace Apps.Contentful.Api;
 
 public class ContentfulClient : ContentfulManagementClient
 {
     private const int Limit = 100;
-    private const int RetryCount = 7;
-
-    private readonly AsyncRetryPolicy _retryPolicy;
+    private static readonly ResiliencePipeline RetryPipeline = ContentfulPollyPolicies.CreateSdkPipeline();
 
     public ContentfulClient(IEnumerable<AuthenticationCredentialsProvider> creds, string? environment)
         : base(new HttpClient { Timeout = TimeSpan.FromMinutes(5) }, new ContentfulOptions
@@ -24,31 +21,9 @@ public class ContentfulClient : ContentfulManagementClient
             SpaceId = creds.First(p => p.KeyName == "spaceId").Value,
             Environment = environment,
             ManagementBaseUrl = creds.First(p => p.KeyName == CredNames.BaseUrl).Value + "/spaces/",
-            MaxNumberOfRateLimitRetries = RetryCount,
+            MaxNumberOfRateLimitRetries = 0,
         })
     {
-        _retryPolicy = Policy
-            .Handle<ContentfulRateLimitException>()
-            .Or<ContentfulException>(ex => ex.Message.Contains("rate limit", StringComparison.OrdinalIgnoreCase))
-            .Or<ObjectDisposedException>()
-            .Or<Exception>(ex => ex.Message.Contains("Version mismatch error"))
-            .WaitAndRetryAsync(RetryCount, (retryAttempt) => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)), async (exception, timeSpan, retryCount, context) =>
-            {
-                if (exception is ContentfulRateLimitException contentfulRateLimitException)
-                {
-                    await Task.Delay(TimeSpan.FromSeconds(contentfulRateLimitException.SecondsUntilNextRequest + 5));
-                }
-                else if (exception is ContentfulException && exception.Message.Contains("rate limit", StringComparison.OrdinalIgnoreCase))
-                {
-                    await Task.Delay(TimeSpan.FromSeconds(5));
-                }
-                else if (exception.Message.Contains("Version mismatch error"))
-                {
-                    var timeoutRandom = new Random();
-                    var delaySeconds = timeoutRandom.Next(2, 5);
-                    await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
-                }
-            });
     }
 
     public string GetEntryEditorUrl(string entryId)
@@ -82,7 +57,13 @@ public class ContentfulClient : ContentfulManagementClient
     {
         try
         {
-            return await _retryPolicy.ExecuteAsync(func);
+            return await RetryPipeline.ExecuteAsync(
+                async _ => await func(),
+                CancellationToken.None);
+        }
+        catch (ContentfulRateLimitException ex)
+        {
+            throw CreateRateLimitException(ex);
         }
         catch (ContentfulException ex)
         {
@@ -91,6 +72,11 @@ public class ContentfulClient : ContentfulManagementClient
         catch (JsonReaderException jex)
         {
             throw new PluginApplicationException("Error parsing JSON response: " + jex.Message);
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new PluginApplicationException(
+                $"Connection error while communicating with Contentful: {ex.Message}", ex);
         }
         catch (ObjectDisposedException ex) when (ex.ObjectName?.Contains("StreamContent") == true)
         {
@@ -102,7 +88,13 @@ public class ContentfulClient : ContentfulManagementClient
     {
         try
         {
-            await _retryPolicy.ExecuteAsync(func);
+            await RetryPipeline.ExecuteAsync(
+                async _ => await func(),
+                CancellationToken.None);
+        }
+        catch (ContentfulRateLimitException ex)
+        {
+            throw CreateRateLimitException(ex);
         }
         catch (ContentfulException e)
         {
@@ -112,5 +104,25 @@ public class ContentfulClient : ContentfulManagementClient
         {
             throw new PluginApplicationException("Error parsing JSON response: " + jex.Message);
         }
+        catch (HttpRequestException ex)
+        {
+            throw new PluginApplicationException(
+                $"Connection error while communicating with Contentful: {ex.Message}", ex);
+        }
+        catch (ObjectDisposedException ex) when (ex.ObjectName?.Contains("StreamContent") == true)
+        {
+            throw new PluginApplicationException("Connection error while communicating with Contentful. Please try again and add retries to this action.");
+        }
+    }
+
+    private static PluginApplicationException CreateRateLimitException(ContentfulRateLimitException exception)
+    {
+        var retryMessage = exception.SecondsUntilNextRequest > 0
+            ? $" Contentful requested waiting {exception.SecondsUntilNextRequest} seconds before the next request."
+            : string.Empty;
+
+        return new PluginApplicationException(
+            $"Contentful rate limit was exceeded.{retryMessage} Please try again later or add a retry step to the Bird.",
+            exception);
     }
 }
