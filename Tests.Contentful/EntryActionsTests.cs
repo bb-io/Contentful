@@ -29,7 +29,10 @@ public class EntryActionsTests : TestBase
     public async Task ListEntries_ValidEnvironment_ShouldReturnAllEntries()
     {
         var entryActions = new EntryActions(InvocationContext, FileManager);
-        var listEntriesRequest = new ListEntriesRequest { Environment = "master", UpdatedBy = "5UuNOI1TXxCkHgBChqQP9z" };
+        var listEntriesRequest = new ListEntriesRequest { UpdatedBy = "59PGm9YqsFF1tTMO1dkJCc", 
+        Tags = ["requestTranslation"] , ExcludeTags = ["launchContentNotToAutoPublish"], Changed = true,
+            ContentModelId= "helpArticle"
+        };
 
         var entriesResponse = await entryActions.ListEntries(listEntriesRequest);
 

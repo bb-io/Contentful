@@ -4,6 +4,7 @@ using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Contentful.Core.Models;
 using Newtonsoft.Json.Linq;
+using System.Web;
 
 namespace Apps.Contentful.DataSourceHandlers.Base;
 
@@ -22,7 +23,14 @@ public class BaseEntryDataSourceHandler : BaseInvocable, IAsyncDataSourceHandler
     {
         var client = new ContentfulClient(InvocationContext.AuthenticationCredentialsProviders, Environment);
 
-        var entries = (await client.GetEntriesCollection<Entry<dynamic>>($"?query={context.SearchString}",
+        var queryString = HttpUtility.ParseQueryString(string.Empty);
+        if (!string.IsNullOrWhiteSpace(context.SearchString))
+            queryString.Add("query", context.SearchString);
+
+        queryString.Add("limit", "30");
+        queryString.Add("select", "sys,fields._displayField");
+
+        var entries = (await client.GetEntriesCollection<Entry<dynamic>>($"?{queryString}",
                 cancellationToken: cancellationToken))
             .GroupBy(e => e.SystemProperties.ContentType.SystemProperties.Id);
         var entriesDictionary = new Dictionary<string, string>();

@@ -69,4 +69,18 @@ public class DataHandlerTests : TestBase
         Assert.IsNotNull(result);
         PrintJsonResult(result);
     }
+
+    [TestMethod]
+    public async Task EntryDataSourceHandler_ReturnsEntries()
+    {
+        // Arrange
+        var handler = new EntryDataSourceHandler(InvocationContext, new EntryIdentifier{ });
+
+        // Act
+        var result = await handler.GetDataAsync(new(), default);
+
+        // Assert
+        Assert.IsNotNull(result);
+        PrintJsonResult(result);
+    }
 }
