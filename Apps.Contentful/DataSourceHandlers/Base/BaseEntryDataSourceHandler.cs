@@ -41,14 +41,14 @@ public class BaseEntryDataSourceHandler : BaseInvocable, IAsyncDataSourceHandler
             foreach (var entry in entryGroup)
             {
                 var entryId = entry.SystemProperties.Id;
-                var entryFields = (JObject)entry.Fields;
+                var entryFields = entry.Fields as JObject;
                 var displayFieldName = contentType.DisplayField;
                 JToken? displayField = null;
 
-                if (displayFieldName != null)
+                if (entryFields != null && displayFieldName != null)
                     displayField = entryFields[displayFieldName];
 
-                if (displayField == null)
+                if (displayField == null && entryFields != null)
                 {
                     if (entryFields.Properties().Any())
                     {
@@ -57,7 +57,12 @@ public class BaseEntryDataSourceHandler : BaseInvocable, IAsyncDataSourceHandler
                     }
                 }
 
-                var entryDisplayValue = displayField == null ? entryId : (displayField.First() as JProperty)!.Value.ToString();
+                var entryDisplayValue = displayField switch
+                {
+                    JObject localizedValue => localizedValue.Properties().FirstOrDefault()?.Value.ToString() ?? entryId,
+                    null => entryId,
+                    _ => displayField.ToString()
+                };
                 entryDisplayValue = contentType.Name + ": " + entryDisplayValue;
                 entriesDictionary[entryId] = entryDisplayValue;
 
