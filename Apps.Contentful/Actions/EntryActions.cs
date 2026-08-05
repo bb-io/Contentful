@@ -86,6 +86,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
         var queryString = HttpUtility.ParseQueryString(string.Empty);
         ApplyListEntriesRequestFilters(queryString, request);
+        queryString.Add("select", "sys,metadata.tags");
 
         IEnumerable<Entry<object>> entries =
             await client.Paginate<Entry<object>>(

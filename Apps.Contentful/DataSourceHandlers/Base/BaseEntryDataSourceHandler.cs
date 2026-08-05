@@ -4,6 +4,7 @@ using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Contentful.Core.Models;
 using Newtonsoft.Json.Linq;
+using System.Web;
 
 namespace Apps.Contentful.DataSourceHandlers.Base;
 
@@ -22,7 +23,14 @@ public class BaseEntryDataSourceHandler : BaseInvocable, IAsyncDataSourceHandler
     {
         var client = new ContentfulClient(InvocationContext.AuthenticationCredentialsProviders, Environment);
 
-        var entries = (await client.GetEntriesCollection<Entry<dynamic>>($"?query={context.SearchString}",
+        var queryString = HttpUtility.ParseQueryString(string.Empty);
+        if (!string.IsNullOrWhiteSpace(context.SearchString))
+            queryString.Add("query", context.SearchString);
+
+        queryString.Add("limit", "30");
+        queryString.Add("select", "sys,fields._displayField");
+
+        var entries = (await client.GetEntriesCollection<Entry<dynamic>>($"?{queryString}",
                 cancellationToken: cancellationToken))
             .GroupBy(e => e.SystemProperties.ContentType.SystemProperties.Id);
         var entriesDictionary = new Dictionary<string, string>();
@@ -33,14 +41,14 @@ public class BaseEntryDataSourceHandler : BaseInvocable, IAsyncDataSourceHandler
             foreach (var entry in entryGroup)
             {
                 var entryId = entry.SystemProperties.Id;
-                var entryFields = (JObject)entry.Fields;
+                var entryFields = entry.Fields as JObject;
                 var displayFieldName = contentType.DisplayField;
                 JToken? displayField = null;
 
-                if (displayFieldName != null)
+                if (entryFields != null && displayFieldName != null)
                     displayField = entryFields[displayFieldName];
 
-                if (displayField == null)
+                if (displayField == null && entryFields != null)
                 {
                     if (entryFields.Properties().Any())
                     {
@@ -49,7 +57,12 @@ public class BaseEntryDataSourceHandler : BaseInvocable, IAsyncDataSourceHandler
                     }
                 }
 
-                var entryDisplayValue = displayField == null ? entryId : (displayField.First() as JProperty)!.Value.ToString();
+                var entryDisplayValue = displayField switch
+                {
+                    JObject localizedValue => localizedValue.Properties().FirstOrDefault()?.Value.ToString() ?? entryId,
+                    null => entryId,
+                    _ => displayField.ToString()
+                };
                 entryDisplayValue = contentType.Name + ": " + entryDisplayValue;
                 entriesDictionary[entryId] = entryDisplayValue;
 
