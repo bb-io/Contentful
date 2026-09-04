@@ -1,5 +1,4 @@
 ﻿using Blackbird.Applications.Sdk.Common.Exceptions;
-using Contentful.Core.Errors;
 using Contentful.Core.Models;
 
 namespace Apps.Contentful.Utils;
@@ -10,11 +9,13 @@ public static class ContentfulClientExtensions
     {
         try
         {
-            return await contentfulClient.GetEntry(entryId);
+            return await contentfulClient.ExecuteWithErrorHandling(() => contentfulClient.GetEntry(entryId));
         }
-        catch (ContentfulException e)
+        catch (PluginApplicationException e)
         {
-            throw new PluginApplicationException($"Couldn't get an entry with ID: {entryId}. Contentful response: {e.Message}");
+            throw new PluginApplicationException(
+                $"Couldn't get an entry with ID: {entryId}. Contentful response: {e.Message}",
+                e);
         }
     }
 

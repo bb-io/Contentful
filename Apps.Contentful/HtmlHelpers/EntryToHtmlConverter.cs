@@ -406,7 +406,7 @@ public class EntryToHtmlConverter(
 
             try
             {
-                var assetTask = client.GetAsset(linkId!);
+                var assetTask = client.ExecuteWithErrorHandling(() => client.GetAsset(linkId!));
                 assetTask.Wait();
 
                 asset = assetTask.Result;
@@ -509,7 +509,7 @@ public class EntryToHtmlConverter(
             var client = new ContentfulClient(invocationContext.AuthenticationCredentialsProviders, environment);
             assetResolver = assetId =>
             {
-                var assetTask = client.GetAsset(assetId);
+                var assetTask = client.ExecuteWithErrorHandling(() => client.GetAsset(assetId));
                 assetTask.Wait();
                 return assetTask.Result;
             };
