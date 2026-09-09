@@ -269,11 +269,13 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     }
 
     [BlueprintActionDefinition(BlueprintAction.DownloadContent)]
-    [Action("Download entry", Description = "Get all localizable fields of specified entry, and all chil entries as a complete translatable file.")]
+    [Action("Download entry", Description = "Get all localizable fields of specified entry, and all child entries as a complete translatable file.")]
     public async Task<DownloadContentOutput> GetEntryLocalizableFieldsAsHtmlFile(
         [ActionParameter] DownloadContentInput entryIdentifier,
         [ActionParameter] GetEntryAsHtmlRequest input)
     {
+        input.Validate();
+        
         if (string.IsNullOrEmpty(entryIdentifier.ContentId))
         {
             throw new PluginMisconfigurationException("Entry ID is null or empty. Please add a valid entry ID");
@@ -302,6 +304,8 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
         var errors = new List<ContentProcessingError>();
 
+        var conditionalIgnoredFieldIds = input.BuildConditionalFieldExclusions();
+        
         var entriesContent = await GetLinkedEntriesContent(
             entryIdentifier.ContentId,
             selectedLocale,
@@ -315,9 +319,12 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             input.GetEmbeddedBlockContent ?? false,
             input.IgnoredFieldIds ?? new List<string>(),
             input.IgnoredContentTypeIds?.ToList() ?? new List<string>(),
+            conditionalIgnoredFieldIds,
             input.ExcludeTags?.ToList(),
             entryIdentifier.ContentId,
-            input.MaxDepth, 0, errors);
+            input.MaxDepth, 
+            0, 
+            errors);
 
         var htmlConverter = new EntryToHtmlConverter(
             InvocationContext,
@@ -821,6 +828,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         ContentfulClient client,
         List<EntryContentDto> resultList, bool getReferenceContent, bool ignoreReferenceLocalization, bool hyperlinks,
         bool inline, bool blocks, IEnumerable<string> ignoredFieldIds, List<string> ignoredContentTypeIds,
+        IReadOnlyDictionary<string, HashSet<string>> conditionalIgnoredFieldIds,
         List<string>? excludeTags, string rootEntryId, int? maxDepth = null, int currentDepth = 0,
         List<ContentProcessingError>? errors = null, string? parentEntryId = null)
     {
@@ -834,8 +842,8 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
         try
         {
-            entryContent = await GetEntryContent(entryId, client, ignoredFieldIds, ignoredContentTypeIds, excludeTags, rootEntryId,
-                    ignoreReferenceLocalization);
+            entryContent = await GetEntryContent(entryId, client, ignoredFieldIds, ignoredContentTypeIds, 
+                conditionalIgnoredFieldIds, excludeTags, rootEntryId, ignoreReferenceLocalization);
         }
         catch (Exception ex)
         {
@@ -858,7 +866,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             foreach (var linkedEntryId in linkedIds)
                 await GetLinkedEntriesContent(linkedEntryId, locale, defaultLocale, client, resultList, getReferenceContent,
                     ignoreReferenceLocalization, hyperlinks, inline, blocks, ignoredFieldIds, ignoredContentTypeIds,
-                    excludeTags, rootEntryId, maxDepth, currentDepth + 1, errors, entryId);
+                    conditionalIgnoredFieldIds, excludeTags, rootEntryId, maxDepth, currentDepth + 1, errors, entryId);
         }
 
         return resultList;
@@ -1076,10 +1084,11 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         }
     }
 
-    private async Task<EntryContentDto?> GetEntryContent(string entryId,
+    private static async Task<EntryContentDto?> GetEntryContent(string entryId,
         ContentfulClient client,
         IEnumerable<string> ignoredFieldIds,
         IEnumerable<string> ignoredContentTypeIds,
+        IReadOnlyDictionary<string, HashSet<string>> conditionalIgnoredFieldIds,
         IEnumerable<string>? excludeTags,
         string rootEntryId,
         bool ignoreLocalizationForLinks = false,
@@ -1113,22 +1122,19 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
         var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
         var contentType = await client.ExecuteWithErrorHandling(async () => await client.GetContentType(contentTypeId));
+        
+        var excludedFieldIds = new HashSet<string>(ignoredFieldIds, StringComparer.Ordinal);
+        if (conditionalIgnoredFieldIds.TryGetValue(contentTypeId, out var fieldIdsExcludedForThisType))
+            excludedFieldIds.UnionWith(fieldIdsExcludedForThisType);
+
+        var fields = contentType.Fields.Where(x => !excludedFieldIds.Contains(x.Id));
 
         if (ignoreLocalizationForLinks)
-        {
-            return new(entryId, entry.Fields,
-                contentType.Fields
-                    .Where(x => x.Localized || x.Type == "Link" || (x.Type == "Array" && x.Items?.Type == "Link"))
-                    .Where(x => !ignoredFieldIds.Contains(x.Id)).ToArray(), user);
-        }
+            fields = fields.Where(x => x.Localized || x.Type == "Link" || (x.Type == "Array" && x.Items?.Type == "Link"));
+        else if (!ignoreLocalizationFields)
+            fields = fields.Where(x => x.Localized);
 
-        if (!ignoreLocalizationFields)
-        {
-            return new(entryId, entry.Fields,
-                contentType.Fields.Where(x => x.Localized).Where(x => !ignoredFieldIds.Contains(x.Id)).ToArray(), user);
-        }
-
-        return new(entryId, entry.Fields, contentType.Fields.Where(x => !ignoredFieldIds.Contains(x.Id)).ToArray(), user);
+        return new(entryId, entry.Fields, fields.ToArray(), user);
     }
 
     private (string? entryId, string? fieldId, string? locale) ExtractIdsFromHtml(string html)
