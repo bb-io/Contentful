@@ -166,6 +166,31 @@ public class EntryActionsTests : TestBase
     }
 
     [TestMethod]
+    public async Task GetEntryLocalizableFieldsAsHtmlFile_WithReferencesAndExcludedConditionalIds_ShouldGenerateHtmlFile()
+    {
+        // Arrange
+        var entryActions = new EntryActions(InvocationContext, FileManager);
+        var entryIdentifier = new DownloadContentInput()
+        {
+            //Environment = "master",
+            ContentId = "232vdiwU8y4YKz3eMaKDyy",
+            Locale = "en-US"
+        };
+        var request = new GetEntryAsHtmlRequest
+        {
+            GetReferenceContent = true,
+            ConditionalIgnoredContentTypeIds = ["book"],
+            ConditionalIgnoredFieldIds = ["description"]
+        };
+
+        // Act
+        var fileResponse = await entryActions.GetEntryLocalizableFieldsAsHtmlFile(entryIdentifier, request);
+
+        // Assert
+        Console.WriteLine(fileResponse.Content.Name);
+    }
+
+    [TestMethod]
     public async Task SetEntryLocalizableFieldsFromHtmlFile_WithHyperlinkEntries_ShouldNotFail()
     {
         var entryActions = new EntryActions(InvocationContext, FileManager);
