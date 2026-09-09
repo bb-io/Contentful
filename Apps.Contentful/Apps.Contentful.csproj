@@ -6,7 +6,7 @@
         <Nullable>enable</Nullable>
         <Product>Contentful</Product>
         <Description>The headless content management system</Description>
-        <Version>1.8.38</Version>
+        <Version>1.8.39</Version>
         <AssemblyName>Apps.Contentful</AssemblyName>
     </PropertyGroup>
 
@@ -20,6 +20,7 @@
         <PackageReference Include="Polly" Version="8.2.0" />
     </ItemGroup>
 	<ItemGroup>
-		<EmbeddedResource CopyToOutputDirectory="Always" Include="image\icon.png"></EmbeddedResource>
+		<EmbeddedResource CopyToOutputDirectory="Always" Include="image\icon.png"/>
+        <EmbeddedResource CopyToOutputDirectory="Always" Include="..\README.md"/>
 	</ItemGroup>
 </Project>
