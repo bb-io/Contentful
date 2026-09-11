@@ -552,7 +552,7 @@ public class EntryActionsTests : TestBase
         // Arrange
         var entryActions = new EntryActions(InvocationContext, FileManager);
         var entry = new EntryIdentifier { EntryId = "1973QRvX9m84FWpFpC7ZnH" };
-        var contentModels = new OptionalMultipleContentTypeIdentifier { ContentModels = ["pageWrapper"] };
+        var contentModels = new OptionalMultipleContentTypeIdentifier { ContentModels = ["book"] };
 
         // Act
         var response = await entryActions.GetEntriesLinkingToEntry(entry, contentModels);
@@ -563,7 +563,7 @@ public class EntryActionsTests : TestBase
         AreNotEqual(response.FirstEntryId, string.Empty);
         IsTrue(response.TotalCount > 0);
 
-        Console.WriteLine(JsonConvert.SerializeObject(response.EntriesIds, Formatting.Indented));
+        Console.WriteLine(JsonConvert.SerializeObject(response, Formatting.Indented));
     }
 
     [TestMethod]

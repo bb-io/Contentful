@@ -667,20 +667,16 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
         var queryString = HttpUtility.ParseQueryString(string.Empty);
         queryString.Add("links_to_entry", entry.EntryId);
+        queryString.Add("select", "sys,metadata.tags");
+        
+        if (contentModels.ContentModels?.Any() == true)
+            queryString.Add("sys.contentType.sys.id[in]", string.Join(",", contentModels.ContentModels));
 
         IEnumerable<Entry<object>> entries =
             await client.Paginate<Entry<object>>(
                 async (query) => await client.GetEntriesCollection<Entry<object>>(query), "?" + queryString);
 
         var entriesResponse = entries.Select(e => new EntryEntity(e)).ToList();
-
-        if (contentModels.ContentModels?.Any() == true)
-        {
-            var models = contentModels.ContentModels.ToHashSet();
-            entriesResponse = entriesResponse
-                .Where(e => models.Contains(e.ContentTypeId))
-                .ToList();
-        }
 
         return new GetEntriesLinkingToEntryResponse
         {
