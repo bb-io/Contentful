@@ -9,6 +9,7 @@ using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Utils.Extensions.Http;
+using Blackbird.Applications.Sdk.Utils.Extensions.Sdk;
 using RestSharp;
 
 namespace Apps.Contentful.Actions;
@@ -209,5 +210,28 @@ public class WorkflowActions(InvocationContext invocationContext) : ContentfulIn
         var request = new ContentfulRestRequest($"/workflows/{workflowRequest.WorkflowId}", Method.Delete, Creds)
             .AddHeader("X-Contentful-Version", workflowResponse.Version.ToString());
         await client.ExecuteWithErrorHandling(request);
+    }
+
+    [Action("Get workflow changelog for entry", Description = "Get the workflow changelog/step history for a specific entry.")]
+    public async Task<WorkflowChangelogResponse> GetWorkflowChangelog(
+    [ActionParameter] FindWorkflowForEntryRequest input)
+    {
+        if (string.IsNullOrEmpty(input.EntryId))
+        {
+            throw new PluginMisconfigurationException("Entry ID is null or empty. Please provide a valid entry ID.");
+        }
+
+        var client = new ContentfulRestClient(Creds, input.Environment);
+
+        var spaceId = Creds.Get("spaceId").Value;
+
+        var request = new ContentfulRestRequest($"/workflows_changelog", Method.Get, Creds);
+        request.AddQueryParameter("entity.sys.id",input.EntryId);
+        request.AddQueryParameter("entity.sys.linkType","Entry");
+        request.AddQueryParameter("workflowDefinition.sys.id[in]", input.WorkflowDefinitionId);
+
+       var changelogItems = await client.Paginate<WorkflowChangelogItem>(request);
+
+        return new WorkflowChangelogResponse(changelogItems);
     }
 }
