@@ -10,6 +10,9 @@ public class WorkflowChangelogResponse
     [Display("Changelog items")]
     public List<ChangelogEntryDto> Items { get; set; }
 
+    [Display("Total count")]
+    public double TotalCount { get; set; }
+
     public WorkflowChangelogResponse(IEnumerable<WorkflowChangelogItem> rawCollection)
     {
         Items = rawCollection.Select(item => new ChangelogEntryDto
@@ -19,6 +22,8 @@ public class WorkflowChangelogResponse
             StepId = item.StepId,
             StepName = item.StepName
         }).ToList();
+
+        TotalCount = Items.Count();
     }
 }
 
