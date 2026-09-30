@@ -334,18 +334,54 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
     {
         entryIdentifier.Validate();
 
+        if (string.IsNullOrWhiteSpace(fieldIdentifier?.FieldId))
+            throw new PluginMisconfigurationException("Field ID must be provided. Please check your input and try again.");
+
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var entry = await client.ExecuteWithErrorHandling(async () =>
             await client.GetEntry(entryIdentifier.EntryId));
-        var fields = (JObject)entry.Fields;
 
-        var assetId = fields[fieldIdentifier.FieldId][entryIdentifier.Locale]["sys"]["id"].ToString();
+        if (entry?.Fields is not JObject fields)
+            throw new PluginMisconfigurationException($"Entry '{entryIdentifier.EntryId}' has no fields.");
+
+        var field = fields[fieldIdentifier.FieldId];
+        if (field == null)
+            throw new PluginMisconfigurationException(
+                $"Media field '{fieldIdentifier.FieldId}' was not found in entry '{entryIdentifier.EntryId}'.");
+
+        if (field is not JObject localizedField)
+            throw new PluginMisconfigurationException(
+                $"Media field '{fieldIdentifier.FieldId}' has an invalid localized value in entry " +
+                $"'{entryIdentifier.EntryId}'.");
+
+        if (localizedField[entryIdentifier.Locale] is not JObject assetLink)
+            throw new PluginMisconfigurationException(
+                $"Media field '{fieldIdentifier.FieldId}' has no asset for locale '{entryIdentifier.Locale}' " +
+                $"in entry '{entryIdentifier.EntryId}'.");
+
+        if (assetLink["sys"] is not JObject systemProperties ||
+            !string.Equals(systemProperties.Value<string>("linkType"), "Asset", StringComparison.OrdinalIgnoreCase) ||
+            string.IsNullOrWhiteSpace(systemProperties.Value<string>("id")))
+        {
+            throw new PluginMisconfigurationException(
+                $"Field '{fieldIdentifier.FieldId}' does not contain a valid asset link for locale " +
+                $"'{entryIdentifier.Locale}' in entry '{entryIdentifier.EntryId}'.");
+        }
+
+        var assetId = systemProperties.Value<string>("id")!;
         var asset = await client.ExecuteWithErrorHandling(async () => await client.GetAsset(assetId));
 
-        if (!asset.Files.TryGetValue(entryIdentifier.Locale, out var fileData))
+        if (asset?.Files == null ||
+            !asset.Files.TryGetValue(entryIdentifier.Locale, out var fileData) ||
+            fileData == null)
         {
-            throw new PluginMisconfigurationException("No asset with the provided locale found.");
+            throw new PluginMisconfigurationException(
+                $"Asset '{assetId}' has no file for locale '{entryIdentifier.Locale}'.");
         }
+
+        if (string.IsNullOrWhiteSpace(fileData.Url))
+            throw new PluginMisconfigurationException(
+                $"Asset '{assetId}' has no processed file URL for locale '{entryIdentifier.Locale}'.");
 
         return new()
         {
