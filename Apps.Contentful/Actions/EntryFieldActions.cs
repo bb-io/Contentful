@@ -169,6 +169,79 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
             await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version));
     }
 
+    [Action("Get entry's JSON field", Description =
+        "Get the JSON content of an Object field for the specified entry and locale.")]
+    public async Task<GetJsonContentResponse> GetJsonFieldContent(
+        [ActionParameter] EntryLocaleIdentifier entryIdentifier,
+        [ActionParameter] JsonFieldIdentifier fieldIdentifier)
+    {
+        entryIdentifier.Validate();
+        ValidateFieldId(fieldIdentifier.FieldId);
+
+        var client = new ContentfulClient(Creds, entryIdentifier.Environment);
+        var (entry, fields) = await GetJsonFieldContext(client, entryIdentifier, fieldIdentifier.FieldId);
+        var fieldToken = fields[fieldIdentifier.FieldId];
+        if (fieldToken != null && fieldToken is not JObject)
+        {
+            throw new PluginApplicationException(
+                $"JSON field '{fieldIdentifier.FieldId}' has an invalid localized value in entry " +
+                $"'{entryIdentifier.EntryId}'.");
+        }
+
+        var localizedField = fieldToken as JObject;
+        var jsonContent = localizedField?[entryIdentifier.Locale];
+
+        return new GetJsonContentResponse
+        {
+            JsonContent = jsonContent?.ToString(Formatting.None),
+            MissingLocales = await GetMissingLocales(entryIdentifier, fieldIdentifier.FieldId, entry)
+        };
+    }
+
+    [Action("Set entry's JSON field", Description =
+        "Set the JSON content of an Object field for the specified entry and locale.")]
+    public async Task SetJsonFieldContent(
+        [ActionParameter] EntryLocaleIdentifier entryIdentifier,
+        [ActionParameter] JsonFieldIdentifier fieldIdentifier,
+        [ActionParameter, Display("JSON content")] string jsonContent)
+    {
+        entryIdentifier.Validate();
+        ValidateFieldId(fieldIdentifier.FieldId);
+
+        if (string.IsNullOrWhiteSpace(jsonContent))
+        {
+            throw new PluginMisconfigurationException(
+                "JSON content must be provided. Please check your input and try again.");
+        }
+
+        JToken parsedJson;
+        try
+        {
+            parsedJson = JToken.Parse(jsonContent);
+        }
+        catch (JsonException exception)
+        {
+            throw new PluginMisconfigurationException(
+                $"JSON content is invalid. Please provide valid JSON. Details: {exception.Message}");
+        }
+
+        var client = new ContentfulClient(Creds, entryIdentifier.Environment);
+        var (entry, fields) = await GetJsonFieldContext(client, entryIdentifier, fieldIdentifier.FieldId);
+
+        fields[fieldIdentifier.FieldId] ??= new JObject();
+        if (fields[fieldIdentifier.FieldId] is not JObject localizedField)
+        {
+            throw new PluginApplicationException(
+                $"JSON field '{fieldIdentifier.FieldId}' has an invalid localized value in entry " +
+                $"'{entryIdentifier.EntryId}'.");
+        }
+
+        localizedField[entryIdentifier.Locale] = parsedJson;
+
+        await client.ExecuteWithErrorHandling(async () =>
+            await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version));
+    }
+
     [Action("Get entry's array field", Description =
     "Get the array content of the specified field of the specified entry. " +
     "Field must be of type Array. Returns the array values as a list of strings.")]
@@ -453,11 +526,19 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
 
     private async Task<List<string>> GetMissingLocales(EntryLocaleIdentifier entryIdentifier, FieldIdentifier fieldIdentifier, Entry<dynamic> entry)
     {
+        return await GetMissingLocales(entryIdentifier, fieldIdentifier.FieldId, entry);
+    }
+
+    private async Task<List<string>> GetMissingLocales(
+        EntryLocaleIdentifier entryIdentifier,
+        string fieldId,
+        Entry<dynamic> entry)
+    {
         var client = new ContentfulClient(InvocationContext.AuthenticationCredentialsProviders, entryIdentifier.Environment);
         var locales = await client.ExecuteWithErrorHandling(async () => await client.GetLocalesCollection());
 
         var availableLocales = locales.Select(l => l.Code);
-        var field = ((JObject)entry.Fields)[fieldIdentifier.FieldId];
+        var field = ((JObject)entry.Fields)[fieldId];
         IEnumerable<string> missingLocales;
 
         if (field == null)
@@ -470,6 +551,48 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
         }
 
         return missingLocales.ToList();
+    }
+
+    private async Task<(Entry<dynamic> Entry, JObject Fields)> GetJsonFieldContext(
+        ContentfulClient client,
+        EntryLocaleIdentifier entryIdentifier,
+        string fieldId)
+    {
+        var entry = await client.ExecuteWithErrorHandling(async () =>
+            await client.GetEntry(entryIdentifier.EntryId));
+
+        if (entry.Fields is not JObject fields)
+        {
+            throw new PluginApplicationException($"Entry '{entryIdentifier.EntryId}' has no fields.");
+        }
+
+        var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
+        var contentType = await client.ExecuteWithErrorHandling(async () =>
+            await client.GetContentType(contentTypeId));
+        var field = contentType.Fields.FirstOrDefault(candidate => candidate.Id == fieldId);
+
+        if (field == null)
+        {
+            throw new PluginMisconfigurationException(
+                $"Field with ID '{fieldId}' does not exist in content type '{contentTypeId}'.");
+        }
+
+        if (!string.Equals(field.Type, "Object", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new PluginMisconfigurationException(
+                $"Field '{fieldId}' is not a JSON field (type is '{field.Type}').");
+        }
+
+        return (entry, fields);
+    }
+
+    private static void ValidateFieldId(string fieldId)
+    {
+        if (string.IsNullOrWhiteSpace(fieldId))
+        {
+            throw new PluginMisconfigurationException(
+                "Field ID must be provided. Please check your input and try again.");
+        }
     }
 
 }

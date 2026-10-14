@@ -1,6 +1,7 @@
 ﻿using Apps.Contentful.Actions;
 using Apps.Contentful.Models.Identifiers;
 using Blackbird.Applications.Sdk.Common.Exceptions;
+using Blackbird.Applications.Sdk.Common.Invocation;
 using Newtonsoft.Json;
 using Tests.Contentful.Base;
 
@@ -9,6 +10,40 @@ namespace Tests.Contentful;
 [TestClass]
 public class EntryFieldActionsTests : TestBase
 {
+    [TestMethod]
+    public async Task SetJsonFieldContent_WithInvalidJson_ThrowsMisconfigurationException()
+    {
+        var action = new EntryFieldActions(new InvocationContext
+        {
+            AuthenticationCredentialsProviders = []
+        });
+
+        var exception = await Assert.ThrowsExceptionAsync<PluginMisconfigurationException>(() =>
+            action.SetJsonFieldContent(
+                new EntryLocaleIdentifier { EntryId = "entry-id", Locale = "en-US" },
+                new JsonFieldIdentifier { FieldId = "localizationStatus" },
+                "{ invalid json }"));
+
+        StringAssert.Contains(exception.Message, "JSON content is invalid");
+    }
+
+    [TestMethod]
+    public async Task SetJsonFieldContent_WithEmptyJson_ThrowsMisconfigurationException()
+    {
+        var action = new EntryFieldActions(new InvocationContext
+        {
+            AuthenticationCredentialsProviders = []
+        });
+
+        var exception = await Assert.ThrowsExceptionAsync<PluginMisconfigurationException>(() =>
+            action.SetJsonFieldContent(
+                new EntryLocaleIdentifier { EntryId = "entry-id", Locale = "en-US" },
+                new JsonFieldIdentifier { FieldId = "localizationStatus" },
+                " "));
+
+        StringAssert.Contains(exception.Message, "JSON content must be provided");
+    }
+
     [TestMethod]
     public async Task GetNumberFieldContent_ValidRequest_ShouldReturnFieldValue()
     {
