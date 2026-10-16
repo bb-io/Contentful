@@ -47,6 +47,7 @@ Follow [this guide](https://www.contentful.com/help/working-with-translations/) 
 ### Entries
 
 - **Search entries** returns a list of entries. Optionally filter by content model, environment, tags, excluded tags and the last updated date.
+- **Search entries by query** builds a native Contentful query from optional Search term, Content model, and Order inputs. Returns First entry, First entry ID, and an Entries array containing all matches.
 - **Search refereced entries** returns a list of all entries that are referenced by the specified entry.
 - **Search links to entry** returns a list of all entries that link to the specified entry.
 - **Find entry by field value** Given a field and a desired value for the field, the first matching entry will be returned.
