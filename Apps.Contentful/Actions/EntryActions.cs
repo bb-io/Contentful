@@ -113,6 +113,31 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         return new ListEntriesResponse(entriesResponse, entriesResponse.Length);
     }
 
+    [Action("Search entries by query", Description = "Search entries using optional search term, content model, and sort order. Returns all matches and the first entry found.")]
+    public async Task<SearchEntriesByQueryResponse> SearchEntriesByQuery([ActionParameter] SearchEntriesByQueryRequest request)
+    {
+        var generatedQuery = HttpUtility.ParseQueryString(string.Empty);
+        foreach (var (parameter, value) in new[]
+                 {
+                     ("query", request.SearchTerm),
+                     ("content_type", request.ContentModelId),
+                     ("order", request.Order)
+                 })
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                continue;
+            generatedQuery[parameter] = value.Trim();
+        }
+
+        generatedQuery["order"] ??= "sys.id";
+        generatedQuery["select"] = "sys,metadata.tags";
+        var client = new ContentfulClient(Creds, request.Environment);
+        var entries = await client.Paginate<Entry<object>>(
+            async pageQuery => await client.GetEntriesCollection<Entry<object>>(pageQuery), "?" + generatedQuery);
+        var result = entries.Select(entry => new EntryEntity(entry)).ToArray();
+        return new SearchEntriesByQueryResponse(result);
+    }
+
     [Action("Search entries by text in field", Description = "Search for entries containing specific text in a given field.")]
     public async Task<ListEntriesResponse> SearchEntriesByFieldText(
         [ActionParameter] ContentModelIdentifier model,
