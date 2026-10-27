@@ -10,10 +10,12 @@ using Apps.Contentful.Webhooks.Models.Payload;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Common.Webhooks;
 using Blackbird.Applications.SDK.Blueprints;
-using Contentful.Core.Models;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Net;
+using Apps.Contentful.Api;
+using Apps.Contentful.Utils;
+using Blackbird.Applications.Sdk.Common.Exceptions;
 using WebhookRequest = Blackbird.Applications.Sdk.Common.Webhooks.WebhookRequest;
 
 namespace Apps.Contentful.Webhooks;
@@ -21,7 +23,6 @@ namespace Apps.Contentful.Webhooks;
 [WebhookList("Entries")]
 public class WebhookList(InvocationContext invocationContext) : ContentfulInvocable(invocationContext)
 {
-
     [Webhook("On entry created", typeof(EntryCreatedHandler), Description = "On entry created")]
     public Task<WebhookResponse<EntryEntity>> EntryCreated(WebhookRequest webhookRequest,
         [WebhookParameter] OptionalTagListIdentifier tags,
@@ -29,15 +30,6 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
         [WebhookParameter] OptionalFilterUsersIdentifier users
         )
         => HandleEntryWebhookResponse(webhookRequest, tags, types, new OptionalEntryIdentifier(), users);
-
-    // It looks like this doesn't trigger anymore after a contentful update removing the save button. Needs to be verified.
-    //[Webhook("On entry saved", typeof(EntrySavedHandler), Description = "On entry saved")]
-    //public Task<WebhookResponse<FieldsChangedResponse>> EntrySaved(WebhookRequest webhookRequest,
-    //    [WebhookParameter] OptionalEntryIdentifier optionalEntryIdentifier,
-    //    [WebhookParameter] LocaleOptionalIdentifier localeOptionalIdentifier, 
-    //    [WebhookParameter] OptionalTagListIdentifier tags, 
-    //    [WebhookParameter] OptionalMultipleContentTypeIdentifier types)
-    //    => HandleFieldsChangedResponse(webhookRequest, localeOptionalIdentifier, tags, types, optionalEntryIdentifier);
 
     [Webhook("On entry auto saved", typeof(EntryAutoSavedHandler), Description = "On entry auto saved")]
     public Task<WebhookResponse<FieldsChangedResponse>> EntryAutoSaved(WebhookRequest webhookRequest,
@@ -103,24 +95,10 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
         }
 
         if (localesInput.Locales != null && !localesInput.Locales.Any(x => publishedLocales.Contains(x)))
-        {
-            return new()
-            {
-                HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
-                Result = null,
-                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
-            };
-        }
+            return WebhookResults.Preflight<EntryWithPublishedLocales>();
 
         if (localesInput.ExcludeLocales != null && localesInput.ExcludeLocales.Any(x => publishedLocales.Contains(x)))
-        {
-            return new()
-            {
-                HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
-                Result = null,
-                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
-            };
-        }
+            return WebhookResults.Preflight<EntryWithPublishedLocales>();
 
         var result = await HandleEntryWebhookResponse(webhookRequest, tagsInput, types, optionalEntryIdentifier, users);
 
@@ -151,64 +129,22 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
             new LocaleOptionalIdentifier());
 
         if (types.ContentModels != null && !types.ContentModels.Contains(entry.ContentTypeId))
-        {
-            return new()
-            {
-                HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
-                Result = null,
-                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
-            };
-        }
-
+            return WebhookResults.Preflight<EntryEntity>();
+        
         if (tagsInput.TagIds != null && !tagsInput.TagIds.All(x => entry.TagIds.Contains(x)))
-        {
-            return new()
-            {
-                HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
-                Result = null,
-                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
-            };
-        }
+            return WebhookResults.Preflight<EntryEntity>();
 
         if (tagsInput.AnyTagIds != null && !tagsInput.AnyTagIds.Any(x => entry.TagIds.Contains(x)))
-        {
-            return new()
-            {
-                HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
-                Result = null,
-                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
-            };
-        }
+            return WebhookResults.Preflight<EntryEntity>();
 
         if (tagsInput.ExcludeTags != null && tagsInput.ExcludeTags.Any(x => entry.TagIds.Contains(x)))
-        {
-            return new()
-            {
-                HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
-                Result = null,
-                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
-            };
-        }
+            return WebhookResults.Preflight<EntryEntity>();
 
         if (optionalEntryIdentifier.EntryId != null && entry.ContentId != optionalEntryIdentifier.EntryId)
-        {
-            return new()
-            {
-                HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
-                Result = null,
-                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
-            };
-        }
+            return WebhookResults.Preflight<EntryEntity>();
 
         if (users.UserIds != null && users.UserIds.Contains(entry.UpdatedBy))
-        {
-            return new()
-            {
-                HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
-                Result = null,
-                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
-            };
-        }
+            return WebhookResults.Preflight<EntryEntity>();
 
         return new()
         {
@@ -255,60 +191,36 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
 
         var environment = payload.Sys.Environment?.Sys.Id ?? tagsInput.Environment;
 
-        var entryActions = new EntryActions(invocationContext, null!);
-        var entry = await entryActions.GetEntry(new EntryIdentifier { EntryId = payload.Sys.Id, Environment = environment },
-            new LocaleOptionalIdentifier());
-
-        if (types.ContentModels != null && !types.ContentModels.Contains(entry.ContentTypeId))
+        EntryEntity entry;
+        try
         {
-            return new()
-            {
-                HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
-                Result = null,
-                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
-            };
+            var client = new ContentfulClient(Creds, environment);
+            var entity = await client.ExecuteWithErrorHandling(() => client.GetEntry(payload.Sys.Id));
+            entry = new EntryEntity(entity);
         }
+        catch (PluginApplicationException ex)
+        {
+            string warningMsg = $"Flight skipped for the 'On entry auto saved' event. " +
+                                $"Entry: {payload.Sys.Id}, env: {environment}. Reason: {ex.Message}";
+            InvocationContext.Logger?.LogWarning(warningMsg, []);
+            return WebhookResults.Preflight<FieldsChangedResponse>();
+        }
+        
+        if (types.ContentModels != null && !types.ContentModels.Contains(entry.ContentTypeId))
+            return WebhookResults.Preflight<FieldsChangedResponse>();
 
         if (tagsInput.TagIds != null && !tagsInput.TagIds.All(x => entry.TagIds.Contains(x)))
-        {
-            return new()
-            {
-                HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
-                Result = null,
-                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
-            };
-        }
+            return WebhookResults.Preflight<FieldsChangedResponse>();
 
         if (tagsInput.AnyTagIds != null && !tagsInput.AnyTagIds.Any(x => entry.TagIds.Contains(x)))
-        {
-            return new()
-            {
-                HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
-                Result = null,
-                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
-            };
-        }
+            return WebhookResults.Preflight<FieldsChangedResponse>();
 
         if (tagsInput.ExcludeTags != null && tagsInput.ExcludeTags.Any(x => entry.TagIds.Contains(x)))
-        {
-            return new()
-            {
-                HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
-                Result = null,
-                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
-            };
-        }
+            return WebhookResults.Preflight<FieldsChangedResponse>();
 
         if (optionalEntryIdentifier.EntryId != null && entry.ContentId != optionalEntryIdentifier.EntryId)
-        {
-            return new()
-            {
-                HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
-                Result = null,
-                ReceivedWebhookRequestType = WebhookRequestType.Preflight,
-            };
-        }
-
+            return WebhookResults.Preflight<FieldsChangedResponse>();
+        
         return new()
         {
             HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
