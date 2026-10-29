@@ -32,8 +32,7 @@ public class AssetActions(InvocationContext invocationContext, IFileManagementCl
     {
         var client = new ContentfulClient(Creds, assetIdentifier.Environment);
 
-        var asset = await client.ExecuteWithErrorHandling(async () =>
-            await client.GetAsset(assetIdentifier.AssetId));
+        var asset = await client.GetAsset(assetIdentifier.AssetId);
 
         if (asset?.Files == null)
             throw new PluginApplicationException("Asset response is empty or does not contain files.");
@@ -64,8 +63,7 @@ public class AssetActions(InvocationContext invocationContext, IFileManagementCl
     {
         var client = new ContentfulClient(Creds, assetIdentifier.Environment);
         var spaceId = Creds.GetSpaceId();
-        var asset = await client.ExecuteWithErrorHandling(async () =>
-            await client.GetAsset(assetIdentifier.AssetId, spaceId));
+        var asset = await client.GetAsset(assetIdentifier.AssetId, spaceId);
 
         var assetToHtmlConverter = new AssetToHtmlConverter(assetIdentifier.Environment);
         var html = assetToHtmlConverter.ConvertToHtml(asset, assetIdentifier.Locale);
@@ -86,8 +84,7 @@ public class AssetActions(InvocationContext invocationContext, IFileManagementCl
         var client = new ContentfulClient(Creds, localeIdentifier.Environment);
 
         var file = await fileManagementClient.DownloadAsync(input.File);
-        var result = await client.ExecuteWithErrorHandling(async () =>
-            await client.UploadFileAndCreateAsset(new ManagementAsset
+        var result = await client.UploadFileAndCreateAsset(new ManagementAsset
             {
                 SystemProperties = new SystemProperties { Id = Guid.NewGuid().ToString() },
                 Title = new Dictionary<string, string> { { localeIdentifier.Locale, input.Title } },
@@ -99,7 +96,7 @@ public class AssetActions(InvocationContext invocationContext, IFileManagementCl
                         new File { FileName = input.Filename ?? input.File.Name, ContentType = "text/plain" }
                     }
                 },
-            }, await file.GetByteData()));
+            }, await file.GetByteData());
 
         return new()
         {
@@ -114,7 +111,7 @@ public class AssetActions(InvocationContext invocationContext, IFileManagementCl
     {
         var client = new ContentfulClient(Creds, assetIdentifier.Environment);
         var oldAsset =
-            await client.ExecuteWithErrorHandling(async () => await client.GetAsset(assetIdentifier.AssetId));
+            await client.GetAsset(assetIdentifier.AssetId);
 
         var file = await fileManagementClient.DownloadAsync(input.File);
         var uploadReference = await client.UploadFile(await file.GetByteData());
@@ -129,17 +126,17 @@ public class AssetActions(InvocationContext invocationContext, IFileManagementCl
             UploadReference = uploadReference
         };
 
-        await client.ExecuteWithErrorHandling(async () => await client.CreateOrUpdateAsset(new ManagementAsset
+        await client.CreateOrUpdateAsset(new ManagementAsset
         {
             SystemProperties = new SystemProperties { Id = assetIdentifier.AssetId },
             Title = oldAsset.Title,
             Description = oldAsset.Description,
             Files = oldAsset.Files
-        }, version: oldAsset.SystemProperties.Version));
+        }, version: oldAsset.SystemProperties.Version);
 
-        await client.ExecuteWithErrorHandling(async () => await client.ProcessAsset(assetIdentifier.AssetId,
+        await client.ProcessAsset(assetIdentifier.AssetId,
             (int)oldAsset.SystemProperties.Version,
-            assetIdentifier.Locale));
+            assetIdentifier.Locale);
     }
 
     [Action("Update asset from HTML", Description = "Update asset from HTML.")]
@@ -154,51 +151,42 @@ public class AssetActions(InvocationContext invocationContext, IFileManagementCl
         var variables = AssetToHtmlConverter.GetVariablesFromHtml(html);
 
         var client = new ContentfulClient(Creds, variables.Environment);
-        var asset = await client.ExecuteWithErrorHandling(async () =>
-            await client.GetAsset(variables.AssetId, Creds.GetSpaceId()));
+        var asset = await client.GetAsset(variables.AssetId, Creds.GetSpaceId());
 
         var assetToJsonConverter = new AssetToJsonConverter(asset, input.Locale);
         assetToJsonConverter.LocalizeAsset(html);
 
-        await client.ExecuteWithErrorHandling(async () =>
-            await client.CreateOrUpdateAsset(asset, version: asset.SystemProperties.Version));
+        await client.CreateOrUpdateAsset(asset, version: asset.SystemProperties.Version);
     }
 
     [Action("Delete asset", Description = "Delete specified asset.")]
     public async Task DeleteAsset([ActionParameter] AssetIdentifier assetIdentifier)
     {
         var client = new ContentfulClient(Creds, assetIdentifier.Environment);
-        var asset = await client.ExecuteWithErrorHandling(async () =>
-            await client.GetAsset(assetIdentifier.AssetId));
+        var asset = await client.GetAsset(assetIdentifier.AssetId);
 
         if (asset.SystemProperties.PublishedAt != null)
         {
-            await client.ExecuteWithErrorHandling(async () =>
-                await client.UnpublishAsset(assetIdentifier.AssetId, asset.SystemProperties.Version ?? default));
+            await client.UnpublishAsset(assetIdentifier.AssetId, asset.SystemProperties.Version ?? default);
         }
 
-        await client.ExecuteWithErrorHandling(async () =>
-            await client.DeleteAsset(assetIdentifier.AssetId, asset.SystemProperties.Version ?? default));
+        await client.DeleteAsset(assetIdentifier.AssetId, asset.SystemProperties.Version ?? default);
     }
 
     [Action("Publish asset", Description = "Publish specified asset.")]
     public async Task PublishAsset([ActionParameter] AssetIdentifier assetIdentifier)
     {
         var client = new ContentfulClient(Creds, assetIdentifier.Environment);
-        var asset = await client.ExecuteWithErrorHandling(async () =>
-            await client.GetAsset(assetIdentifier.AssetId));
-        await client.ExecuteWithErrorHandling(async () =>
-            await client.PublishAsset(assetIdentifier.AssetId, (int)asset.SystemProperties.Version));
+        var asset = await client.GetAsset(assetIdentifier.AssetId);
+        await client.PublishAsset(assetIdentifier.AssetId, (int)asset.SystemProperties.Version);
     }
 
     [Action("Unpublish asset", Description = "Unpublish specified asset.")]
     public async Task UnpublishAsset([ActionParameter] AssetIdentifier assetIdentifier)
     {
         var client = new ContentfulClient(Creds, assetIdentifier.Environment);
-        var asset = await client.ExecuteWithErrorHandling(async () =>
-            await client.GetAsset(assetIdentifier.AssetId));
-        await client.ExecuteWithErrorHandling(async () =>
-            await client.UnpublishAsset(assetIdentifier.AssetId, (int)asset.SystemProperties.Version));
+        var asset = await client.GetAsset(assetIdentifier.AssetId);
+        await client.UnpublishAsset(assetIdentifier.AssetId, (int)asset.SystemProperties.Version);
     }
 
     [Action("Is asset locale present", Description = "Is asset locale present.")]
@@ -206,8 +194,7 @@ public class AssetActions(InvocationContext invocationContext, IFileManagementCl
         [ActionParameter] AssetLocaleIdentifier assetIdentifier)
     {
         var client = new ContentfulClient(Creds, assetIdentifier.Environment);
-        var asset = await client.ExecuteWithErrorHandling(async () =>
-            await client.GetAsset(assetIdentifier.AssetId));
+        var asset = await client.GetAsset(assetIdentifier.AssetId);
 
         if (asset.Files.TryGetValue(assetIdentifier.Locale, out _))
         {
@@ -223,11 +210,9 @@ public class AssetActions(InvocationContext invocationContext, IFileManagementCl
         var client = new ContentfulClient(InvocationContext.AuthenticationCredentialsProviders,
             assetIdentifier.Environment);
 
-        var asset = await client.ExecuteWithErrorHandling(async () =>
-            await client.GetAsset(assetIdentifier.AssetId));
+        var asset = await client.GetAsset(assetIdentifier.AssetId);
 
-        var locales = await client.ExecuteWithErrorHandling(async () =>
-            await client.GetLocalesCollection());
+        var locales = await client.GetLocalesCollection();
 
         var availableLocales = locales.Select(l => l.Code);
         IEnumerable<string> missingLocales;
@@ -251,8 +236,7 @@ public class AssetActions(InvocationContext invocationContext, IFileManagementCl
     {
         var client = new ContentfulClient(InvocationContext.AuthenticationCredentialsProviders,
             assetIdentifier.Environment);
-        var asset = await client.ExecuteWithErrorHandling(async () =>
-            await client.GetAsset(assetIdentifier.AssetId));
+        var asset = await client.GetAsset(assetIdentifier.AssetId);
         asset.Metadata.Tags.Add(new()
         {
             Sys = new()
@@ -262,8 +246,7 @@ public class AssetActions(InvocationContext invocationContext, IFileManagementCl
             }
         });
 
-        await client.ExecuteWithErrorHandling(async () =>
-            await client.CreateOrUpdateAsset(asset, version: asset.SystemProperties.Version));
+        await client.CreateOrUpdateAsset(asset, version: asset.SystemProperties.Version);
     }
 
     [Action("Remove asset tag", Description = "Remove a specific tag from the asset")]
@@ -272,12 +255,10 @@ public class AssetActions(InvocationContext invocationContext, IFileManagementCl
     {
         var client = new ContentfulClient(InvocationContext.AuthenticationCredentialsProviders,
             assetIdentifier.Environment);
-        var asset = await client.ExecuteWithErrorHandling(async () =>
-            await client.GetAsset(assetIdentifier.AssetId));
+        var asset = await client.GetAsset(assetIdentifier.AssetId);
         asset.Metadata.Tags = asset.Metadata.Tags.Where(x => x.Sys.Id != assetIdentifier.TagId).ToList();
 
-        await client.ExecuteWithErrorHandling(async () =>
-            await client.CreateOrUpdateAsset(asset, version: asset.SystemProperties.Version));
+        await client.CreateOrUpdateAsset(asset, version: asset.SystemProperties.Version);
     }
 
     private async Task<Blackbird.Applications.Sdk.Common.Files.FileReference?> DownloadFileByUrl(File? file)

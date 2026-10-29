@@ -18,12 +18,10 @@ public class ReferenceFieldDataHandler(InvocationContext invocationContext, [Act
         }
         
         var client = new ContentfulClient(invocationContext.AuthenticationCredentialsProviders, entryIdentifier.Environment);
-        var entry = await client.ExecuteWithErrorHandling(async () =>
-            await client.GetEntry(entryIdentifier.EntryId, cancellationToken: cancellationToken));
+        var entry = await client.GetEntry(entryIdentifier.EntryId, cancellationToken: cancellationToken);
         
         var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
-        var contentType = await client.ExecuteWithErrorHandling(async () => 
-            await client.GetContentType(contentTypeId, cancellationToken: cancellationToken));
+        var contentType = await client.GetContentType(contentTypeId, cancellationToken: cancellationToken);
         
         var referenceFields = contentType.Fields
             .Where(f => f.LinkType == "Entry" || (f.Type == "Array" && f.Items?.LinkType == "Entry"))

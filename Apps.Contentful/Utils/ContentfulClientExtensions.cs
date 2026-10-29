@@ -9,7 +9,7 @@ public static class ContentfulClientExtensions
     {
         try
         {
-            return await contentfulClient.ExecuteWithErrorHandling(() => contentfulClient.GetEntry(entryId));
+            return await contentfulClient.GetEntry(entryId);
         }
         catch (PluginApplicationException e)
         {

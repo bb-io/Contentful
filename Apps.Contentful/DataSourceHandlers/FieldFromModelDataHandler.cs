@@ -19,8 +19,7 @@ public class FieldFromModelDataHandler(InvocationContext invocationContext, [Act
         
         var client = new ContentfulClient(invocationContext.AuthenticationCredentialsProviders, modelIdentifier.Environment);
 
-        var model = await client.ExecuteWithErrorHandling(async () =>
-            await client.GetContentType(modelIdentifier.ContentModelId, cancellationToken: cancellationToken));
+        var model = await client.GetContentType(modelIdentifier.ContentModelId, cancellationToken: cancellationToken);
 
         return model.Fields
             .Where(x => context.SearchString == null ||

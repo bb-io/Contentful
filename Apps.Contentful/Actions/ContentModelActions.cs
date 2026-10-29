@@ -34,8 +34,7 @@ public class ContentModelActions(InvocationContext invocationContext) : Contentf
     {
         var client = new ContentfulClient(InvocationContext.AuthenticationCredentialsProviders, input.Environment);
 
-        var contentType = await client.ExecuteWithErrorHandling(async () => 
-            await client.GetContentType(input.ContentModelId));
+        var contentType = await client.GetContentType(input.ContentModelId);
         return new(contentType);
     }
 }

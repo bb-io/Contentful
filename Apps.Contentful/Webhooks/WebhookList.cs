@@ -195,7 +195,7 @@ public class WebhookList(InvocationContext invocationContext) : ContentfulInvoca
         try
         {
             var client = new ContentfulClient(Creds, environment);
-            var entity = await client.ExecuteWithErrorHandling(() => client.GetEntry(payload.Sys.Id));
+            var entity = await client.GetEntry(payload.Sys.Id);
             entry = new EntryEntity(entity);
         }
         catch (PluginApplicationException ex)

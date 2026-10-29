@@ -19,8 +19,7 @@ public class FieldDataHandler(InvocationContext invocationContext, [ActionParame
         }
         
         var client = new ContentfulClient(invocationContext.AuthenticationCredentialsProviders, entryIdentifier.Environment);
-        var entry = await client.ExecuteWithErrorHandling(async () =>
-            await client.GetEntry(entryIdentifier.EntryId, cancellationToken: cancellationToken));
+        var entry = await client.GetEntry(entryIdentifier.EntryId, cancellationToken: cancellationToken);
         var fields = (JObject)entry.Fields;
         var availableFields = fields.Properties()
             .Where(x => context.SearchString == null ||

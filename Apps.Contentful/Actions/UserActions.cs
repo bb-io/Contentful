@@ -21,7 +21,7 @@ namespace Apps.Contentful.Actions;
     public async Task<UserResponse> GetUser([ActionParameter] [Display("User ID", Description = "The ID of the user"), DataSource(typeof(UserDataSourceHandler))] string input, EnvironmentIdentifier environment)
     {
         var client = new ContentfulClient(Creds, environment.Environment);
-        var user =  await client.ExecuteWithErrorHandling(async () => await client.GetUser(input, Creds.FirstOrDefault(x => x.KeyName == "spaceId")?.Value));
+        var user =  await client.GetUser(input, Creds.FirstOrDefault(x => x.KeyName == "spaceId")?.Value);
         return new(user);
     }
     

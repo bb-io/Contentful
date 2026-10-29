@@ -1,9 +1,7 @@
 using System.Globalization;
 using System.Net;
-using Contentful.Core.Errors;
 using Polly;
 using Polly.Retry;
-using RestSharp;
 
 namespace Apps.Contentful.Api;
 
@@ -12,74 +10,36 @@ public static class ContentfulPollyPolicies
     internal const int DefaultRetryCount = 6;
     internal static readonly TimeSpan MaximumServerDelay = TimeSpan.FromSeconds(60);
 
-    private static readonly TimeSpan MaximumFallbackDelay = TimeSpan.FromSeconds(30);
-    private static readonly TimeSpan MaximumJitter = TimeSpan.FromMilliseconds(500);
+    private static readonly TimeSpan MaximumBackoffDelay = TimeSpan.FromSeconds(30);
+    private const double MaximumJitterRatio = 0.5;
 
-    public static ResiliencePipeline<RestResponse> CreateRestPipeline()
+    public static ResiliencePipeline<HttpResponseMessage> CreateHttpPipeline()
     {
-        var options = new RetryStrategyOptions<RestResponse>
+        var options = new RetryStrategyOptions<HttpResponseMessage>
         {
             MaxRetryAttempts = DefaultRetryCount,
-            ShouldHandle = new PredicateBuilder<RestResponse>()
-                .HandleResult(ShouldRetryRestResponse)
-                .Handle<HttpRequestException>(ShouldRetryHttpRequestException),
-            DelayGenerator = args => new ValueTask<TimeSpan?>(
-                GetDelay(args.Outcome.Result, args.Outcome.Exception, args.AttemptNumber))
+            ShouldHandle = new PredicateBuilder<HttpResponseMessage>().HandleResult(ShouldRetry),
+            DelayGenerator = args => new ValueTask<TimeSpan?>(GetDelay(
+                args.Outcome.Result is { } response && TryGetServerDelay(response, out var serverDelay)
+                    ? serverDelay
+                    : null,
+                args.AttemptNumber))
         };
 
-        return new ResiliencePipelineBuilder<RestResponse>()
+        return new ResiliencePipelineBuilder<HttpResponseMessage>()
             .AddRetry(options)
             .Build();
     }
 
-    public static ResiliencePipeline CreateSdkPipeline()
+    internal static bool TryGetServerDelay(HttpResponseMessage response, out TimeSpan delay)
     {
-        var options = new RetryStrategyOptions
-        {
-            MaxRetryAttempts = DefaultRetryCount,
-            ShouldHandle = new PredicateBuilder()
-                .Handle<ContentfulRateLimitException>(exception =>
-                    IsAcceptableServerDelay(TimeSpan.FromSeconds(exception.SecondsUntilNextRequest)))
-                .Handle<ContentfulException>(exception =>
-                    exception is not ContentfulRateLimitException &&
-                    exception.Message.Contains("rate limit", StringComparison.OrdinalIgnoreCase))
-                .Handle<ObjectDisposedException>()
-                .Handle<HttpRequestException>(ShouldRetryHttpRequestException)
-                .Handle<Exception>(exception =>
-                    exception.Message.Contains("Version mismatch error", StringComparison.OrdinalIgnoreCase)),
-            DelayGenerator = args => new ValueTask<TimeSpan?>(
-                GetDelay(null, args.Outcome.Exception, args.AttemptNumber))
-        };
-
-        return new ResiliencePipelineBuilder()
-            .AddRetry(options)
-            .Build();
-    }
-
-    internal static bool ShouldRetryRestResponse(RestResponse response)
-    {
-        if (response.StatusCode is HttpStatusCode.InternalServerError or HttpStatusCode.ServiceUnavailable)
-        {
-            return true;
-        }
-
-        if (response.StatusCode != HttpStatusCode.TooManyRequests)
-        {
-            return false;
-        }
-
-        return !TryGetServerDelay(response, out var delay) || IsAcceptableServerDelay(delay);
-    }
-
-    internal static bool TryGetServerDelay(RestResponse response, out TimeSpan delay)
-    {
-        if (TryGetHeaderValue(response, "X-Contentful-RateLimit-Reset", out var resetValue) &&
+        if (GetHeaderValue(response, "X-Contentful-RateLimit-Reset") is { } resetValue &&
             TryParseDelay(resetValue, out delay))
         {
             return true;
         }
 
-        if (TryGetHeaderValue(response, "Retry-After", out var retryAfterValue))
+        if (GetHeaderValue(response, "Retry-After") is { } retryAfterValue)
         {
             if (TryParseDelay(retryAfterValue, out delay))
             {
@@ -103,43 +63,38 @@ public static class ContentfulPollyPolicies
         return false;
     }
 
-    private static TimeSpan GetDelay(RestResponse? response, Exception? exception, int attemptNumber)
+    private static bool ShouldRetry(HttpResponseMessage response)
     {
-        TimeSpan delay;
-
-        if (response is not null && TryGetServerDelay(response, out var responseDelay))
+        if (response.StatusCode is HttpStatusCode.InternalServerError or HttpStatusCode.ServiceUnavailable)
         {
-            delay = responseDelay;
-        }
-        else if (exception is ContentfulRateLimitException rateLimitException)
-        {
-            delay = TimeSpan.FromSeconds(Math.Max(0, rateLimitException.SecondsUntilNextRequest));
-        }
-        else
-        {
-            var exponentialSeconds = Math.Min(
-                Math.Pow(2, attemptNumber),
-                MaximumFallbackDelay.TotalSeconds);
-            delay = TimeSpan.FromSeconds(exponentialSeconds);
+            return true;
         }
 
-        return delay + TimeSpan.FromMilliseconds(Random.Shared.NextDouble() * MaximumJitter.TotalMilliseconds);
+        if (response.StatusCode != HttpStatusCode.TooManyRequests)
+        {
+            return false;
+        }
+
+        return !TryGetServerDelay(response, out var delay) || IsAcceptableServerDelay(delay);
     }
 
-    private static bool ShouldRetryHttpRequestException(HttpRequestException exception) =>
-        exception.StatusCode is HttpStatusCode.TooManyRequests
-            or HttpStatusCode.InternalServerError
-            or HttpStatusCode.ServiceUnavailable;
+    private static TimeSpan GetDelay(TimeSpan? serverDelay, int attemptNumber)
+    {
+        var backoffDelay = TimeSpan.FromSeconds(Math.Min(
+            Math.Pow(2, attemptNumber),
+            MaximumBackoffDelay.TotalSeconds));
+        var delay = serverDelay > backoffDelay ? serverDelay.Value : backoffDelay;
+
+        return delay * (1 + Random.Shared.NextDouble() * MaximumJitterRatio);
+    }
 
     private static bool IsAcceptableServerDelay(TimeSpan delay) => delay <= MaximumServerDelay;
 
-    private static bool TryGetHeaderValue(RestResponse response, string name, out string value)
+    private static string? GetHeaderValue(HttpResponseMessage response, string name)
     {
-        value = response.Headers?
-            .FirstOrDefault(header => header.Name?.Equals(name, StringComparison.OrdinalIgnoreCase) == true)
-            ?.Value?.ToString() ?? string.Empty;
+        var value = response.Headers.TryGetValues(name, out var values) ? values.FirstOrDefault() : null;
 
-        return !string.IsNullOrWhiteSpace(value);
+        return string.IsNullOrWhiteSpace(value) ? null : value;
     }
 
     private static bool TryParseDelay(string value, out TimeSpan delay)

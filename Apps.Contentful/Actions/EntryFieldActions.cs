@@ -61,8 +61,7 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
         entryIdentifier.Validate();
 
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
-        var entry = await client.ExecuteWithErrorHandling(async () =>
-            await client.GetEntry(entryIdentifier.EntryId));
+        var entry = await client.GetEntry(entryIdentifier.EntryId);
         var field = ((JObject)entry.Fields)[fieldIdentifier.FieldId]?[entryIdentifier.Locale];
 
         if (field is null)
@@ -73,7 +72,7 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
 
         var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
         var contentType =
-            await client.ExecuteWithErrorHandling(async () => await client.GetContentType(contentTypeId));
+            await client.GetContentType(contentTypeId);
         var fieldType = contentType.Fields.First(f => f.Id == fieldIdentifier.FieldId).Type;
         string textContent;
 
@@ -113,8 +112,7 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
         entryIdentifier.Validate();
 
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
-        var entry = await client.ExecuteWithErrorHandling(async () =>
-            await client.GetEntry(entryIdentifier.EntryId));
+        var entry = await client.GetEntry(entryIdentifier.EntryId);
 
         if (entry.Fields == null)
         {
@@ -124,7 +122,7 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
         var fields = (JObject)entry.Fields;
         var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
         var contentType =
-            await client.ExecuteWithErrorHandling(async () => await client.GetContentType(contentTypeId));
+            await client.GetContentType(contentTypeId);
 
         if (contentType.Fields == null)
         {
@@ -165,8 +163,7 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
                 "The specified field must be of the short text, long text or rich text type.");
         }
 
-        await client.ExecuteWithErrorHandling(async () =>
-            await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version));
+        await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version);
     }
 
     [Action("Get entry's JSON field", Description =
@@ -238,8 +235,7 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
 
         localizedField[entryIdentifier.Locale] = parsedJson;
 
-        await client.ExecuteWithErrorHandling(async () =>
-            await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version));
+        await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version);
     }
 
     [Action("Get entry's array field", Description =
@@ -252,8 +248,7 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
         entryIdentifier.Validate();
 
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
-        var entry = await client.ExecuteWithErrorHandling(async () =>
-            await client.GetEntry(entryIdentifier.EntryId));
+        var entry = await client.GetEntry(entryIdentifier.EntryId);
         var field = ((JObject)entry.Fields)[fieldIdentifier.FieldId]?[entryIdentifier.Locale];
 
         if (field is null)
@@ -264,7 +259,7 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
 
         var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
         var contentType =
-            await client.ExecuteWithErrorHandling(async () => await client.GetContentType(contentTypeId));
+            await client.GetContentType(contentTypeId);
         var fieldType = contentType.Fields.First(f => f.Id == fieldIdentifier.FieldId).Type;
 
         if (fieldType != "Array")
@@ -294,8 +289,7 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
         entryIdentifier.Validate();
 
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
-        var entry = await client.ExecuteWithErrorHandling(async () =>
-            await client.GetEntry(entryIdentifier.EntryId));
+        var entry = await client.GetEntry(entryIdentifier.EntryId);
         var fields = (JObject)entry.Fields;
         if (fields.TryGetValue(fieldIdentifier.FieldId, out JToken fieldToken) == false
            || fieldToken[entryIdentifier.Locale] == null)
@@ -320,12 +314,10 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
         entryIdentifier.Validate();
 
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
-        var entry = await client.ExecuteWithErrorHandling(async () =>
-            await client.GetEntry(entryIdentifier.EntryId));
+        var entry = await client.GetEntry(entryIdentifier.EntryId);
         var fields = (JObject)entry.Fields;
         fields[fieldIdentifier.FieldId][entryIdentifier.Locale] = number;
-        await client.ExecuteWithErrorHandling(async () =>
-            await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version));
+        await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version);
     }
 
     [Action("Get entry's boolean field", Description = "Get entry's boolean field by field ID.")]
@@ -336,8 +328,7 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
         entryIdentifier.Validate();
 
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
-        var entry = await client.ExecuteWithErrorHandling(async () =>
-            await client.GetEntry(entryIdentifier.EntryId));
+        var entry = await client.GetEntry(entryIdentifier.EntryId);
         var fields = (JObject)entry.Fields;
 
         if (fields == null
@@ -360,7 +351,7 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
         entryIdentifier.Validate();
 
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
-        var entry = await client.ExecuteWithErrorHandling(async () => await client.GetEntry(entryIdentifier.EntryId));
+        var entry = await client.GetEntry(entryIdentifier.EntryId);
 
         if (entry == null)
             throw new PluginMisconfigurationException($"Entry with ID '{entryIdentifier.EntryId}' was not found.");
@@ -375,7 +366,7 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
             throw new PluginApplicationException(
                 $"Could not determine content type for entry '{entryIdentifier.EntryId}'.");
 
-        var contentType = await client.ExecuteWithErrorHandling(async () => await client.GetContentType(contentTypeId));
+        var contentType = await client.GetContentType(contentTypeId);
         var field = contentType?.Fields?.FirstOrDefault(f => f.Id == fieldIdentifier.FieldId);
 
         if (field == null)
@@ -396,8 +387,7 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
 
         fieldObject[entryIdentifier.Locale] = boolean;
 
-        await client.ExecuteWithErrorHandling(async () =>
-            await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version));
+        await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version);
     }
 
     [Action("Get entry's media field", Description = "Get entry's media content by field ID.")]
@@ -411,8 +401,7 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
             throw new PluginMisconfigurationException("Field ID must be provided. Please check your input and try again.");
 
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
-        var entry = await client.ExecuteWithErrorHandling(async () =>
-            await client.GetEntry(entryIdentifier.EntryId));
+        var entry = await client.GetEntry(entryIdentifier.EntryId);
 
         if (entry?.Fields is not JObject fields)
             throw new PluginMisconfigurationException($"Entry '{entryIdentifier.EntryId}' has no fields.");
@@ -442,7 +431,7 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
         }
 
         var assetId = systemProperties.Value<string>("id")!;
-        var asset = await client.ExecuteWithErrorHandling(async () => await client.GetAsset(assetId));
+        var asset = await client.GetAsset(assetId);
 
         if (asset?.Files == null ||
             !asset.Files.TryGetValue(entryIdentifier.Locale, out var fileData) ||
@@ -480,15 +469,13 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
                 id = assetEntryIdentifier.AssetId
             }
         };
-        var entry = await client.ExecuteWithErrorHandling(async () =>
-            await client.GetEntry(assetEntryIdentifier.EntryId));
+        var entry = await client.GetEntry(assetEntryIdentifier.EntryId);
         var fields = (JObject)entry.Fields;
 
         fields[fieldIdentifier.FieldId] ??= new JObject();
         fields[fieldIdentifier.FieldId][assetEntryIdentifier.Locale] =
             JObject.Parse(JsonConvert.SerializeObject(payload));
-        await client.ExecuteWithErrorHandling(async () =>
-            await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version));
+        await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version);
     }
 
     [Action("Set entry's reference field", Description = "Set entry's reference field by field ID.")]
@@ -513,15 +500,13 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
             }
         };
 
-        var entry = await client.ExecuteWithErrorHandling(async () =>
-            await client.GetEntry(entryLocaleIdentifier.EntryId));
+        var entry = await client.GetEntry(entryLocaleIdentifier.EntryId);
         var fields = (JObject)entry.Fields;
 
         fields[fieldIdentifier.FieldId] ??= new JObject();
         fields[fieldIdentifier.FieldId][entryLocaleIdentifier.Locale] = JObject.Parse(JsonConvert.SerializeObject(payload));
 
-        await client.ExecuteWithErrorHandling(async () =>
-            await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version));
+        await client.CreateOrUpdateEntry(entry, version: entry.SystemProperties.Version);
     }
 
     private async Task<List<string>> GetMissingLocales(EntryLocaleIdentifier entryIdentifier, FieldIdentifier fieldIdentifier, Entry<dynamic> entry)
@@ -535,7 +520,7 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
         Entry<dynamic> entry)
     {
         var client = new ContentfulClient(InvocationContext.AuthenticationCredentialsProviders, entryIdentifier.Environment);
-        var locales = await client.ExecuteWithErrorHandling(async () => await client.GetLocalesCollection());
+        var locales = await client.GetLocalesCollection();
 
         var availableLocales = locales.Select(l => l.Code);
         var field = ((JObject)entry.Fields)[fieldId];
@@ -558,8 +543,7 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
         EntryLocaleIdentifier entryIdentifier,
         string fieldId)
     {
-        var entry = await client.ExecuteWithErrorHandling(async () =>
-            await client.GetEntry(entryIdentifier.EntryId));
+        var entry = await client.GetEntry(entryIdentifier.EntryId);
 
         if (entry.Fields is not JObject fields)
         {
@@ -567,8 +551,7 @@ public class EntryFieldActions(InvocationContext invocationContext) : BaseInvoca
         }
 
         var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
-        var contentType = await client.ExecuteWithErrorHandling(async () =>
-            await client.GetContentType(contentTypeId));
+        var contentType = await client.GetContentType(contentTypeId);
         var field = contentType.Fields.FirstOrDefault(candidate => candidate.Id == fieldId);
 
         if (field == null)
