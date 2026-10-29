@@ -166,7 +166,7 @@ public class SearchEntriesByQueryTests : TestBase
         var exact = new List<string>();
         foreach (var id in response.Entries.Select(entry => entry.ContentId))
         {
-            var entry = await client.ExecuteWithErrorHandling(() => client.GetEntry(id));
+            var entry = await client.GetEntry(id);
             if (((JObject)entry.Fields)["localizationStatus"]?["en-US"]?["flightId"]?.Value<string>() == flightId)
                 exact.Add(id);
         }

@@ -23,11 +23,9 @@ public class JsonFieldDataHandler(
         var client = new ContentfulClient(
             InvocationContext.AuthenticationCredentialsProviders,
             entryIdentifier.Environment);
-        var entry = await client.ExecuteWithErrorHandling(async () =>
-            await client.GetEntry(entryIdentifier.EntryId, cancellationToken: cancellationToken));
+        var entry = await client.GetEntry(entryIdentifier.EntryId, cancellationToken: cancellationToken);
         var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
-        var contentType = await client.ExecuteWithErrorHandling(async () =>
-            await client.GetContentType(contentTypeId, cancellationToken: cancellationToken));
+        var contentType = await client.GetContentType(contentTypeId, cancellationToken: cancellationToken);
 
         return contentType.Fields
             .Where(field => string.Equals(field.Type, "Object", StringComparison.OrdinalIgnoreCase))

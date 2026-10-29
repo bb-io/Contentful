@@ -173,17 +173,15 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         }
 
         var client = new ContentfulClient(Creds, input.Environment);
-        var entry = await client.ExecuteWithErrorHandling(async () => await client.GetEntry(input.EntryId));
-        
+        var entry = await client.GetEntry(input.EntryId);
+
         var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
-        var contentType =
-            await client.ExecuteWithErrorHandling(async () => await client.GetContentType(contentTypeId));
+        var contentType = await client.GetContentType(contentTypeId);
         entry.SystemProperties.ContentType = contentType;
 
-        var availableLocales = (await client.GetLocalesCollection()).Select(l => l.Code).ToArray();
-        var contentModel = await client.ExecuteWithErrorHandling(async () =>
-            await client.GetContentType(entry.SystemProperties.ContentType.SystemProperties.Id));
-        var contentModelLocalizableFields = contentModel.Fields.Where(f => f.Localized);
+        var locales = await client.GetLocalesCollection();
+        var availableLocales = locales.Select(l => l.Code).ToArray();
+        var contentModelLocalizableFields = contentType.Fields.Where(f => f.Localized);
         var entryFields = (JObject)entry.Fields;
         var missingLocales = new HashSet<string>();
 
@@ -227,8 +225,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     public async Task<EntryIdentifier> AddNewEntry([ActionParameter] ContentModelIdentifier contentModelIdentifier)
     {
         var client = new ContentfulClient(Creds, contentModelIdentifier.Environment);
-        var result = await client.ExecuteWithErrorHandling(async () =>
-            await client.CreateEntry(new Entry<dynamic>(), contentModelIdentifier.ContentModelId));
+        var result = await client.CreateEntry(new Entry<dynamic>(), contentModelIdentifier.ContentModelId);
         return new EntryIdentifier
         {
             EntryId = result.SystemProperties.Id
@@ -241,10 +238,8 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         ContentfulClientExtensions.ThrowIfNullOrEmpty(entryIdentifier.EntryId, nameof(entryIdentifier.EntryId));
 
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
-        var entry = await client.ExecuteWithErrorHandling(async () =>
-            await client.GetEntry(entryIdentifier.EntryId));
-        await client.ExecuteWithErrorHandling(async () =>
-            await client.DeleteEntry(entryIdentifier.EntryId, version: (int)entry.SystemProperties.Version));
+        var entry = await client.GetEntry(entryIdentifier.EntryId);
+        await client.DeleteEntry(entryIdentifier.EntryId, version: (int)entry.SystemProperties.Version);
     }
 
     [Action("Publish entry", Description = "Publish specified entry.")]
@@ -255,18 +250,16 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         ContentfulClientExtensions.ThrowIfNullOrEmpty(entryIdentifier.EntryId, nameof(entryIdentifier.EntryId));
 
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
-        var entry = await client.ExecuteWithErrorHandling(async () => await client.GetEntry(entryIdentifier.EntryId));
+        var entry = await client.GetEntry(entryIdentifier.EntryId);
 
         string entryId = entryIdentifier.EntryId;
         int entryVersion = (int)entry.SystemProperties.Version!;
 
         if (input.Locales == null)
-            await client.ExecuteWithErrorHandling(async () => await client.PublishEntry(entryId, entryVersion));
+            await client.PublishEntry(entryId, entryVersion);
         else
         {
-            await client.ExecuteWithErrorHandling(async () => 
-                await client.PublishEntryLocales(entryId, entryVersion, input.Locales.ToArray())
-            );
+            await client.PublishEntryLocales(entryId, entryVersion, input.Locales.ToArray());
         }
     }
 
@@ -278,18 +271,16 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         ContentfulClientExtensions.ThrowIfNullOrEmpty(entryIdentifier.EntryId, nameof(entryIdentifier.EntryId));
 
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
-        var entry = await client.ExecuteWithErrorHandling(async () => await client.GetEntry(entryIdentifier.EntryId));
+        var entry = await client.GetEntry(entryIdentifier.EntryId);
 
         string entryId = entryIdentifier.EntryId;
         int entryVersion = (int)entry.SystemProperties.Version!;
 
         if (input.Locales == null)
-            await client.ExecuteWithErrorHandling(async () => await client.UnpublishEntry(entryId, entryVersion));
+            await client.UnpublishEntry(entryId, entryVersion);
         else
         {
-            await client.ExecuteWithErrorHandling(async () =>
-                await client.UnPublishEntryLocales(entryId, entryVersion, input.Locales.ToArray())
-            );
+            await client.UnPublishEntryLocales(entryId, entryVersion, input.Locales.ToArray());
         }
     }
 
@@ -313,7 +304,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         var client = new ContentfulClient(Creds, entryIdentifier.Environment);
         var spaceId = Creds.Get("spaceId").Value;
 
-        var locales = await client.ExecuteWithErrorHandling(async () => await client.GetLocalesCollection());
+        var locales = await client.GetLocalesCollection();
         var defaultLocale = locales.FirstOrDefault(x => x.Default)?.Code;
         var otherLocales = locales.Where(x => !x.Default).Select(x => x.Code).ToList();
         var selectedLocale = entryIdentifier.Locale ?? defaultLocale ?? otherLocales.FirstOrDefault();
@@ -361,15 +352,14 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         
         try
         {
-            var originalEntry = await client.ExecuteWithErrorHandling(async () => await GetEntry(
+            var originalEntry = await GetEntry(
                 new() { EntryId = entryIdentifier.ContentId, Environment = entryIdentifier.Environment },
-                new LocaleOptionalIdentifier { Locale = selectedLocale }));
+                new LocaleOptionalIdentifier { Locale = selectedLocale });
 
             User updatedByUser = null;
             try
             {
-                updatedByUser = await client.ExecuteWithErrorHandling(async () =>
-                await client.GetUser(originalEntry.UpdatedBy));
+                updatedByUser = await client.GetUser(originalEntry.UpdatedBy);
             }
             catch { }
 
@@ -448,7 +438,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
         var client = new ContentfulClient(Creds, input.Environment);
 
-        var locales = await client.ExecuteWithErrorHandling(async () => await client.GetLocalesCollection());
+        var locales = await client.GetLocalesCollection();
         if (locales.All(x => x.Code != input.Locale))
         {
             var allLocales = string.Join(", ", locales.Select(x => x.Code));
@@ -466,9 +456,8 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
             try
             {
-                entry = await client.ExecuteWithErrorHandling(() => client.GetEntry(entryToUpdate.EntryId));
-                var contentType = await client.ExecuteWithErrorHandling(() =>
-                    client.GetContentType(entry.SystemProperties.ContentType.SystemProperties.Id));
+                entry = await client.GetEntry(entryToUpdate.EntryId);
+                var contentType = await client.GetContentType(entry.SystemProperties.ContentType.SystemProperties.Id);
 
                 var oldEntryFields = (entry.Fields as JToken)!.DeepClone();
                 EntryToJsonConverter.ToJson(entry, entryToUpdate.HtmlNode, input.Locale, contentType,
@@ -480,10 +469,10 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
                 }
 
                 var partialObject = PartialObjectBuilder.Build(entry, input.Locale);
-                await client.ExecuteWithErrorHandling(async () => await client.UpdateEntryForLocale(
+                await client.UpdateEntryForLocale(
                     entry: partialObject,
                     id: entryToUpdate.EntryId,
-                    locale: input.Locale));
+                    locale: input.Locale);
             }
             catch (FieldConversionException ex)
             {
@@ -625,10 +614,10 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
         var client = new ContentfulClient(Creds, input.Environment);
 
-        var entry = await client.ExecuteWithErrorHandling(async () => await client.GetEntry(input.EntryId));
+        var entry = await client.GetEntry(input.EntryId);
 
         var rootContentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
-        var rootContentType = await client.ExecuteWithErrorHandling(async () => await client.GetContentType(rootContentTypeId));
+        var rootContentType = await client.GetContentType(rootContentTypeId);
 
         var directReferencedIds = ExtractReferencedIds(entry, rootContentType, input.FieldIds);
 
@@ -650,7 +639,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         {
             try
             {
-                var referencedEntry = await client.ExecuteWithErrorHandling(async () => await client.GetEntry(id));
+                var referencedEntry = await client.GetEntry(id);
                 referencedEntries.Add(new EntryEntity(referencedEntry));
             }
             catch
@@ -753,8 +742,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             ? request.NewRootContenTypeId
             : originalEntry.SystemProperties.ContentType.SystemProperties.Id;
 
-        var createdClone = await client.ExecuteWithErrorHandling(async () =>
-            await client.CreateEntry(clone, cloneContentTypeId));
+        var createdClone = await client.CreateEntry(clone, cloneContentTypeId);
 
         return new()
         {
@@ -1142,7 +1130,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         }
 
         var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
-        var contentType = await client.ExecuteWithErrorHandling(async () => await client.GetContentType(contentTypeId));
+        var contentType = await client.GetContentType(contentTypeId);
         
         var excludedFieldIds = new HashSet<string>(ignoredFieldIds, StringComparer.Ordinal);
         if (conditionalIgnoredFieldIds.TryGetValue(contentTypeId, out var fieldIdsExcludedForThisType))
@@ -1204,11 +1192,8 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
             try
             {
-                await client.ExecuteWithErrorHandling(async () =>
-                {
-                    var asset = await client.GetAsset(image.Asset.SystemProperties.Id);
-                    await client.CreateOrUpdateAsset(image.Asset, version: asset.SystemProperties.Version);
-                });
+                var asset = await client.GetAsset(image.Asset.SystemProperties.Id);
+                await client.CreateOrUpdateAsset(image.Asset, version: asset.SystemProperties.Version);
             }
             catch (Exception e)
             {
@@ -1239,7 +1224,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             Entry<object> entry;
             try
             {
-                entry = await client.ExecuteWithErrorHandling(async () => await client.GetEntry(id));
+                entry = await client.GetEntry(id);
             }
             catch
             {
@@ -1247,7 +1232,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             }
 
             var ctId = entry.SystemProperties.ContentType.SystemProperties.Id;
-            var contentType = await client.ExecuteWithErrorHandling(async () => await client.GetContentType(ctId));
+            var contentType = await client.GetContentType(ctId);
 
             var children = ExtractReferencedIds(entry, contentType);
 

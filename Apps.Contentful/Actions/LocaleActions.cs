@@ -17,8 +17,7 @@ public class LocaleActions(InvocationContext invocationContext) : BaseInvocable(
     public async Task<GetLocalesResponse> GetLocales([ActionParameter] EnvironmentIdentifier environment)
     {
         var client = new ContentfulClient(Creds, environment.Environment);
-        var locales = await client.ExecuteWithErrorHandling(async () =>
-            await client.GetLocalesCollection());
+        var locales = await client.GetLocalesCollection();
         var defaultLocale = locales.FirstOrDefault(x => x.Default)?.Code;
         var otherLocales = locales.Where(x => !x.Default).Select(x => x.Code).ToList();
 

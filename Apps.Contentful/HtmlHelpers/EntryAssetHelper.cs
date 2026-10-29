@@ -43,7 +43,7 @@ public static class EntryAssetHelper
             if (string.IsNullOrEmpty(assetId) || string.IsNullOrEmpty(altText))
                 continue;
 
-            var asset = await client.ExecuteWithErrorHandling(() => client.GetAsset(assetId));
+            var asset = await client.GetAsset(assetId);
 
             var candidate = new ImageUpdateCandidate(asset, altText);
             result.Add(candidate);
