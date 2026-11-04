@@ -334,7 +334,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             input.GetEmbeddedInlineContent ?? false,
             input.GetEmbeddedBlockContent ?? false,
             input.IgnoredFieldIds ?? new List<string>(),
-            input.IgnoredContentTypeIds?.ToList() ?? new List<string>(),
+            new ReferencedEntryContentTypeFilter(input.IgnoredContentTypeIds, input.IncludedReferenceContentTypeIds),
             conditionalIgnoredFieldIds,
             input.ExcludeTags?.ToList(),
             entryIdentifier.ContentId,
@@ -836,7 +836,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     private async Task<List<EntryContentDto>> GetLinkedEntriesContent(string entryId, string locale, string defaultLocale,
         ContentfulClient client,
         List<EntryContentDto> resultList, bool getReferenceContent, bool ignoreReferenceLocalization, bool hyperlinks,
-        bool inline, bool blocks, IEnumerable<string> ignoredFieldIds, List<string> ignoredContentTypeIds,
+        bool inline, bool blocks, IEnumerable<string> ignoredFieldIds, ReferencedEntryContentTypeFilter contentTypeFilter,
         IReadOnlyDictionary<string, HashSet<string>> conditionalIgnoredFieldIds,
         List<string>? excludeTags, string rootEntryId, int? maxDepth = null, int currentDepth = 0,
         List<ContentProcessingError>? errors = null, string? parentEntryId = null)
@@ -851,7 +851,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
         try
         {
-            entryContent = await GetEntryContent(entryId, client, ignoredFieldIds, ignoredContentTypeIds, 
+            entryContent = await GetEntryContent(entryId, client, ignoredFieldIds, contentTypeFilter,
                 conditionalIgnoredFieldIds, excludeTags, rootEntryId, ignoreReferenceLocalization);
         }
         catch (Exception ex)
@@ -874,7 +874,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             resultList.Add(entryContent);
             foreach (var linkedEntryId in linkedIds)
                 await GetLinkedEntriesContent(linkedEntryId, locale, defaultLocale, client, resultList, getReferenceContent,
-                    ignoreReferenceLocalization, hyperlinks, inline, blocks, ignoredFieldIds, ignoredContentTypeIds,
+                    ignoreReferenceLocalization, hyperlinks, inline, blocks, ignoredFieldIds, contentTypeFilter,
                     conditionalIgnoredFieldIds, excludeTags, rootEntryId, maxDepth, currentDepth + 1, errors, entryId);
         }
 
@@ -1096,7 +1096,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     private static async Task<EntryContentDto?> GetEntryContent(string entryId,
         ContentfulClient client,
         IEnumerable<string> ignoredFieldIds,
-        IEnumerable<string> ignoredContentTypeIds,
+        ReferencedEntryContentTypeFilter contentTypeFilter,
         IReadOnlyDictionary<string, HashSet<string>> conditionalIgnoredFieldIds,
         IEnumerable<string>? excludeTags,
         string rootEntryId,
@@ -1106,12 +1106,8 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         var entry = await client.GetEntryWithErrorHandling(entryId);
         if (entry == null) return null;
 
-        User user = null;
-        try { user = await client.GetUser(entry.SystemProperties.UpdatedBy.SystemProperties.Id); } 
-        catch { }
-
         if (rootEntryId != entry.SystemProperties.Id &&
-            ignoredContentTypeIds.Contains(entry.SystemProperties.ContentType.SystemProperties.Id))
+            !contentTypeFilter.Allows(entry.SystemProperties.ContentType.SystemProperties.Id))
         {
             return null;
         }
@@ -1128,6 +1124,10 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
             return null;
         }
+
+        User user = null;
+        try { user = await client.GetUser(entry.SystemProperties.UpdatedBy.SystemProperties.Id); }
+        catch { }
 
         var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
         var contentType = await client.GetContentType(contentTypeId);

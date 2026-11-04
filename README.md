@@ -80,6 +80,8 @@ In the action you are able to select exactly which type of linked entry you want
 
 > Note: you can also specify if you want to ignore the localization aspect of reference fields. If this optional input is true, and the 'Include referenced entries' is true, then all referenced entries will be included regardless of localization setting.
 
+You can narrow down the linked entries by content type: **Excluded content type IDs** skips linked entries of the listed content types, and **Include referenced entries only for content types** keeps only linked entries of the listed content types. The root entry is always included. Entries that are skipped are not searched for further linked entries.
+
 Finally, you can specify a list of Field IDs which will always be ignored and not added to the produced HTML file.
 
 > For more information about CMS localization. Check out [this guide](https://docs.blackbird.io/guides/cms-contentful/).
