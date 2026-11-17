@@ -12,4 +12,7 @@ public class SearchWorkflowsRequest : EnvironmentIdentifier
 
     [Display("Current step names", Description = "Filter by current step names")]
     public IEnumerable<string>? CurrentStepNames { get; set; }
+
+    [Display("Updated after", Description = "Only return workflows updated on or after this date")]
+    public DateTime? UpdatedAfter { get; set; }
 }
