@@ -24,6 +24,14 @@ public class WorkflowActions(InvocationContext invocationContext) : ContentfulIn
         var workflowsRequest = new ContentfulRestRequest("/workflows", Method.Get, Creds);
         var workflows = await client.Paginate<WorkflowDto>(workflowsRequest);
 
+
+        if (searchRequest.UpdatedAfter.HasValue)
+        {
+            workflows = workflows
+                .Where(w => w.Sys.UpdatedAt >= searchRequest.UpdatedAfter.Value)
+                .ToList();
+        }
+
         var workflowResponses = workflows.Select(workflow => new WorkflowResponse
         {
             StepId = workflow.StepId,
