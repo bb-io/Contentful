@@ -2,6 +2,7 @@ using Apps.Contentful.Api;
 using Apps.Contentful.Models.Identifiers;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Dynamic;
+using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 
 namespace Apps.Contentful.DataSourceHandlers;
@@ -13,9 +14,7 @@ public class ReferenceFieldDataHandler(InvocationContext invocationContext, [Act
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(entryIdentifier.EntryId))
-        {
-            throw new Exception("Please provide Entry ID first");
-        }
+            throw new PluginMisconfigurationException("Please provide Entry ID first");
         
         var client = new ContentfulClient(invocationContext.AuthenticationCredentialsProviders, entryIdentifier.Environment);
         var entry = await client.GetEntry(entryIdentifier.EntryId, cancellationToken: cancellationToken);

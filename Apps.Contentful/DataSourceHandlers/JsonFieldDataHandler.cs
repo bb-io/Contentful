@@ -2,6 +2,7 @@ using Apps.Contentful.Api;
 using Apps.Contentful.Models.Identifiers;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Dynamic;
+using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 
 namespace Apps.Contentful.DataSourceHandlers;
@@ -16,9 +17,7 @@ public class JsonFieldDataHandler(
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(entryIdentifier.EntryId))
-        {
-            throw new Exception("Please provide Entry ID first");
-        }
+            throw new PluginMisconfigurationException("Please provide Entry ID first");
 
         var client = new ContentfulClient(
             InvocationContext.AuthenticationCredentialsProviders,
