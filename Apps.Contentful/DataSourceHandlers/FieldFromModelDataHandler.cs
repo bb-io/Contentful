@@ -2,6 +2,7 @@
 using Apps.Contentful.Models.Identifiers;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Dynamic;
+using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 
 namespace Apps.Contentful.DataSourceHandlers;
@@ -13,9 +14,7 @@ public class FieldFromModelDataHandler(InvocationContext invocationContext, [Act
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(modelIdentifier.ContentModelId))
-        {
-            throw new Exception("Please provide Model ID first");
-        }
+            throw new PluginMisconfigurationException("Please provide Model ID first");
         
         var client = new ContentfulClient(invocationContext.AuthenticationCredentialsProviders, modelIdentifier.Environment);
 

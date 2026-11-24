@@ -2,6 +2,7 @@ using Apps.Contentful.Api;
 using Apps.Contentful.Models.Entities;
 using Apps.Contentful.Models.Requests;
 using Apps.Contentful.Models.Responses;
+using Apps.Contentful.Utils.Cache;
 using Contentful.Core.Models;
 using Contentful.Core.Models.Management;
 using Contentful.Core.Search;
@@ -10,9 +11,9 @@ using File = Contentful.Core.Models.File;
 
 namespace Apps.Contentful.Utils;
 
-class EntryCloner(ContentfulClient apiClient)
+public class EntryCloner(ContentfulClient apiClient)
 {
-    private readonly Dictionary<string, ContentType> _contentTypesCached = [];
+    private readonly ContentTypeCache _contentTypeCache = new(apiClient);
 
     public async Task<DuplicateEntryResponse> CloneRecursively(DuplicateEntryRequest request)
     {
@@ -320,7 +321,8 @@ class EntryCloner(ContentfulClient apiClient)
         if (content.Resource is not Entry<dynamic> entry)
             return draftBackfills;
 
-        var contentType = await GetContentTypeWithCache(entry);
+        string contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
+        var contentType = await _contentTypeCache.Get(contentTypeId);
         var clone = new Entry<dynamic>
         {
             SystemProperties = new() { ContentType = contentType },
@@ -396,7 +398,8 @@ class EntryCloner(ContentfulClient apiClient)
         if (resource is not Entry<dynamic> entry)
             throw new Exception("An unexpected resource received for extraction its connections.");
 
-        var contentType = await GetContentTypeWithCache(entry);
+        string contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
+        var contentType = await _contentTypeCache.Get(contentTypeId);
         var fromEntryId = entry.SystemProperties.Id;
         var entryFields = entry.Fields as JObject ?? [];
 
@@ -436,18 +439,6 @@ class EntryCloner(ContentfulClient apiClient)
         }
 
         return connections;
-    }
-
-    public async Task<ContentType> GetContentTypeWithCache(Entry<dynamic> entry)
-    {
-        var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
-
-        if (_contentTypesCached.TryGetValue(contentTypeId, out var cachedContentType))
-            return cachedContentType;
-
-        var fetchedContentType = await apiClient.GetContentType(contentTypeId);
-        _contentTypesCached.Add(contentTypeId, fetchedContentType);
-        return fetchedContentType;
     }
 
     private static void AddConnection(

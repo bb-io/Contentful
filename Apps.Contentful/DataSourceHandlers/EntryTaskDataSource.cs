@@ -5,6 +5,7 @@ using Apps.Contentful.Models.Entities;
 using Apps.Contentful.Models.Identifiers;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Dynamic;
+using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using RestSharp;
 
@@ -16,9 +17,7 @@ public class EntryTaskDataSource(InvocationContext invocationContext, [ActionPar
         CancellationToken cancellationToken)
     {
         if (identifier.EntryId == null!)
-        {
-            throw new Exception("You should provide an Entry ID first.");
-        }
+            throw new PluginMisconfigurationException("You should provide an Entry ID first.");
         
         var client = new ContentfulRestClient(Creds, identifier.Environment);
         var request = new ContentfulRestRequest($"/entries/{identifier.EntryId}/tasks", Method.Get, Creds);
