@@ -36,6 +36,7 @@ using System.Net.Mime;
 using System.Text;
 using System.Web;
 using Apps.Contentful.HtmlHelpers.Constants;
+using Apps.Contentful.Utils.Cache;
 using ContentType = Contentful.Core.Models.ContentType;
 
 namespace Apps.Contentful.Actions;
@@ -327,6 +328,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             selectedLocale,
             defaultLocale,
             client,
+            new ContentTypeCache(client),
             new(),
             input.GetReferenceContent ?? false,
             input.GetNonLocalizationReferenceContent ?? false,
@@ -437,6 +439,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         errors.AddRange(_customSizeValidationService.Validate(content, input.Locale, input.SkipCustomValidationStep == true));
 
         var client = new ContentfulClient(Creds, input.Environment);
+        var contentTypeCache = new ContentTypeCache(client);
 
         var locales = await client.GetLocalesCollection();
         if (locales.All(x => x.Code != input.Locale))
@@ -457,7 +460,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             try
             {
                 entry = await client.GetEntry(entryToUpdate.EntryId);
-                var contentType = await client.GetContentType(entry.SystemProperties.ContentType.SystemProperties.Id);
+                var contentType = await contentTypeCache.Get(entry.SystemProperties.ContentType.SystemProperties.Id);
 
                 var oldEntryFields = (entry.Fields as JToken)!.DeepClone();
                 EntryToJsonConverter.ToJson(entry, entryToUpdate.HtmlNode, input.Locale, contentType,
@@ -613,11 +616,11 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         }
 
         var client = new ContentfulClient(Creds, input.Environment);
-
+        var contentTypeCache = new ContentTypeCache(client);
         var entry = await client.GetEntry(input.EntryId);
 
         var rootContentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
-        var rootContentType = await client.GetContentType(rootContentTypeId);
+        var rootContentType = await contentTypeCache.Get(rootContentTypeId);
 
         var directReferencedIds = ExtractReferencedIds(entry, rootContentType, input.FieldIds);
 
@@ -626,6 +629,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         {
             allReferencedIds = await GetAllReferencedIdsRecursive(
                 client,
+                contentTypeCache,
                 directReferencedIds,
                 new HashSet<string>() 
             );
@@ -835,6 +839,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
     private async Task<List<EntryContentDto>> GetLinkedEntriesContent(string entryId, string locale, string defaultLocale,
         ContentfulClient client,
+        ContentTypeCache contentTypeCache,
         List<EntryContentDto> resultList, bool getReferenceContent, bool ignoreReferenceLocalization, bool hyperlinks,
         bool inline, bool blocks, IEnumerable<string> ignoredFieldIds, ReferencedEntryContentTypeFilter contentTypeFilter,
         IReadOnlyDictionary<string, HashSet<string>> conditionalIgnoredFieldIds,
@@ -851,7 +856,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
         try
         {
-            entryContent = await GetEntryContent(entryId, client, ignoredFieldIds, contentTypeFilter,
+            entryContent = await GetEntryContent(entryId, client, contentTypeCache, ignoredFieldIds, contentTypeFilter,
                 conditionalIgnoredFieldIds, excludeTags, rootEntryId, ignoreReferenceLocalization);
         }
         catch (Exception ex)
@@ -873,7 +878,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
             resultList.Add(entryContent);
             foreach (var linkedEntryId in linkedIds)
-                await GetLinkedEntriesContent(linkedEntryId, locale, defaultLocale, client, resultList, getReferenceContent,
+                await GetLinkedEntriesContent(linkedEntryId, locale, defaultLocale, client, contentTypeCache, resultList, getReferenceContent,
                     ignoreReferenceLocalization, hyperlinks, inline, blocks, ignoredFieldIds, contentTypeFilter,
                     conditionalIgnoredFieldIds, excludeTags, rootEntryId, maxDepth, currentDepth + 1, errors, entryId);
         }
@@ -1095,6 +1100,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
 
     private static async Task<EntryContentDto?> GetEntryContent(string entryId,
         ContentfulClient client,
+        ContentTypeCache contentTypeCache,
         IEnumerable<string> ignoredFieldIds,
         ReferencedEntryContentTypeFilter contentTypeFilter,
         IReadOnlyDictionary<string, HashSet<string>> conditionalIgnoredFieldIds,
@@ -1125,12 +1131,8 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             return null;
         }
 
-        User user = null;
-        try { user = await client.GetUser(entry.SystemProperties.UpdatedBy.SystemProperties.Id); }
-        catch { }
-
         var contentTypeId = entry.SystemProperties.ContentType.SystemProperties.Id;
-        var contentType = await client.GetContentType(contentTypeId);
+        var contentType = await contentTypeCache.Get(contentTypeId);
         
         var excludedFieldIds = new HashSet<string>(ignoredFieldIds, StringComparer.Ordinal);
         if (conditionalIgnoredFieldIds.TryGetValue(contentTypeId, out var fieldIdsExcludedForThisType))
@@ -1143,7 +1145,7 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
         else if (!ignoreLocalizationFields)
             fields = fields.Where(x => x.Localized);
 
-        return new(entryId, entry.Fields, fields.ToArray(), user);
+        return new(entryId, entry.Fields, fields.ToArray());
     }
 
     private (string? entryId, string? fieldId, string? locale) ExtractIdsFromHtml(string html)
@@ -1208,9 +1210,10 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
     }
 
     private async Task<List<string>> GetAllReferencedIdsRecursive(
-    ContentfulClient client,
-    IEnumerable<string> rootIds,
-    HashSet<string> visited)
+        ContentfulClient client,
+        ContentTypeCache contentTypeCache,
+        IEnumerable<string> rootIds,
+        HashSet<string> visited)
     {
         var allIds = new List<string>();
 
@@ -1232,11 +1235,11 @@ public class EntryActions(InvocationContext invocationContext, IFileManagementCl
             }
 
             var ctId = entry.SystemProperties.ContentType.SystemProperties.Id;
-            var contentType = await client.GetContentType(ctId);
+            var contentType = await contentTypeCache.Get(ctId);
 
             var children = ExtractReferencedIds(entry, contentType);
 
-            var recursiveIds = await GetAllReferencedIdsRecursive(client, children, visited);
+            var recursiveIds = await GetAllReferencedIdsRecursive(client, contentTypeCache, children, visited);
             allIds.AddRange(recursiveIds);
         }
 
